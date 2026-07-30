@@ -85,8 +85,8 @@ user's center or zoom. The canvas rejects maps above 50,000 total records,
 which exceeds the largest observed installed map while bounding full redraw
 work during pan and zoom.
 
-The canvas defaults to a player-relative height band from 25 game units below
-through 25 units above the player's current Z. Lines remain visible when
+The canvas defaults to a player-relative height band from 15 game units below
+through 15 units above the player's current Z. Lines remain visible when
 either endpoint or the segment between them intersects that band, while labels
 use their own elevation. The right-click map menu can disable or re-enable the
 filter and opens numeric controls for independently adjusting the below and

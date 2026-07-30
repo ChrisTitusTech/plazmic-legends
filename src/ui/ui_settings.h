@@ -11,8 +11,8 @@ struct UiState {
     QByteArray geometry;
     QByteArray layout;
     bool height_filter_enabled{true};
-    double height_filter_below{25.0};
-    double height_filter_above{25.0};
+    double height_filter_below{15.0};
+    double height_filter_above{15.0};
     bool player_follow_enabled{false};
 };
 

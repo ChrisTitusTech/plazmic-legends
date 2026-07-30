@@ -139,6 +139,9 @@ int main(int argc, char** argv) {
                 "map canvas did not retain the player snapshot");
         require(window.map_canvas()->height_filter_enabled(),
                 "height filter did not default to enabled");
+        require(window.map_canvas()->height_filter_below() == 15.0 &&
+                    window.map_canvas()->height_filter_above() == 15.0,
+                "height filter did not default to +/-15 player-Z units");
         window.map_canvas()->set_height_filter_enabled(false);
         require(!window.map_canvas()->height_filter_enabled(),
                 "height filter could not be disabled");

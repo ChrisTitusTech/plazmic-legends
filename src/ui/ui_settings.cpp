@@ -101,8 +101,8 @@ std::optional<UiState> UiSettings::load() const {
     std::optional<QByteArray> geometry;
     std::optional<QByteArray> layout;
     bool height_filter_enabled = true;
-    double height_filter_below = 25.0;
-    double height_filter_above = 25.0;
+    double height_filter_below = 15.0;
+    double height_filter_above = 15.0;
     bool player_follow_enabled = false;
     for (QByteArray line : lines) {
         line = line.trimmed();

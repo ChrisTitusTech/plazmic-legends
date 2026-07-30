@@ -23,8 +23,8 @@ class QWheelEvent;
 namespace plazmic {
 
 inline constexpr std::size_t kMaximumRenderableMapRecords = 50000U;
-inline constexpr double kDefaultHeightFilterBelow = 25.0;
-inline constexpr double kDefaultHeightFilterAbove = 25.0;
+inline constexpr double kDefaultHeightFilterBelow = 15.0;
+inline constexpr double kDefaultHeightFilterAbove = 15.0;
 inline constexpr double kMaximumHeightFilterRange = 1000.0;
 
 class MapCanvas final : public QWidget {

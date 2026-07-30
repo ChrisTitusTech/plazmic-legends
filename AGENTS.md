@@ -2,10 +2,11 @@
 
 ## Purpose
 
-Plazmic Legends is a minimal, read-only information overlay for the 64-bit
-EverQuest Legends `eqgame.exe` running under Wine on Linux. The repository
-began as a MacroQuest-derived source import, but the intended product is not a
-scripting or plugin platform.
+Plazmic Legends is a minimal, read-only companion application for the 64-bit
+EverQuest Legends `eqgame.exe` running under Wine on Linux. It uses an
+independent Linux window for maps, spawns, and status; it does not draw over or
+inside the game. The repository began as a MacroQuest-derived source import,
+but the intended product is not a scripting or plugin platform.
 
 ## Read before changing code
 
@@ -16,6 +17,8 @@ scripting or plugin platform.
 4. Read `docs/cleanup-inventory.md` before deleting or retaining imported code.
 5. Read `docs/research/legends-baseline.md` before work on the client,
    renderer, process integration, offsets, or compatibility profiles.
+6. Read `docs/research/showeq-ui-review.md` before work on the companion
+   window, map, spawn model, or Qt dependency.
 
 If these documents conflict, stop and reconcile them with the user before
 implementing the conflicting behavior.
@@ -25,11 +28,16 @@ implementing the conflicting behavior.
 - The inherited MacroQuest implementation and bundled dependencies were
   removed in Phase 0.
 - The full import is recoverable from tag `phase0-import-baseline`.
-- The active tree contains planning documents, Linux-native research tooling,
-  and no product runtime yet.
+- Phase 1 is complete and contains an isolated native Linux proof. It may
+  fingerprint and select the client, perform bounded read-only process-memory
+  access, and validate the live PE identity. Its external X11 overlay
+  experiment is retained only as research: the reference DWM raises true
+  fullscreen above override windows, so the overlay is not the product UI.
+- Phase 2 is complete. The Qt 6 product shell, client status boundary, saved
+  dock layout, live DWM tag 5 rule, and game-invariance gate passed.
 - No inherited implementation or third-party source is retained.
 - The local reference client is a Windows x86-64 PE executable running through
-  Wine 11.0 Staging in an X11 session.
+  GE-Proton11-3 in an X11 session.
 
 Do not restore imported code without a documented requirement, provenance
 review, license review, and comparison against a native replacement.
@@ -44,8 +52,9 @@ review, license review, and comparison against a native replacement.
 - Native Windows and Visual Studio builds are non-goals.
 - Project artifacts are native Linux ELF binaries and data only. Do not add a
   PE DLL, MinGW toolchain, Wine DLL override, or Windows injection path.
-- The product observes the Wine-hosted process externally and renders a
-  separate X11 overlay. Keep process access behind a narrow Linux interface.
+- The product observes the Wine-hosted process externally and renders a normal
+  independent Linux application window. Keep process access behind a narrow
+  Linux interface.
 
 ## Planned source boundaries
 
@@ -54,7 +63,9 @@ review, license review, and comparison against a native replacement.
 - `src/integration`: Linux process identification, module mapping, and
   read-only process access for the Wine-hosted client.
 - `src/game`: build profiles and read-only game-state access.
-- `src/overlay`: Linux overlay window and immutable-snapshot rendering.
+- `src/model`: immutable player, zone, spawn, and selection snapshots.
+- `src/map`: map geometry, transforms, and renderer-independent map state.
+- `src/ui`: Qt 6 main window, map canvas, spawn table, status, and preferences.
 - `src/common`: narrow configuration, logging, and shared utilities.
 - `tests`: profile, state-conversion, configuration, and lifecycle tests that
   do not require a live account.
@@ -64,8 +75,18 @@ active task.
 
 ## Working boundaries
 
-- Phase 0 is complete. Do not start Phase 1 until the user explicitly says to
-  continue.
+- Phase 0 through Phase 2 are complete. Phase 3 is authorized on
+  `phase3/player-follow-lifecycle`. The first checkpoint includes the bounded
+  map parser, map canvas, exact-profile zone/player reader, manually verified
+  marker orientation, adjustable player-Z filtering, and player-follow state.
+  The active continuation is lifecycle invalidation. Do not begin Phase 4
+  spawn work without explicit approval.
+- The owner explicitly accepts that this private development project operates
+  against the Daybreak EULA. Read-only symbol and gameplay-state research may
+  proceed after the normal phase checkpoints. The EULA-risk decision does not
+  authorize writes, injection, automation, protection bypass, push, public
+  packaging, release, or distribution. See
+  `docs/research/phase1-policy-risk.md`.
 - Preserve the imported tree in a recoverable baseline commit before deleting
   files.
 - Use `phase0-import-baseline` only as read-only research unless restoration is
@@ -89,6 +110,13 @@ active task.
   offsets.
 - Keep the game-data reader separate from rendering so recorded or synthetic
   snapshots can be tested without launching the game.
+- Use `plazmic-legends` as the X11 instance and `PlazmicLegends` as the class
+  for every Plazmic top-level window. The reference DWM places that class on
+  tag 5, monitor 1, with `noswallow=1`; do not request `alwaysontop` or activate
+  the game tag.
+- Treat the ShowEQ 6.4.25 source as conceptual guidance only. Do not copy its
+  GPL implementation, packet decoder, generated data, maps, or mutable
+  pointer-based object model. See `docs/research/showeq-ui-review.md`.
 - Add a dependency only when an approved feature requires it. Document the
   license and removal impact in the same phase.
 
@@ -115,6 +143,7 @@ Configure and validate the Linux research scaffold:
 
 ```bash
 cmake --preset dev
+cmake --build --preset dev
 cmake --build --preset check
 ctest --preset dev
 python3 tools/inspect_eqgame.py "$EQ_LEGENDS_DIR" \
@@ -122,8 +151,23 @@ python3 tools/inspect_eqgame.py "$EQ_LEGENDS_DIR" \
 git diff --check
 ```
 
-Phase 1 must extend these commands with exact native configure, format, build,
-test, and package gates for its proof of life.
+Run the diagnostics-only live proof after launching the exact client:
+
+```bash
+build/dev/plazmic-legends-proof \
+  --client "$EQ_LEGENDS_DIR/eqgame.exe" \
+  --diagnose-only
+```
+
+The Phase 1 overlay mode is historical research and is not a supported product
+run path.
+
+Run the standalone Phase 2 product:
+
+```bash
+build/dev/plazmic-legends \
+  --client "$EQ_LEGENDS_DIR/eqgame.exe"
+```
 
 ## Validation and evidence
 
@@ -134,9 +178,9 @@ test, and package gates for its proof of life.
   an inventory comparison against the recoverable baseline.
 - Live-client validation must use the approved fingerprint and record Linux,
   Wine, display-server, renderer, and lifecycle evidence.
-- A successful process attachment is not sufficient evidence. Validate
-  rendering, zoning, return to character select, game exit, and unsupported
-  build handling when the phase requires them.
+- A successful process attachment is not sufficient evidence. Validate the
+  independent window, snapshot rendering, zoning, return to character select,
+  game exit, and unsupported build handling when the phase requires them.
 - Never use an agent report as validation evidence. Record commands and
   observable results.
 - Report skipped checks and residual risk explicitly.

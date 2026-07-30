@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Plazmic Legends
+Comment=Read-only EverQuest Legends companion window
+Exec=plazmic-legends
+Terminal=false
+Categories=Game;
+StartupWMClass=PlazmicLegends

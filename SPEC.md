@@ -8,10 +8,11 @@ EverQuest clients and Windows development. EverQuest Legends uses a different
 scripting, plugin, login, data-model, Windows build, and service code is outside
 this project's purpose.
 
-Plazmic Legends will be a small Linux-built overlay that shows selected
-read-only information from the Legends client. Client-version knowledge must
-be isolated, lifecycle transitions must be safe, and unknown builds must be
-rejected instead of risking invalid memory access.
+Plazmic Legends will be a small Linux-built companion application that shows
+selected read-only information from the Legends client in an independent
+window. It does not draw over or inside the game. Client-version knowledge
+must be isolated, lifecycle transitions must be safe, and unknown builds must
+be rejected instead of risking invalid memory access.
 
 ## Users
 
@@ -26,7 +27,7 @@ support tier.
 
 - Read-only: observe and present; never control gameplay.
 - Linux-first: configure, build, test, and package on Linux.
-- Minimal: retain only code and dependencies used by the approved panel and
+- Minimal: retain only code and dependencies used by the approved window and
   lifecycle.
 - Version-aware: client-specific knowledge belongs to an explicit
   compatibility profile.
@@ -52,40 +53,74 @@ support tier.
 ### Runtime lifecycle
 
 - Startup initializes logging, compatibility state, process integration, the
-  read-only game adapter, and the overlay in a defined order.
+  read-only game adapter, immutable snapshot model, and companion window in a
+  defined order.
 - Shutdown removes hooks or process access and stops owned work idempotently.
 - Character select, entering the world, zoning, camping, and process exit
   invalidate old snapshots and reacquire state without retaining stale
   pointers.
 - A failed optional data read marks that field unavailable for the frame. It
   does not crash the client or reuse a prior value as current data.
-- Fatal initialization failures disable the overlay and emit a local
-  diagnostic; they do not continue in a partial state.
+- Fatal initialization failures disable live data and emit a local diagnostic
+  in the companion window; they do not continue in a partial state.
 
-### MVP information panel
+### MVP companion window
 
-The initial panel is deliberately narrow:
+The initial application window is deliberately narrow:
 
 - compatibility status and client profile;
-- current zone name;
-- player coordinates and heading;
-- current target name, level, and distance when a target exists.
+- current zone name and locally installed zone-map geometry;
+- player coordinates, heading, and map marker;
+- a filtered and sortable spawn list;
+- spawn markers synchronized with list selection; and
+- selected-spawn name, type, level, coordinates, and distance when available.
 
-The panel shows `Not in world`, `Zoning`, `No target`, and `Unavailable`
-states explicitly. Field selection is an approval checkpoint at the end of
-Phase 1 and may be reduced or amended before game-data implementation.
+The window shows `Client not running`, `Unsupported client`, `Not in world`,
+`Zoning`, `No selection`, and `Unavailable` states explicitly. A field that
+cannot be isolated and validated safely is omitted rather than guessed.
 
-### Overlay interaction
+### Window and map interaction
 
-- The overlay is readable at 1920x1080 and 2560x1440 under X11 in windowed or
-  borderless play.
-- A configurable hotkey toggles the panel.
-- The panel is movable and can be locked in place.
-- When hidden or locked, it does not capture mouse or keyboard input.
-- Visual settings and position persist per Linux user outside the game
-  installation and Wine prefix.
+- The application is a normal independent Linux window and does not require a
+  relationship with the game window, its focus, its fullscreen state, or its
+  render surface.
+- The main window contains a central map canvas and dockable spawn and detail
+  views inspired conceptually by ShowEQ.
+- The main window and any detached Plazmic tool windows expose
+  `WM_CLASS(STRING) = "plazmic-legends", "PlazmicLegends"` so DWM can place
+  them predictably.
+- On the reference two-monitor DWM session, all Plazmic windows open on tag 5,
+  owned by monitor 1 (HDMI-0). They do not request `alwaysontop`, activate the
+  game tag, or change game focus.
+- The reference DWM rule is
+  `{ class="PlazmicLegends", tags=5, monitor=1, noswallow=1 }`.
+- The map supports pan, zoom, player-follow, layer visibility, selection, and
+  readable labels.
+- Selecting a spawn in either the map or list highlights the same stable ID in
+  both views without affecting the game target.
+- Window geometry, dock state, columns, filters, map view, and visual settings
+  persist per Linux user outside the game installation and Wine prefix.
+- The window follows the active system light or dark preference while running.
+  The reference DWM theme file is authoritative in that session, with standard
+  desktop portal and Qt color-scheme hints as fallbacks elsewhere.
 - The default theme has sufficient contrast over bright and dark scenes and
   does not rely on color alone for status.
+
+### Data sources
+
+- Static map lines and labels are parsed read-only from the configured Legends
+  installation's `maps/<zone>.txt` and optional numbered layer files. Map
+  files are never copied into the project or package.
+- The live zone short name selects map files only after bounded validation; it
+  is never used as an unchecked path.
+- Player and spawn observations come only from exact-profile, same-user,
+  bounded external process reads.
+- One profile-local game adapter converts validated observations into
+  immutable player, zone, and spawn snapshots keyed by stable IDs.
+- The UI consumes snapshots and local map geometry only. It never receives
+  target addresses or traverses process memory.
+- ShowEQ's packet capture, opcode decoding, privileged execution, maps,
+  generated data, and implementation are not data sources.
 
 ### Diagnostics
 
@@ -94,7 +129,7 @@ Phase 1 and may be reduced or amended before game-data implementation.
 - Logs exclude credentials, session tokens, chat, memory dumps, character
   names, and target names.
 - Local status distinguishes not running, unsupported build, integration
-  failure, overlay failure, and data-reader failure.
+  failure, window failure, map-file failure, and data-reader failure.
 
 ## Architecture and data flow
 
@@ -110,7 +145,7 @@ Linux launcher -> Legends PE fingerprint -> compatible profile
                                                 |
                                       immutable snapshot
                                                 |
-                                      Linux X11 overlay
+                              independent Qt companion window
 ```
 
 The implementation is a native Linux process. It discovers the Wine-hosted
@@ -120,8 +155,8 @@ narrow external process-reader interface. It does not inject code into Wine.
 Compatibility profiles contain identity metadata and the smallest set of
 symbols or signatures needed by approved fields. The runtime resolves one
 profile, validates every required symbol, and exposes typed readers. Readers
-publish value snapshots; the overlay never traverses client objects or owns raw
-game pointers.
+publish value snapshots; the UI never traverses client objects or owns raw game
+pointers.
 
 Configuration and logs use the XDG base-directory conventions. The game
 installation and Wine prefix remain unmodified unless a later explicitly
@@ -146,21 +181,23 @@ approved architecture decision requires otherwise.
   synthesized gameplay input are prohibited.
 - Retained MacroQuest-derived code remains subject to GPLv2 notices.
   Third-party dependencies require a documented license and provenance audit.
-- The project does not assert that process inspection or overlays are permitted
-  by current game rules. Live integration testing and distribution require an
-  explicit risk decision.
+- The project does not assert that process inspection or a companion
+  application is permitted by current game rules. Live integration testing and
+  distribution require an explicit risk decision.
 
 ## Performance and compatibility
 
-- Reference host: Fedora Linux 44 x86-64, X11, and Wine 11.0 Staging.
-- The observed client contains Direct3D 9 loader strings, but the active
-  renderer and Wine translation path must be confirmed at runtime.
+- Reference host: Fedora Linux 44 x86-64, X11, and GE-Proton11-3.
+- The reference run used the existing Lutris DXVK 2.6.2 configuration and
+  mapped DXGI, Wine Vulkan, the host Vulkan loader, and the NVIDIA GLX library.
 - Wayland is not an MVP target.
-- Overlay update and render work should stay below 1 ms p95 per presented frame
-  on the reference system and avoid visible frame-pacing regressions.
+- Snapshot publication and UI rendering must not cause visible game
+  frame-pacing regressions.
 - Game-state sampling is bounded and does not scan the full process each frame.
 - No unbounded queues, detached worker threads, or blocking file/network work
   are allowed on a render or UI event thread.
+- The spawn model has an explicit maximum count, and unchanged snapshots do not
+  force full table or map reconstruction.
 - A supported profile is immutable. A client patch creates a new profile and
   runs the compatibility gate.
 
@@ -168,7 +205,8 @@ approved architecture decision requires otherwise.
 
 - Macro, scripting, command, or plugin platforms.
 - Automated input, combat, movement, inventory, login, or multibox features.
-- Maps, spawn lists, alerts, chat processing, remote control, or web services.
+- Alerts, chat processing, remote control, or web services.
+- Map editing, route finding, spawn alerts, audio alerts, or command execution.
 - Support for traditional EverQuest live, test, beta, or emulator clients.
 - Native Windows builds, Visual Studio solutions, MSVC, or Windows-hosted CI.
 - Windows-format project artifacts, MinGW builds, Wine DLL injection, or
@@ -188,36 +226,60 @@ approved architecture decision requires otherwise.
 - AC-03: The launcher identifies the reference Legends executable and rejects
   wrong architecture, changed hash, ambiguous target, and unsupported build
   with distinct errors.
-- AC-04: The native Linux process displays a diagnostic X11 overlay for the
-  reference client without code injection, gameplay-state writes, or Wine
-  prefix changes.
-- AC-05: Approved MVP fields match controlled ground truth, including loading,
-  zoning, no-target, and unavailable states.
-- AC-06: Character select, zoning, camping, repeated startup/shutdown, and
+- AC-04: The native Linux process displays a normal independent Qt companion
+  window on DWM tag 5 with the approved class and rule, without changing game
+  focus, fullscreen, opacity, geometry, input, active tag, or the Wine prefix.
+- AC-05: The local map parser renders approved zone geometry, layers, player
+  position, and heading against controlled fixtures.
+- AC-06: Validated live spawn snapshots match controlled ground truth, and map
+  and table selection agree by stable ID.
+- AC-07: Character select, zoning, camping, repeated startup/shutdown, and
   process exit complete without a client crash, stale snapshot, or orphaned
   project process.
-- AC-07: Hidden or locked overlays leave game input unaffected; position and
-  settings persist after restart.
-- AC-08: Tests cover profile matching, rejection paths, state conversion,
-  snapshot invalidation, and configuration defaults without a live game.
-- AC-09: The release gate includes format/lint, warnings-as-errors build, tests,
+- AC-08: Window movement, focus, minimization, and shutdown leave game
+  fullscreen, focus policy, geometry, opacity, and input configuration
+  unchanged; UI state persists after restart.
+- AC-09: Tests cover profile matching, rejection paths, map parsing, state
+  conversion, snapshot invalidation, model updates, selection, and
+  configuration defaults without a live game.
+- AC-10: The release gate includes format/lint, warnings-as-errors build, tests,
   dependency/license audit, clean-package smoke test, and documented Wine
   evidence.
-- AC-10: The package contains no Daybreak content, credentials, private Wine
-  data, unused inherited services, or unsupported plugins.
-- AC-11: Every retained source directory and dependency maps to a requirement
+- AC-11: The package contains no Daybreak or ShowEQ content, credentials,
+  private Wine data, unused inherited services, or unsupported plugins.
+- AC-12: Every retained source directory and dependency maps to a requirement
   in this specification.
 
-## Unresolved Phase 1 decisions
+## Resolved Phase 1 decisions
 
-- Confirm or amend the proposed MVP information fields.
-- Select the least-privilege Linux process-read mechanism and module-address
-  resolution strategy.
-- Confirm the active renderer, Wine translation path, X11 stacking behavior,
-  and supported window modes.
-- Select the smallest reproducible Linux toolchain and dependency set.
-- Decide whether packages remain private development artifacts or become public
-  releases.
-- Review current game rules and accept or reject operational risk before live
-  integration testing and distribution.
-- Choose the default toggle hotkey and final XDG configuration locations.
+- Retain the proposed narrow MVP information fields, but remove any field that
+  cannot be isolated and validated safely.
+- The technically viable proof uses same-user `process_vm_readv`, exact file
+  mappings, and an external Xlib/Xext/Xfixes window.
+- The game may remain in its existing true-fullscreen mode because the
+  companion window does not stack above or alter it.
+- Use GCC C++20, CMake, Ninja, system X11 libraries, and no vendored runtime
+  dependency.
+- Keep development private and local; do not push, package for distribution,
+  or publish it without a separate explicit decision.
+- Record that the owner knowingly accepts development contrary to the Daybreak
+  EULA. This permits private read-only research but does not authorize writes,
+  injection, automation, protection bypass, or distribution.
+- Use plain F11 for the proof toggle.
+- Reserve `$XDG_CONFIG_HOME/plazmic-legends/config.toml` for configuration and
+  `$XDG_STATE_HOME/plazmic-legends/plazmic-legends.log` for logs, with standard
+  per-user defaults when the variables are unset.
+
+## Post-Phase 1 UI decision
+
+- The external X11 overlay experiment is not the product UI. On the reference
+  DWM, true-fullscreen clients intentionally stack above override windows, and
+  removing fullscreen changed the game's focus presentation and opacity.
+- Phase 2 uses a normal independent Qt 6 Widgets application inspired by
+  ShowEQ's map/spawn layout but independently implemented.
+- The application uses one dock-based main window by default and places every
+  Plazmic top-level window on DWM tag 5 through a class rule.
+- Static geometry comes from the user's installed Legends map files. Dynamic
+  player and spawn values come from validated immutable snapshots.
+- ShowEQ 6.4.25 is conceptual guidance only; no GPL implementation, packet
+  capture, protocol data, map, or generated table is retained.

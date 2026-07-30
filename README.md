@@ -5,12 +5,12 @@ the 64-bit EverQuest Legends `eqgame.exe` running under Wine on Linux. It uses
 an independent Linux window for maps, spawns, and diagnostics rather than
 drawing over the game.
 
-Status: Phase 0 through Phase 2 are complete and squash-merged locally. The
-first Phase 3 checkpoint adds installed-map rendering and an exact-profile,
-read-only live zone/player marker to the independent Qt 6 companion on DWM tag
-5. Map orientation, player position, and heading have been manually verified
-against the in-game map. Player-follow and lifecycle-transition validation
-remain active Phase 3 work.
+Status: Phase 0 through Phase 3 are complete. Phase 3 adds installed-map
+rendering, an exact-profile read-only live zone/player marker, player-follow,
+bounded lifecycle invalidation, and process reacquisition to the independent
+Qt 6 companion on DWM tag 5. Map orientation, player position, heading, zoning,
+camping, game exit, and relaunch have passed live validation. Phase 4 spawn
+research is waiting at its explicit approval checkpoint.
 
 ## Development and EULA notice
 
@@ -48,8 +48,10 @@ distribution are outside the authorized scope.
 - [Phase 3 map baseline](docs/research/phase3-map-baseline.md) records the
   installed-map inventory, parser bounds, and content-free validation evidence.
 - [Phase 3 map/player checkpoint](docs/research/phase3-player-map-checkpoint.md)
-  records the exact-profile reader, renderer, controlled manual validation,
-  and remaining Phase 3 risks.
+  records the exact-profile reader, renderer, and first controlled manual
+  validation.
+- [Phase 3 completion report](docs/phase3-completion-report.md) records
+  lifecycle, performance, packaging, DWM, and live-client evidence.
 - [EULA-risk decision](docs/research/phase1-policy-risk.md) records the
   explicit decision to continue private read-only development despite the
   published restrictions.
@@ -125,7 +127,9 @@ show all elevations, or independently adjust how far below and above the
 player's Z axis the map remains visible. The filter state and ranges persist
 with the window settings. The same menu can enable player-follow; manual
 panning or fitting the full map disables follow mode, and the choice persists
-across launches.
+across launches. Fit uses line geometry so off-map legends and attribution
+labels do not make normal maps unnecessarily small; label-only maps retain a
+bounded label fallback.
 
 The window follows the active system dark or light preference. On the reference
 DWM session it reads `dwm-titus/themes.toml`; on other desktops it falls back

@@ -37,6 +37,7 @@ class MapCanvas final : public QWidget {
     void set_layer_visible(unsigned int layer, bool visible);
     void set_height_filter_enabled(bool enabled);
     void set_height_filter_range(double below, double above);
+    void set_player_follow_enabled(bool enabled);
     void reset_view();
 
     [[nodiscard]] const std::optional<ZoneMap>& zone_map() const {
@@ -53,6 +54,9 @@ class MapCanvas final : public QWidget {
     }
     [[nodiscard]] double height_filter_above() const {
         return height_filter_above_;
+    }
+    [[nodiscard]] bool player_follow_enabled() const {
+        return player_follow_enabled_;
     }
 
   protected:
@@ -84,6 +88,7 @@ class MapCanvas final : public QWidget {
     bool needs_fit_{true};
     bool map_cache_dirty_{true};
     bool height_filter_enabled_{true};
+    bool player_follow_enabled_{false};
     double height_filter_below_{kDefaultHeightFilterBelow};
     double height_filter_above_{kDefaultHeightFilterAbove};
     std::optional<double> height_filter_center_;

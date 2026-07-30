@@ -103,6 +103,7 @@ std::optional<UiState> UiSettings::load() const {
     bool height_filter_enabled = true;
     double height_filter_below = 25.0;
     double height_filter_above = 25.0;
+    bool player_follow_enabled = false;
     for (QByteArray line : lines) {
         line = line.trimmed();
         if (line.isEmpty() || line.startsWith('#')) {
@@ -152,6 +153,13 @@ std::optional<UiState> UiSettings::load() const {
                     return std::nullopt;
                 }
                 height_filter_above = *value;
+            } else if (line.startsWith("player_follow_enabled")) {
+                const auto value =
+                    scalar_value(line, "player_follow_enabled");
+                if (!value || (*value != "true" && *value != "false")) {
+                    return std::nullopt;
+                }
+                player_follow_enabled = *value == "true";
             }
         }
     }
@@ -165,6 +173,7 @@ std::optional<UiState> UiSettings::load() const {
         .height_filter_enabled = height_filter_enabled,
         .height_filter_below = height_filter_below,
         .height_filter_above = height_filter_above,
+        .player_follow_enabled = player_follow_enabled,
     };
 }
 
@@ -201,6 +210,8 @@ bool UiSettings::save(const UiState& state) const {
     contents += "height_filter_above = " +
                 QByteArray::number(state.height_filter_above, 'f', 1) +
                 "\n";
+    contents += QByteArray("player_follow_enabled = ") +
+                (state.player_follow_enabled ? "true\n" : "false\n");
     if (file.write(contents) != contents.size()) {
         file.cancelWriting();
         return false;

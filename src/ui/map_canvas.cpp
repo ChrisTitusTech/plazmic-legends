@@ -81,8 +81,19 @@ void MapCanvas::clear_zone_map(QString detail) {
 }
 
 void MapCanvas::set_player_snapshot(PlayerSnapshot snapshot) {
+    const bool position_changed =
+        snapshot.zone != player_.zone || snapshot.x != player_.x ||
+        snapshot.y != player_.y;
     player_ = std::move(snapshot);
     refresh_height_filter_center(false);
+    if (player_follow_enabled_ && position_changed && map_ &&
+        player_.available() && player_.zone == map_->zone) {
+        if (needs_fit_) {
+            fit_map();
+        }
+        viewport_.center_on(player_map_position(player_));
+        map_cache_dirty_ = true;
+    }
     update();
 }
 
@@ -124,7 +135,24 @@ void MapCanvas::set_height_filter_range(double below, double above) {
     update();
 }
 
+void MapCanvas::set_player_follow_enabled(bool enabled) {
+    if (player_follow_enabled_ == enabled) {
+        return;
+    }
+    player_follow_enabled_ = enabled;
+    if (enabled && map_ && player_.available() &&
+        player_.zone == map_->zone) {
+        if (needs_fit_) {
+            fit_map();
+        }
+        viewport_.center_on(player_map_position(player_));
+        map_cache_dirty_ = true;
+    }
+    update();
+}
+
 void MapCanvas::reset_view() {
+    player_follow_enabled_ = false;
     needs_fit_ = true;
     fit_map();
     update();
@@ -353,6 +381,7 @@ void MapCanvas::mouseMoveEvent(QMouseEvent* event) {
     const QPoint current = event->position().toPoint();
     const QPoint delta = current - drag_origin_;
     drag_origin_ = current;
+    player_follow_enabled_ = false;
     viewport_.pan(
         static_cast<double>(delta.x()),
         static_cast<double>(delta.y()));
@@ -401,6 +430,13 @@ void MapCanvas::contextMenuEvent(QContextMenuEvent* event) {
     QAction* fit_action = menu.addAction("Fit map");
     connect(fit_action, &QAction::triggered, this,
             [this]() { reset_view(); });
+    QAction* follow_action = menu.addAction("Follow player");
+    follow_action->setCheckable(true);
+    follow_action->setChecked(player_follow_enabled_);
+    connect(follow_action, &QAction::toggled, this,
+            [this](bool enabled) {
+                set_player_follow_enabled(enabled);
+            });
     QAction* height_action = menu.addAction("Height filter");
     height_action->setCheckable(true);
     height_action->setChecked(height_filter_enabled_);

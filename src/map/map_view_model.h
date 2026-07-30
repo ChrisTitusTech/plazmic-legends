@@ -43,6 +43,7 @@ class MapViewport {
   public:
     void fit(const MapBounds& bounds, double width, double height);
     void resize(double width, double height);
+    void center_on(MapPoint2D point);
     void pan(double screen_dx, double screen_dy);
     void zoom_at(double factor, double screen_x, double screen_y);
 

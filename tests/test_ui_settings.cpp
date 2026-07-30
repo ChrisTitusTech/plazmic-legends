@@ -32,6 +32,7 @@ int main() {
             .height_filter_enabled = false,
             .height_filter_below = 12.5,
             .height_filter_above = 47.5,
+            .player_follow_enabled = true,
         };
         require(settings.save(expected), "cannot save UI state");
         const auto loaded = settings.load();
@@ -45,8 +46,10 @@ int main() {
                     loaded->height_filter_below ==
                         expected.height_filter_below &&
                     loaded->height_filter_above ==
-                        expected.height_filter_above,
-                "map height filter settings did not round trip");
+                        expected.height_filter_above &&
+                    loaded->player_follow_enabled ==
+                        expected.player_follow_enabled,
+                "map settings did not round trip");
 
         QFile corrupt(path);
         require(corrupt.open(QIODevice::WriteOnly | QIODevice::Truncate),

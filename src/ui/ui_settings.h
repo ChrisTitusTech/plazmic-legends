@@ -13,6 +13,7 @@ struct UiState {
     bool height_filter_enabled{true};
     double height_filter_below{25.0};
     double height_filter_above{25.0};
+    bool player_follow_enabled{false};
 };
 
 class UiSettings {

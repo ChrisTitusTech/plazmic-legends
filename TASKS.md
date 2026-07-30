@@ -8,8 +8,9 @@ work done.
 
 Phase 1 and Phase 2 were verified and squash-merged locally into `main` as
 commit `8769e35`. The first Phase 3 checkpoint contains the bounded map parser,
-Qt map canvas, and exact-profile zone/player reader. The current continuation
-is player-follow and lifecycle invalidation; no spawn work is authorized.
+Qt map canvas, exact-profile zone/player reader, adjustable player-Z filter,
+and persisted player-follow state. The current continuation is lifecycle
+invalidation; no spawn work is authorized.
 
 ## Active Phase 3
 
@@ -33,7 +34,7 @@ is player-follow and lifecycle invalidation; no spawn work is authorized.
   visibility.
 - [x] Add a default-on player-Z height filter with explicit off/on control,
   independently adjustable below/above ranges, and persisted settings.
-- [ ] Add explicit player-follow state.
+- [x] Add persisted player-follow state that exits on manual pan or map fit.
 - [x] Replace the Phase 2 map placeholder with a Qt canvas driven only by
   immutable map and player snapshots.
 - [x] Add synthetic transform and canvas snapshot tests.

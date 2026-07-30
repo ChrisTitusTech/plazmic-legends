@@ -118,6 +118,12 @@ int main() {
         require(close_to(resized_center.x, 600.0) &&
                     close_to(resized_center.y, 350.0),
                 "viewport resize retained stale dimensions");
+        viewport.center_on({42.0, 73.0});
+        const plazmic::MapPoint2D recentered =
+            viewport.map_to_screen({42.0, 73.0});
+        require(close_to(recentered.x, 600.0) &&
+                    close_to(recentered.y, 350.0),
+                "player-follow center did not reach the viewport center");
 
         const plazmic::PlayerSnapshot player{
             .state = plazmic::PlayerSnapshotState::in_world,

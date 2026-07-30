@@ -123,7 +123,9 @@ live values fail closed. A player-relative height filter is enabled by default
 to separate vertical map floors. Right-click the map to toggle the filter,
 show all elevations, or independently adjust how far below and above the
 player's Z axis the map remains visible. The filter state and ranges persist
-with the window settings.
+with the window settings. The same menu can enable player-follow; manual
+panning or fitting the full map disables follow mode, and the choice persists
+across launches.
 
 The window follows the active system dark or light preference. On the reference
 DWM session it reads `dwm-titus/themes.toml`; on other desktops it falls back

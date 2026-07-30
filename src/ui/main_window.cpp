@@ -163,6 +163,8 @@ void MainWindow::restore_ui_state() {
                 state->height_filter_above);
             map_canvas_->set_height_filter_enabled(
                 state->height_filter_enabled);
+            map_canvas_->set_player_follow_enabled(
+                state->player_follow_enabled);
             if (!geometry_restored || !layout_restored) {
                 resize(1200, 780);
             }
@@ -201,6 +203,8 @@ void MainWindow::save_ui_state() {
             map_canvas_->height_filter_below(),
         .height_filter_above =
             map_canvas_->height_filter_above(),
+        .player_follow_enabled =
+            map_canvas_->player_follow_enabled(),
     };
     (void)settings_.save(state);
 }

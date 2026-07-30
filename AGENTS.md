@@ -76,10 +76,11 @@ active task.
 ## Working boundaries
 
 - Phase 0 through Phase 2 are complete. Phase 3 is authorized on
-  `phase3/local-map-player`. The first checkpoint includes the bounded map
-  parser, map canvas, exact-profile zone/player reader, and manually verified
-  marker orientation. The active continuation is player-follow and lifecycle
-  invalidation. Do not begin Phase 4 spawn work without explicit approval.
+  `phase3/player-follow-lifecycle`. The first checkpoint includes the bounded
+  map parser, map canvas, exact-profile zone/player reader, manually verified
+  marker orientation, adjustable player-Z filtering, and player-follow state.
+  The active continuation is lifecycle invalidation. Do not begin Phase 4
+  spawn work without explicit approval.
 - The owner explicitly accepts that this private development project operates
   against the Daybreak EULA. Read-only symbol and gameplay-state research may
   proceed after the normal phase checkpoints. The EULA-risk decision does not

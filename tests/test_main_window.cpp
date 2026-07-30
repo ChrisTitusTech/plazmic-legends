@@ -154,6 +154,11 @@ int main(int argc, char** argv) {
                     window.map_canvas()->height_filter_above() ==
                         plazmic::kMaximumHeightFilterRange,
                 "height filter ranges were not bounded");
+        require(!window.map_canvas()->player_follow_enabled(),
+                "player follow did not default to disabled");
+        window.map_canvas()->set_player_follow_enabled(true);
+        require(window.map_canvas()->player_follow_enabled(),
+                "player follow could not be enabled");
 
         plazmic::ZoneMap oversized_map{
             .zone = "oversized",
@@ -207,6 +212,8 @@ int main(int argc, char** argv) {
                     saved_state->height_filter_above ==
                         plazmic::kMaximumHeightFilterRange,
                 "close did not persist the map height filter state");
+        require(saved_state->player_follow_enabled,
+                "close did not persist player-follow state");
 
         QMainWindow geometry_reference;
         require(geometry_reference.restoreGeometry(expected_geometry_state),
@@ -233,6 +240,8 @@ int main(int argc, char** argv) {
                     restored.map_canvas()->height_filter_above() ==
                         plazmic::kMaximumHeightFilterRange,
                 "saved map height filter state was not restored");
+        require(restored.map_canvas()->player_follow_enabled(),
+                "saved player-follow state was not restored");
         auto* restored_spawn_dock =
             restored.findChild<QDockWidget*>("spawn-dock");
         require(restored_spawn_dock != nullptr,

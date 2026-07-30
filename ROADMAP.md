@@ -223,8 +223,8 @@ Status: In progress. The first checkpoint contains bounded local-map parsing,
 the Qt map canvas with toggleable player-relative height filtering, and
 exact-profile zone/player snapshots. Map orientation, player position, and
 heading passed controlled live comparison against the in-game map.
-Player-follow, lifecycle transitions, a second-zone observation, and the final
-Phase 3 gate remain.
+Persisted player-follow is implemented on the continuation branch. Lifecycle
+transitions, a second-zone observation, and the final Phase 3 gate remain.
 
 ### Outcome
 

@@ -104,6 +104,11 @@ void MapViewport::resize(double width, double height) {
     height_ = std::max(height, 1.0);
 }
 
+void MapViewport::center_on(MapPoint2D point) {
+    center_x_ = point.x;
+    center_y_ = point.y;
+}
+
 void MapViewport::pan(double screen_dx, double screen_dy) {
     center_x_ -= screen_dx / scale_;
     center_y_ -= screen_dy / scale_;

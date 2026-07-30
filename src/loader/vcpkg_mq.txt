@@ -1,0 +1,8 @@
+crashpad
+spdlog
+wil
+date
+curl
+cpr
+pe-parse
+protobuf

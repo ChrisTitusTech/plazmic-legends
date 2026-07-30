@@ -1,0 +1,42 @@
+# Local Codex and environment settings
+.codex/local/
+.env
+.env.*
+!.env.example
+
+# IDE and editor state
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.VC.db
+*.VC.VC.opendb
+
+# CMake and build output
+/build/
+/out/
+/artifacts/
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/compile_commands.json
+/vcpkg_installed/
+CMakeUserPresets.json
+
+# Runtime output and private evidence
+*.log
+*.dmp
+*.trace
+/logs/
+/captures/
+
+# Python tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Operating system files
+.DS_Store
+Thumbs.db

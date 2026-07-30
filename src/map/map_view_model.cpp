@@ -13,8 +13,17 @@ std::optional<MapBounds> calculate_map_bounds(const ZoneMap& map) {
         .minimum_y = std::numeric_limits<double>::max(),
         .maximum_y = std::numeric_limits<double>::lowest(),
     };
+    const bool base_layer_has_lines =
+        std::any_of(map.layers.begin(), map.layers.end(),
+                    [](const MapLayer& layer) {
+                        return layer.index == 0U &&
+                               !layer.lines.empty();
+                    });
     bool found_lines = false;
     for (const MapLayer& layer : map.layers) {
+        if (base_layer_has_lines && layer.index != 0U) {
+            continue;
+        }
         for (const MapLineRecord& line : layer.lines) {
             bounds.minimum_x =
                 std::min({bounds.minimum_x, line.start.x, line.end.x});

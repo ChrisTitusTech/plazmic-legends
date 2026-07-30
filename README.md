@@ -127,9 +127,9 @@ show all elevations, or independently adjust how far below and above the
 player's Z axis the map remains visible. The filter state and ranges persist
 with the window settings. The same menu can enable player-follow; manual
 panning or fitting the full map disables follow mode, and the choice persists
-across launches. Fit uses line geometry so off-map legends and attribution
-labels do not make normal maps unnecessarily small; label-only maps retain a
-bounded label fallback.
+across launches. Fit prefers base-layer line geometry so numbered-layer
+legends and attribution labels do not make normal maps unnecessarily small.
+Maps without base geometry retain bounded all-line and label fallbacks.
 
 The window follows the active system dark or light preference. On the reference
 DWM session it reads `dwm-titus/themes.toml`; on other desktops it falls back

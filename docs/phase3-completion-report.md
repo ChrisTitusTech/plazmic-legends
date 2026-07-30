@@ -38,8 +38,9 @@ that load publishes `Zoning` and discards both the obsolete map and snapshot.
 Client exit clears the cached process. A later exact-profile process is
 fingerprinted and has its live PE identity revalidated before reads resume.
 
-Default fit uses line geometry rather than off-map labels and attribution
-legends. Label-only maps use label positions as a bounded fallback.
+Default fit prefers base-layer line geometry rather than numbered-layer
+legends or off-map labels. Maps without base lines fall back to all line
+geometry, then to label positions.
 
 ## Automated validation
 
@@ -57,7 +58,8 @@ ctest --preset dev
 Coverage includes the complete Phase 2 gate plus:
 
 - bounded map parser records, layers, path containment, and typed failures;
-- map transforms, geometry-only fit, label-only fallback, and off-map labels;
+- map transforms, base-geometry fit, all-line and label-only fallbacks, and
+  off-map legends;
 - player-map coordinate and heading conversion;
 - player-relative height filtering and persisted player-follow;
 - exact-profile synthetic zone and player reads;

@@ -15,6 +15,7 @@ enum class GameStateReadError {
     none,
     process_unavailable,
     not_in_world,
+    zoning,
     invalid_profile,
     invalid_pointer,
     inconsistent_snapshot,

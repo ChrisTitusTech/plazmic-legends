@@ -140,11 +140,10 @@ Live evidence on the reference Fedora X11/Wine session includes:
 - the companion on human DWM tag 5 with no always-on-top state; and
 - the game remaining a mapped 2560 by 1440 fullscreen window on its own tag.
 
-## Remaining Phase 3 work
+## Subsequent Phase 3 completion
 
-- Add and persist explicit player-follow state.
-- Observe a second zone and validate the zone transition.
-- Exercise character select, zoning, camping, read failure, and process exit
-  while proving stale markers are removed.
-- Exercise missing and malformed maps through the live UI.
-- Complete the Phase 3 performance and lifecycle gate before Phase 4.
+The continuation added persisted player-follow, lifecycle-safe invalidation,
+explicit unavailable states, second-zone coverage, process reacquisition,
+performance measurements, and geometry-only default fit. The automated and
+live evidence is recorded in `docs/phase3-completion-report.md`. Phase 3 is
+complete and Phase 4 remains behind its explicit approval checkpoint.

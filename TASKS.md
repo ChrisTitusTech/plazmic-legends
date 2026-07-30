@@ -6,13 +6,14 @@ work done.
 
 ## Current phase
 
-Phase 1 and Phase 2 were verified and squash-merged locally into `main` as
-commit `8769e35`. The first Phase 3 checkpoint contains the bounded map parser,
-Qt map canvas, exact-profile zone/player reader, adjustable player-Z filter,
-and persisted player-follow state. The current continuation is lifecycle
-invalidation; no spawn work is authorized.
+Phase 1 and Phase 2 were verified and merged into `main`. Phase 3 is complete
+on `phase3/lifecycle-completion`: bounded map parsing and rendering,
+exact-profile zone/player reads, adjustable player-Z filtering, player-follow,
+lifecycle invalidation, performance, live zoning, camping, game exit, and
+process reacquisition passed. See `docs/phase3-completion-report.md`. Phase 4
+spawn work is waiting for explicit approval.
 
-## Active Phase 3
+## Completed Phase 3
 
 ### P3-01: Parse local map geometry safely
 
@@ -48,17 +49,17 @@ invalidation; no spawn work is authorized.
   short name, player coordinates, and heading.
 - [x] Enforce module, mapping, pointer-depth, string, finite-number, and
   lifecycle bounds through the existing read-only reader.
-- [ ] Require two controlled observations for each live field and fail closed
+- [x] Require two controlled observations for each live field and fail closed
   when any invariant fails.
 - Acceptance criteria: no guessed or copied offset reaches the compatibility
   profile.
-- Checkpoint evidence: player position and heading matched controlled ground
-  truth at multiple locations; a second zone transition is still required.
+- Completion evidence: player position and heading matched controlled ground
+  truth at multiple locations, and a second-zone transition passed.
 
 ### P3-04: Publish lifecycle-safe player snapshots
 
 - [x] Convert validated reads into immutable zone/player snapshots.
-- [ ] Invalidate state on character select, zoning, camping, read failure, and
+- [x] Invalidate state on character select, zoning, camping, read failure, and
   process exit.
 - [x] Select map paths only from validated zone short names.
 - Acceptance criteria: stale player markers cannot survive a lifecycle
@@ -66,13 +67,14 @@ invalidation; no spawn work is authorized.
 
 ### P3-05: Complete the Phase 3 gate
 
-- [ ] Run the full Phase 2 gate plus parser, transform, renderer, reader,
+- [x] Run the full Phase 2 gate plus parser, transform, renderer, reader,
   snapshot, and lifecycle tests.
-- [ ] Validate map orientation, multiple controlled positions and headings,
+- [x] Validate map orientation, multiple controlled positions and headings,
   layer behavior, missing maps, zoning, camping, and exit against the live
   client.
-- [ ] Measure parsing, snapshot publication, and UI update cost.
-- [ ] Stop for approval before Phase 4 spawn collection research.
+- [x] Measure parsing, snapshot publication, and UI update cost.
+- [x] Stop for approval before Phase 4 spawn collection research.
+- Completion evidence: `docs/phase3-completion-report.md`.
 
 ### P1-01: Capture the Linux/Wine runtime baseline
 

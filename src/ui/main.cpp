@@ -1,5 +1,6 @@
 #include "game/game_state_reader.h"
 #include "launcher/client_status.h"
+#include "launcher/player_lifecycle.h"
 #include "map/map_parser.h"
 #include "ui/main_window.h"
 #include "ui/system_theme.h"
@@ -35,10 +36,14 @@ std::filesystem::path selected_client(const QCommandLineParser& parser) {
     return QDir(directory).filePath("eqgame.exe").toStdString();
 }
 
-struct PlayerRefresh {
-    plazmic::GameStateReadResult state;
-    std::optional<plazmic::MapLoadResult> map_load;
-};
+std::filesystem::path selected_maps(
+    const QCommandLineParser& parser,
+    const std::filesystem::path& client) {
+    if (parser.isSet("maps")) {
+        return parser.value("maps").toStdString();
+    }
+    return client.parent_path() / "maps";
+}
 
 }  // namespace
 
@@ -76,6 +81,11 @@ int main(int argc, char** argv) {
         "0",
     });
     parser.addOption({
+        "maps",
+        "Override the installed map directory for validation.",
+        "path",
+    });
+    parser.addOption({
         "reset-layout",
         "Ignore saved window geometry and dock state for this run.",
     });
@@ -94,6 +104,8 @@ int main(int argc, char** argv) {
     }
 
     const std::filesystem::path client = selected_client(parser);
+    const std::filesystem::path map_root =
+        selected_maps(parser, client);
     auto probe =
         std::make_unique<plazmic::ClientStatusProbe>(client);
     auto game_probe = std::make_shared<plazmic::LiveGameStateProbe>(
@@ -112,52 +124,35 @@ int main(int argc, char** argv) {
                      });
     status_timer.start(std::chrono::seconds(1));
 
-    std::string handled_zone;
-    QFutureWatcher<PlayerRefresh> player_watcher;
+    plazmic::PlayerLifecycle player_lifecycle;
+    QFutureWatcher<plazmic::PlayerRefresh> player_watcher;
     QObject::connect(
-        &player_watcher, &QFutureWatcher<PlayerRefresh>::finished,
+        &player_watcher,
+        &QFutureWatcher<plazmic::PlayerRefresh>::finished,
         &window,
-        [&window, &player_watcher, &handled_zone]() {
-            PlayerRefresh refresh = player_watcher.result();
-            if (!refresh.state) {
-                window.update_player_snapshot({
-                    .state = plazmic::PlayerSnapshotState::unavailable,
-                    .zone = {},
-                    .x = 0.0,
-                    .y = 0.0,
-                    .z = 0.0,
-                    .heading_degrees = 0.0,
-                    .detail = refresh.state.detail,
-                });
-                handled_zone.clear();
+        [&window, &player_watcher, &player_lifecycle]() {
+            plazmic::PlayerLifecycleUpdate update =
+                player_lifecycle.apply(player_watcher.result());
+            if (update.map) {
+                window.set_zone_map(std::move(*update.map));
+            } else if (update.clear_map) {
                 window.clear_zone_map(
-                    QString::fromStdString(refresh.state.detail));
-                return;
+                    QString::fromStdString(update.player.detail));
             }
-
-            if (refresh.map_load) {
-                handled_zone = refresh.state.snapshot->zone;
-                if (!*refresh.map_load) {
-                    window.clear_zone_map(QString::fromStdString(
-                        refresh.map_load->detail));
-                } else {
-                    window.set_zone_map(
-                        std::move(*refresh.map_load->map));
-                }
-            }
-            window.update_player_snapshot(*refresh.state.snapshot);
+            window.update_player_snapshot(update.player);
         });
 
     QTimer player_timer;
     const auto start_player_refresh =
-        [&player_watcher, &game_probe, &handled_zone, &client]() {
+        [&player_watcher, &game_probe, &player_lifecycle, &map_root]() {
         if (player_watcher.isRunning()) {
             return;
         }
-        const std::string current_zone = handled_zone;
+        const std::string current_zone =
+            player_lifecycle.handled_zone();
         player_watcher.setFuture(QtConcurrent::run(
-            [game_probe, client, current_zone]() {
-                PlayerRefresh refresh{
+            [game_probe, map_root, current_zone]() {
+                plazmic::PlayerRefresh refresh{
                     .state = game_probe->refresh(),
                     .map_load = std::nullopt,
                 };
@@ -166,18 +161,21 @@ int main(int argc, char** argv) {
                     const std::string loaded_zone =
                         refresh.state.snapshot->zone;
                     refresh.map_load = plazmic::load_zone_map(
-                        client.parent_path() / "maps",
-                        loaded_zone);
+                        map_root, loaded_zone);
                     if (*refresh.map_load) {
                         plazmic::GameStateReadResult confirmation =
                             game_probe->refresh();
-                        if (!confirmation ||
-                            confirmation.snapshot->zone != loaded_zone) {
+                        if (!confirmation) {
+                            refresh.state = std::move(confirmation);
+                            refresh.map_load.reset();
+                            return refresh;
+                        }
+                        if (confirmation.snapshot->zone != loaded_zone) {
                             refresh.state = {
                                 .snapshot = std::nullopt,
                                 .error =
                                     plazmic::GameStateReadError::
-                                        inconsistent_snapshot,
+                                        zoning,
                                 .detail =
                                     "zone changed while loading its map",
                             };

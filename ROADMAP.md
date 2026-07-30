@@ -219,12 +219,12 @@ gameplay-state work.
 
 ## Phase 3: Local map and player vertical slice
 
-Status: In progress. The first checkpoint contains bounded local-map parsing,
-the Qt map canvas with toggleable player-relative height filtering, and
-exact-profile zone/player snapshots. Map orientation, player position, and
-heading passed controlled live comparison against the in-game map.
-Persisted player-follow is implemented on the continuation branch. Lifecycle
-transitions, a second-zone observation, and the final Phase 3 gate remain.
+Status: Complete on 2026-07-30 on local branch
+`phase3/lifecycle-completion`. See `docs/phase3-completion-report.md`.
+Bounded map parsing, rendering, exact-profile player snapshots, map
+orientation, player-follow, lifecycle invalidation, performance, a second
+zone, camping, game exit, and process reacquisition passed their automated and
+live gates.
 
 ### Outcome
 

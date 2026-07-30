@@ -37,6 +37,27 @@ int main() {
                                     .color = {255, 255, 255},
                                 },
                             },
+                        .labels =
+                            {
+                                {
+                                    .position = {5000.0, 6000.0, 0.0},
+                                    .color = {255, 255, 255},
+                                    .size = 3,
+                                    .text = "Off-map legend",
+                                },
+                            },
+                    },
+                    {
+                        .index = 2,
+                        .source = "synthetic_2.txt",
+                        .lines =
+                            {
+                                {
+                                    .start = {5000.0, 6000.0, 0.0},
+                                    .end = {5100.0, 6100.0, 0.0},
+                                    .color = {255, 0, 0},
+                                },
+                            },
                         .labels = {},
                     },
                 },
@@ -51,6 +72,9 @@ int main() {
                 "minimum Y is incorrect");
         require(close_to(bounds->maximum_y, 150.0),
                 "maximum Y is incorrect");
+        require(bounds->maximum_x < 5000.0 &&
+                    bounds->maximum_y < 6000.0,
+                "numbered-layer legend expanded base geometry bounds");
 
         const plazmic::ZoneMap label_map{
             .zone = "labels",

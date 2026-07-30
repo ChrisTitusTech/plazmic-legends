@@ -31,13 +31,13 @@ Fedora package. Public release or distribution remains unauthorized.
 
 ### P5-02: Harden compatibility and privacy-safe diagnostics
 
-- [ ] Expose the project version and exact compatibility profile in local
+- [x] Expose the project version and exact compatibility profile in local
   status and diagnostics.
-- [ ] Write bounded XDG-state logs containing only approved lifecycle,
+- [x] Write bounded XDG-state logs containing only approved lifecycle,
   compatibility, integration, and error-category values.
-- [ ] Detect client executable changes, invalidate live state, and show an
+- [x] Detect client executable changes, invalidate live state, and show an
   actionable unsupported-build result without weakening profile matching.
-- [ ] Document the immutable profile-refresh workflow for a newly fingerprinted
+- [x] Document the immutable profile-refresh workflow for a newly fingerprinted
   client.
 - Acceptance criteria: a changed or unsupported client never receives old
   offsets, and diagnostics contain no credentials, tokens, runtime names,

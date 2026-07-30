@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/client_file_monitor.h"
 #include "game/client_profile.h"
 #include "integration/process_discovery.h"
 #include "model/player_snapshot.h"
@@ -53,6 +54,7 @@ class LiveGameStateProbe {
   private:
     std::filesystem::path client_;
     const ClientProfile* profile_{};
+    std::optional<ClientFileMonitor> file_monitor_;
     std::optional<ClientProcess> process_;
     std::chrono::steady_clock::time_point next_discovery_check_{};
     std::string last_discovery_detail_{"client discovery has not run"};

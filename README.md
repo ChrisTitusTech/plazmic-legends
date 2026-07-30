@@ -101,6 +101,19 @@ The application stores geometry and dock layout in
 configuration path when `XDG_CONFIG_HOME` is unset. Use `--reset-layout` to
 ignore saved placement for one run.
 
+## Privacy-safe diagnostics
+
+The companion writes bounded lifecycle and compatibility categories to
+`$XDG_STATE_HOME/plazmic-legends/plazmic-legends.log`, or
+`$HOME/.local/state/plazmic-legends/plazmic-legends.log` when
+`XDG_STATE_HOME` is unset. The active log is limited to 1 MiB with one rotated
+file and owner-only permissions. It never records client paths, process IDs,
+runtime names, tokens, memory content, or process addresses.
+
+If the client executable changes, Plazmic drops live state and requires a new
+immutable compatibility profile. See
+[Compatibility profile refresh](docs/profile-refresh.md).
+
 The reference DWM configuration assigns class `PlazmicLegends` to human tag 5
 on monitor 1. Other window managers may place the normal application window
 according to their own rules.

@@ -301,13 +301,23 @@ GameStateReadResult read_game_state(
 LiveGameStateProbe::LiveGameStateProbe(
     std::filesystem::path client,
     const ClientProfile* profile)
-    : client_(std::move(client)), profile_(profile) {}
+    : client_(std::move(client)), profile_(profile) {
+    if (profile_ != nullptr) {
+        file_monitor_.emplace(client_, std::string(profile_->sha256));
+    }
+}
 
 GameStateReadResult LiveGameStateProbe::refresh() {
     if (profile_ == nullptr) {
         return failure(
             GameStateReadError::invalid_profile,
             "client has no exact compatibility profile");
+    }
+    const ClientFileCheck file = file_monitor_->check();
+    if (!file) {
+        process_.reset();
+        return failure(
+            GameStateReadError::invalid_profile, file.detail);
     }
 
     const auto now = std::chrono::steady_clock::now();

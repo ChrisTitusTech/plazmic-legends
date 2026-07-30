@@ -8,6 +8,8 @@
 #include <QFile>
 #include <QTemporaryDir>
 
+#include <sys/stat.h>
+
 namespace {
 
 void require(bool condition, const std::string& message) {
@@ -40,6 +42,10 @@ int main() {
             .spawn_column_widths = {260, 80, 100, 120},
         };
         require(settings.save(expected), "cannot save UI state");
+        struct stat saved_permissions {};
+        require(::stat(path.toStdString().c_str(), &saved_permissions) == 0 &&
+                    (saved_permissions.st_mode & 0777) == 0600,
+                "saved UI state permissions are not owner-only");
         const auto loaded = settings.load();
         require(loaded.has_value(), "saved UI state did not load");
         require(loaded->geometry == expected.geometry,

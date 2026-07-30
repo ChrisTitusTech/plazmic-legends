@@ -20,6 +20,7 @@ find_program(MARKDOWNLINT_EXECUTABLE NAMES markdownlint-cli2 REQUIRED)
 
 add_library(
     plazmic_core
+    src/common/client_file_monitor.cpp
     src/common/sha256.cpp
     src/game/client_profile.cpp
     src/game/game_state_reader.cpp
@@ -28,6 +29,7 @@ add_library(
     src/integration/process_reader.cpp
     src/launcher/client_status.cpp
     src/launcher/player_lifecycle.cpp
+    src/launcher/privacy_log.cpp
     src/map/map_parser.cpp
     src/map/map_view_model.cpp
     src/model/status_snapshot.cpp
@@ -67,6 +69,11 @@ add_executable(
     src/ui/x11_window_class.cpp
 )
 target_compile_features(plazmic-legends PRIVATE cxx_std_20)
+target_compile_definitions(
+    plazmic-legends
+    PRIVATE
+        PLAZMIC_VERSION="${PROJECT_VERSION}"
+)
 target_compile_options(
     plazmic-legends
     PRIVATE
@@ -194,6 +201,22 @@ if(BUILD_TESTING)
     target_link_libraries(client_status_test PRIVATE plazmic_core)
     add_dependencies(check client_status_test)
     add_test(NAME client_status.unit COMMAND client_status_test)
+
+    add_executable(privacy_log_test tests/test_privacy_log.cpp)
+    target_compile_features(privacy_log_test PRIVATE cxx_std_20)
+    target_compile_options(
+        privacy_log_test
+        PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+    )
+    target_link_libraries(privacy_log_test PRIVATE plazmic_core)
+    add_dependencies(check privacy_log_test)
+    add_test(NAME privacy_log.unit COMMAND privacy_log_test)
 
     add_executable(map_parser_test tests/test_map_parser.cpp)
     target_compile_features(map_parser_test PRIVATE cxx_std_20)

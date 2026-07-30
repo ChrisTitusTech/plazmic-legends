@@ -45,6 +45,7 @@ ClientStatusProbe::ClientStatusProbe(std::filesystem::path client)
         };
         return;
     }
+    file_monitor_.emplace(client_, digest_);
 
     identity_status_ = {
         .compatibility = CompatibilityState::supported,
@@ -55,9 +56,22 @@ ClientStatusProbe::ClientStatusProbe(std::filesystem::path client)
     };
 }
 
-StatusSnapshot ClientStatusProbe::refresh() const {
+StatusSnapshot ClientStatusProbe::refresh() {
     if (profile_ == nullptr) {
         return identity_status_;
+    }
+    const ClientFileCheck file = file_monitor_->check();
+    if (!file) {
+        return {
+            .compatibility =
+                file.state == ClientFileState::changed
+                    ? CompatibilityState::unsupported
+                    : CompatibilityState::client_error,
+            .process = ProcessState::unavailable,
+            .profile = "none",
+            .detail = file.detail,
+            .pid = std::nullopt,
+        };
     }
 
     const auto discovery = discover_client_process(client_);

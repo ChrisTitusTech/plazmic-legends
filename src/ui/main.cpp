@@ -1,6 +1,7 @@
 #include "game/game_state_reader.h"
 #include "launcher/client_status.h"
 #include "launcher/player_lifecycle.h"
+#include "launcher/privacy_log.h"
 #include "map/map_parser.h"
 #include "ui/main_window.h"
 #include "ui/system_theme.h"
@@ -50,6 +51,7 @@ std::filesystem::path selected_maps(
 int main(int argc, char** argv) {
     QApplication::setApplicationName("plazmic-legends");
     QApplication::setApplicationDisplayName("Plazmic Legends");
+    QApplication::setApplicationVersion(PLAZMIC_VERSION);
     QApplication::setDesktopFileName("plazmic-legends");
     QApplication application(argc, argv);
     application.setQuitOnLastWindowClosed(true);
@@ -110,17 +112,35 @@ int main(int argc, char** argv) {
         std::make_unique<plazmic::ClientStatusProbe>(client);
     auto game_probe = std::make_shared<plazmic::LiveGameStateProbe>(
         client, probe->profile());
+    const QProcessEnvironment environment =
+        QProcessEnvironment::systemEnvironment();
+    plazmic::PrivacyLog privacy_log(
+        plazmic::PrivacyLog::default_path(
+            environment.value("XDG_STATE_HOME").toStdString(),
+            environment.value("HOME").toStdString()));
+    plazmic::StatusSnapshot initial_status = probe->refresh();
+    privacy_log.record_startup(
+        QApplication::applicationVersion().toStdString(),
+        initial_status.profile);
+    privacy_log.record_status(initial_status);
+    if (!privacy_log.healthy()) {
+        initial_status.detail +=
+            "; local privacy log is unavailable";
+    }
     const QString settings_path = parser.isSet("settings-file")
                                       ? parser.value("settings-file")
                                       : plazmic::UiSettings::default_path();
     plazmic::MainWindow window(
-        probe->refresh(), settings_path, parser.isSet("reset-layout"));
+        initial_status, settings_path, parser.isSet("reset-layout"));
     window.show();
 
     QTimer status_timer;
     QObject::connect(&status_timer, &QTimer::timeout, &window,
-                     [&window, &probe]() {
-                         window.update_snapshot(probe->refresh());
+                     [&window, &probe, &privacy_log]() {
+                         const plazmic::StatusSnapshot status =
+                             probe->refresh();
+                         privacy_log.record_status(status);
+                         window.update_snapshot(status);
                      });
     status_timer.start(std::chrono::seconds(1));
 
@@ -130,9 +150,17 @@ int main(int argc, char** argv) {
         &player_watcher,
         &QFutureWatcher<plazmic::PlayerRefresh>::finished,
         &window,
-        [&window, &player_watcher, &player_lifecycle]() {
+        [&window, &player_watcher, &player_lifecycle, &privacy_log]() {
+            plazmic::PlayerRefresh refresh =
+                player_watcher.result();
+            privacy_log.record_game_state(refresh.state.error);
+            if (refresh.map_load) {
+                privacy_log.record_map_state(
+                    refresh.map_load->error);
+            }
             plazmic::PlayerLifecycleUpdate update =
-                player_lifecycle.apply(player_watcher.result());
+                player_lifecycle.apply(std::move(refresh));
+            privacy_log.record_player_state(update.player.state);
             if (update.map) {
                 window.set_zone_map(std::move(*update.map));
             } else if (update.clear_map) {
@@ -204,5 +232,6 @@ int main(int argc, char** argv) {
     if (player_watcher.isRunning()) {
         player_watcher.waitForFinished();
     }
+    privacy_log.record_shutdown();
     return result;
 }

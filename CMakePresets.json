@@ -1,68 +1,41 @@
 {
-    "version": 9,
+    "version": 6,
     "cmakeMinimumRequired": {
         "major": 3,
-        "minor": 30,
+        "minor": 28,
         "patch": 0
     },
     "configurePresets": [
         {
-            "name": "base",
-            "hidden": true,
-            "generator": "Visual Studio 17 2022",
-            "toolset": "v143",
-            "binaryDir": "${sourceDir}/build",
+            "name": "dev",
+            "displayName": "Linux development",
+            "description": "Configure the native Linux research scaffold",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/dev",
             "cacheVariables": {
-                "MQ_CUSTOM_PLUGINS_FILE": "custom_plugins.cmake"
-            },
-            "environment": {
-                "VCPKG_ROOT": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\vcpkg"
+                "BUILD_TESTING": "ON"
             }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "dev",
+            "configurePreset": "dev"
         },
         {
-            "name": "live",
-            "displayName": "Live (x64)",
-            "description": "Configuration for live servers (x64 architecture)",
-            "inherits": "base",
-            "architecture": {
-                "value": "x64",
-                "strategy": "set"
-            },
-            "cacheVariables": {
-                "VCPKG_TARGET_TRIPLET": "x64-windows-static"
-            }
-        },
+            "name": "check",
+            "configurePreset": "dev",
+            "targets": [
+                "check"
+            ]
+        }
+    ],
+    "testPresets": [
         {
-            "name": "emu",
-            "displayName": "Emu (Win32)",
-            "description": "Configuration for emu servers (Win32 architecture)",
-            "inherits": "base",
-            "architecture": {
-                "value": "Win32",
-                "strategy": "set"
-            },
-            "cacheVariables": {
-                "VCPKG_TARGET_TRIPLET": "x86-windows-static"
-            }
-        },
-        {
-            "name": "live-sln",
-            "displayName": "Rebuild Live/Test Solution",
-            "description": "Rebuild the live/test solution for use in Visual Studio",
-            "binaryDir": "${sourceDir}/build/solution",
-            "inherits": "live",
-            "cacheVariables": {
-                "MQ_REGENERATE_SOLUTION": "ON"
-            }
-        },
-        {
-            "name": "emu-sln",
-            "displayName": "Rebuild Emu Solution",
-            "description": "Rebuild the emu solution for use in Visual Studio",
-            "binaryDir": "${sourceDir}/build/solution",
-            "inherits": "emu",
-            "cacheVariables": {
-                "MQ_REGENERATE_SOLUTION": "ON"
+            "name": "dev",
+            "configurePreset": "dev",
+            "output": {
+                "outputOnFailure": true
             }
         }
     ]

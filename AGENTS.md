@@ -22,16 +22,17 @@ implementing the conflicting behavior.
 
 ## Current repository state
 
-- The working tree is an uncommitted MacroQuest-derived import.
-- The inherited project assumes Visual Studio, MSVC, vcpkg, and Windows build
-  scripts. Those are not the target toolchain.
-- `src/eqlib` is empty even though the inherited CMake project requires it, so
-  the import is not a reproducible build baseline.
+- The inherited MacroQuest implementation and bundled dependencies were
+  removed in Phase 0.
+- The full import is recoverable from tag `phase0-import-baseline`.
+- The active tree contains planning documents, Linux-native research tooling,
+  and no product runtime yet.
+- No inherited implementation or third-party source is retained.
 - The local reference client is a Windows x86-64 PE executable running through
   Wine 11.0 Staging in an X11 session.
 
-Treat inherited code as migration input, not as the target architecture. Phase
-0 removes irrelevant files before new runtime code is built.
+Do not restore imported code without a documented requirement, provenance
+review, license review, and comparison against a native replacement.
 
 ## Target platform and architecture
 
@@ -69,7 +70,7 @@ active task.
   files.
 - Phase 0 is cleanup. Do not mix new product implementation into cleanup
   commits.
-- Remove files only from an reviewed keep/remove/replace inventory. Validate
+- Remove files only from a reviewed keep/remove/replace inventory. Validate
   every deletion batch for dangling build, include, documentation, and license
   references.
 - Preserve copyright and license notices for retained third-party or
@@ -113,22 +114,19 @@ does not authorize updating old offsets in place.
 
 ## Current commands
 
-Validate the planning scaffold:
+Configure and validate the Linux research scaffold:
 
 ```bash
-markdownlint-cli2 'AGENTS.md' 'SPEC.md' 'ROADMAP.md' 'TASKS.md' \
-  'README.md' 'docs/**/*.md'
-ruff check tools/inspect_eqgame.py
-ruff format --check tools/inspect_eqgame.py
-python3 -m py_compile tools/inspect_eqgame.py
+cmake --preset dev
+cmake --build --preset check
+ctest --preset dev
 python3 tools/inspect_eqgame.py "$EQ_LEGENDS_DIR" \
   --expect-sha256 97ee793d491930ac97f91e5e26fac16d84d17ff24afcd24d5390d256e7045661
 git diff --check
 ```
 
-The inherited configure and build commands are not project gates. Phase 1 must
-replace this section with exact Linux configure, format, build, unit-test, and
-package commands before product code can be considered complete.
+Phase 1 must extend these commands with exact native configure, format, build,
+test, and package gates for its proof of life.
 
 ## Validation and evidence
 

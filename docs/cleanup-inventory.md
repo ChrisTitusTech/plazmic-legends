@@ -1,74 +1,78 @@
-# Phase 0 cleanup inventory
+# Phase 0 cleanup record
 
-This is the planning-level inventory for the imported tree. Phase 0 must expand
-it to exact paths after creating the recoverable baseline commit. A category is
-not permission to delete files before that commit.
+Phase 0 reduced the active tree from the complete imported baseline at
+`phase0-import-baseline` to a Linux-native research scaffold. Git retains every
+removed file; the active branch does not carry unused implementation forward.
 
-## Remove
+## Removed paths
 
-These capabilities are outside the Linux/Wine MVP:
+The following tracked paths were deleted in full:
 
-| Area | Initial paths | Reason |
-| --- | --- | --- |
-| Visual Studio metadata | `src/**/*.sln`, `src/**/*.vcxproj*`, `src/**/*.props`, `tools/**/*.vcxproj*` | Windows-hosted builds are a non-goal. |
-| Windows build conversion | `batch-convert.ps1`, `gen_solution.ps1`, `cmake/`, `tools/build_scripts/`, `tools/conversions/` | The target build is Linux-native and will not generate Visual Studio projects. |
-| Bundled Windows Python | `tools/python/` | Do not ship an obsolete embedded Windows interpreter. |
-| Plugin authoring | `plugins/`, `tools/mkplugin/`, `extras/mkplugin_old/`, `src/plugins/` | Plugins and plugin API compatibility are non-goals. |
-| Macros and game data | `data/macros/`, inherited item, spell, zone, and command databases | The MVP does not provide a macro or general data platform. |
-| Login automation | `src/login/`, loader auto-login code and data | Automated login is prohibited. |
-| Remote messaging | `src/routing/`, PostOffice, named-pipe tests and clients | Remote control and messaging are non-goals. |
-| Windows process integration | injector, Detours, remote-thread, DLL loader, and module-hook code | The project reads the Wine process externally from native Linux. |
-| Windows rendering | DirectX 9/11 hooks and Win32 ImGui backends | The product uses a separate native X11 overlay. |
-| Editor and developer platform | `contrib/zep/`, developer tools, window inspectors, macro console | The project has one fixed information panel. |
-| Crash upload and news | Crashpad upload, changelog/news fetching, update services | The product is offline and keeps diagnostics local. |
-| Emulator and legacy variants | emu sources, Win32 presets, and traditional-client build variants | Traditional, test, beta, and emulator clients are unsupported. |
-| Conversion and comment tools | `tools/comment-update/`, obsolete resource/conversion helpers | They do not build, test, inspect, or package the Linux product. |
-| Optional legacy extras | `extras/` | Inherited optional plugins and samples are outside scope. |
+- `LICENSE.md`;
+- `batch-convert.ps1`;
+- `cmake/`;
+- `contrib/`;
+- `data/`;
+- `extras/`;
+- `gen_solution.ps1`;
+- `include/`;
+- `plugins/`;
+- `src/`;
+- `tools/build_scripts/`;
+- `tools/comment-update/`;
+- `tools/conversions/`;
+- `tools/mkplugin/`;
+- `tools/python/`.
 
-## Replace
+This removes the inherited Visual Studio and MSVC build, vcpkg overlays,
+PowerShell conversion tools, bundled Windows Python, Windows process injection,
+Detours, DirectX backends, MacroQuest runtime, plugins, macro engine, login
+automation, messaging, editor, crash upload, emulator variants, game databases,
+and bundled third-party source.
 
-| Imported area | Replacement |
+`LICENSE.md` governed the removed GPLv2 import. No inherited implementation
+remains in the active tree. Its license and all dependency notices remain
+recoverable from the baseline tag. The new project's license is unresolved.
+
+## Replaced paths
+
+- `CMakeLists.txt` is now a dependency-free Linux research-tool project.
+- `CMakePresets.json` now configures Ninja on Linux.
+- `README.md` describes Plazmic Legends rather than MacroQuest.
+- The former implementation is represented by explicit future source
+  boundaries in `AGENTS.md`; Phase 0 does not create placeholder product code.
+
+## Retained paths and purpose
+
+| Path | Phase 1 purpose |
 | --- | --- |
-| Root `CMakeLists.txt` and `CMakePresets.json` | Small Linux CMake/Ninja project after the Phase 0 inventory. |
-| MacroQuest README and badges | Plazmic Legends scope, status, and Linux commands. |
-| MacroQuest loader UI | Minimal Linux launcher/status surface. |
-| Broad MQ2Main runtime | Native Linux lifecycle, process reader, game reader, and snapshot boundaries. |
-| Scattered offsets/build types | Immutable Legends compatibility profiles. |
-| MacroQuest settings and logging | XDG configuration and local privacy-safe logs. |
-| Windows package scripts | Reproducible Linux packaging commands. |
+| `.gitignore` | Exclude Linux build, cache, diagnostic, and private output. |
+| `.markdownlint-cli2.jsonc` | Enforce project documentation formatting. |
+| `AGENTS.md` | Define execution and safety boundaries. |
+| `CMakeLists.txt` | Provide the Linux configure and validation entrypoint. |
+| `CMakePresets.json` | Make the Linux/Ninja gate reproducible. |
+| `README.md` | Explain project state, scope, and commands. |
+| `SPEC.md` | Define observable product requirements and non-goals. |
+| `ROADMAP.md` | Define phase ordering, exit criteria, and pause points. |
+| `TASKS.md` | Track authorized work and validation status. |
+| `docs/cleanup-inventory.md` | Record the exact cleanup scope. |
+| `docs/research/import-provenance.md` | Record source recovery and license audit. |
+| `docs/research/legends-baseline.md` | Record the Linux/Wine/client baseline. |
+| `tools/inspect_eqgame.py` | Fingerprint the target PE without launching it. |
+| `tests/test_inspect_eqgame.py` | Validate PE inspection without game content. |
 
-## Retain temporarily for Phase 1 research
+No imported source, binary dependency, game asset, offset, or account data is
+retained.
 
-These are candidates, not permanent dependencies:
+## Recovery
 
-| Research area | Candidate source | Question it may answer |
-| --- | --- | --- |
-| PE identity | selected portable PE parsing concepts | Which file identity checks should the Linux launcher reproduce? |
-| Overlay UI | backend-independent ImGui concepts, if smaller than replacement | Can any UI code be retained without Win32 or DirectX dependencies? |
-| Lifecycle | backend-independent state-machine concepts | Which transition hazards should the external reader model? |
-| Game structures | retained public declarations with known provenance | Which minimal Legends fields need new profiles or typed readers? |
-| Shared utilities | narrow string, config, and logging helpers | Is reuse smaller than a Linux-native replacement? |
-| Licenses | `LICENSE.md` and dependency notices | What obligations apply to each retained source fragment? |
+Inspect or restore removed material without changing the active branch:
 
-Temporary research code must be removed in Phase 4 unless it maps to a product
-requirement.
+```bash
+git show phase0-import-baseline:path/to/file
+git worktree add /tmp/plazmic-import phase0-import-baseline
+```
 
-## Retain as project infrastructure
-
-- `AGENTS.md`, `SPEC.md`, `ROADMAP.md`, and `TASKS.md`.
-- `docs/cleanup-inventory.md` and `docs/research/legends-baseline.md`.
-- `tools/inspect_eqgame.py`.
-- `LICENSE.md` until the retained-source license audit determines the final
-  notice set.
-- `.gitignore` and the project README.
-
-## Required deletion evidence
-
-For each cleanup batch, record:
-
-- exact paths removed and retained;
-- baseline and resulting file counts and disk usage;
-- searches for includes, build references, docs, commands, and generated files;
-- retained copyright and dependency notices;
-- validation run and anything skipped;
-- rollback commit.
+Restoring source to the active tree requires a requirement mapping, provenance
+and license audit, and evidence that reuse is smaller than a native
+replacement.

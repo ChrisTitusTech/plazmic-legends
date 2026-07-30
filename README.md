@@ -3,9 +3,9 @@
 Plazmic Legends is planned as a minimal, read-only information overlay for the
 64-bit EverQuest Legends `eqgame.exe` running under Wine on Linux.
 
-Status: planning is complete and Phase 0 cleanup has not started. The imported
-MacroQuest-derived source is not currently a buildable Plazmic Legends product,
-and no live process integration has been approved or implemented.
+Status: Phase 0 cleanup is complete. The active tree is a minimal Linux
+research scaffold; no live process integration or product runtime has been
+approved or implemented.
 
 ## Project documents
 
@@ -17,6 +17,16 @@ and no live process integration has been approved or implemented.
 - [Cleanup inventory](docs/cleanup-inventory.md) classifies the imported tree.
 - [Legends baseline](docs/research/legends-baseline.md) records the reference
   Linux, Wine, and executable evidence.
+- [Import provenance](docs/research/import-provenance.md) records the recovery
+  tag and retained-code audit.
+
+## Validate the scaffold
+
+```bash
+cmake --preset dev
+cmake --build --preset check
+ctest --preset dev
+```
 
 ## Inspect a local Legends client
 
@@ -51,7 +61,8 @@ and process integration remain Phase 1 approval decisions.
 
 ## Provenance and license
 
-The initial import is derived from MacroQuest and includes GPLv2 code and
-third-party components. Retained code must preserve its notices and remain
-compatible with [LICENSE.md](LICENSE.md). EverQuest and its assets are the
-property of their respective owners and are not part of this repository.
+The removed import was derived from MacroQuest and is preserved at
+`phase0-import-baseline`. No MacroQuest implementation or bundled dependency is
+retained in the active tree. Future code licensing is unresolved and must be
+decided before distribution. EverQuest and its assets are the property of
+their respective owners and are not part of this repository.

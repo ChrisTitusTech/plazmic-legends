@@ -49,7 +49,7 @@ project setting.
 - Static evidence does not prove the active API, Wine translation path, hook
   point, loaded modules, or safe process integration.
 
-## Imported repository observations
+## Historical imported repository observations
 
 - Initial inventory: 487 files under `src`, 61 under `include`, and 736 under
   `contrib`.
@@ -59,7 +59,8 @@ project setting.
 - `src/eqlib` is empty even though root CMake adds it as required.
 - There is no `.gitmodules`, and the branch has no commits. Missing source
   cannot be recovered from local repository history.
-- The imported build is migration input, not a validated baseline.
+- The imported build was migration input, not a validated baseline. It is now
+  preserved at `phase0-import-baseline` and absent from the active tree.
 
 ## Repeat the inspection
 

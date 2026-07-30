@@ -5,13 +5,8 @@
 !.env.example
 
 # IDE and editor state
-.vs/
 .vscode/
 .idea/
-*.suo
-*.user
-*.VC.db
-*.VC.VC.opendb
 
 # CMake and build output
 /build/
@@ -21,7 +16,6 @@
 /CMakeCache.txt
 /cmake_install.cmake
 /compile_commands.json
-/vcpkg_installed/
 CMakeUserPresets.json
 
 # Runtime output and private evidence
@@ -39,4 +33,3 @@ __pycache__/
 
 # Operating system files
 .DS_Store
-Thumbs.db

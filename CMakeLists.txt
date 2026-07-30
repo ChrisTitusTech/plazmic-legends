@@ -23,6 +23,7 @@ add_library(
     src/common/sha256.cpp
     src/game/client_profile.cpp
     src/game/game_state_reader.cpp
+    src/game/spawn_reader.cpp
     src/integration/process_discovery.cpp
     src/integration/process_reader.cpp
     src/launcher/client_status.cpp
@@ -124,6 +125,7 @@ add_executable(
     src/ui/main.cpp
     src/ui/map_canvas.cpp
     src/ui/main_window.cpp
+    src/ui/spawn_table_model.cpp
     src/ui/system_theme.cpp
     src/ui/ui_settings.cpp
     src/ui/x11_window_class.cpp
@@ -394,6 +396,7 @@ if(BUILD_TESTING)
             tests/test_main_window.cpp
             src/ui/map_canvas.cpp
             src/ui/main_window.cpp
+            src/ui/spawn_table_model.cpp
             src/ui/ui_settings.cpp
             src/ui/x11_window_class.cpp
         )
@@ -479,6 +482,53 @@ if(BUILD_TESTING)
         )
         set_tests_properties(
             phase3_performance.x11
+            PROPERTIES
+                TIMEOUT 30
+        )
+
+        add_executable(
+            phase4_performance_test
+            tests/test_phase4_performance.cpp
+            src/ui/map_canvas.cpp
+            src/ui/spawn_table_model.cpp
+        )
+        target_compile_features(
+            phase4_performance_test
+            PRIVATE cxx_std_20
+        )
+        target_compile_options(
+            phase4_performance_test
+            PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wconversion
+                -Wsign-conversion
+                -Werror
+        )
+        target_include_directories(
+            phase4_performance_test
+            PRIVATE
+                "${CMAKE_CURRENT_SOURCE_DIR}/src"
+        )
+        target_link_libraries(
+            phase4_performance_test
+            PRIVATE
+                plazmic_core
+                Qt6::Core
+                Qt6::Gui
+                Qt6::Widgets
+        )
+        add_dependencies(check phase4_performance_test)
+        add_test(
+            NAME phase4_performance.x11
+            COMMAND
+                "${XVFB_RUN_EXECUTABLE}"
+                -a
+                "$<TARGET_FILE:phase4_performance_test>"
+        )
+        set_tests_properties(
+            phase4_performance.x11
             PROPERTIES
                 TIMEOUT 30
         )

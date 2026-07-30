@@ -27,6 +27,21 @@ constexpr ClientProfile kLegendsReferenceProfile{
             .zone_id_mask = 0x7fffU,
             .maximum_zone_id = 1000U,
         },
+    .spawns =
+        {
+            .next_offset = 0x08U,
+            .previous_offset = 0x10U,
+            .name_offset = 0x0b8U,
+            .name_bytes = 64U,
+            .type_offset = 0x139U,
+            .id_offset = 0x178U,
+            .level_offset = 0x6b4U,
+            .y_offset = 0x78U,
+            .x_offset = 0x74U,
+            .z_offset = 0x7cU,
+            .record_bytes = 0x6b5U,
+            .maximum_count = 2048U,
+        },
 };
 
 }  // namespace

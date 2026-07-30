@@ -33,6 +33,11 @@ int main() {
             .height_filter_below = 12.5,
             .height_filter_above = 47.5,
             .player_follow_enabled = true,
+            .spawn_filter = "guard",
+            .spawn_type_filter = 1,
+            .spawn_sort_column = 0,
+            .spawn_sort_descending = true,
+            .spawn_column_widths = {260, 80, 100, 120},
         };
         require(settings.save(expected), "cannot save UI state");
         const auto loaded = settings.load();
@@ -48,7 +53,16 @@ int main() {
                     loaded->height_filter_above ==
                         expected.height_filter_above &&
                     loaded->player_follow_enabled ==
-                        expected.player_follow_enabled,
+                        expected.player_follow_enabled &&
+                    loaded->spawn_filter == expected.spawn_filter &&
+                    loaded->spawn_type_filter ==
+                        expected.spawn_type_filter &&
+                    loaded->spawn_sort_column ==
+                        expected.spawn_sort_column &&
+                    loaded->spawn_sort_descending ==
+                        expected.spawn_sort_descending &&
+                    loaded->spawn_column_widths ==
+                        expected.spawn_column_widths,
                 "map settings did not round trip");
 
         QFile corrupt(path);

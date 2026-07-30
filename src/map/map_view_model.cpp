@@ -74,6 +74,13 @@ MapPoint2D player_map_position(const PlayerSnapshot& player) {
     };
 }
 
+MapPoint2D spawn_map_position(const SpawnSnapshot& spawn) {
+    return {
+        .x = -spawn.y,
+        .y = -spawn.x,
+    };
+}
+
 double player_map_heading_degrees(const PlayerSnapshot& player) {
     double heading = 360.0 - player.heading_degrees;
     if (heading >= 360.0) {

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <numbers>
+#include <ranges>
 
 #include <QContextMenuEvent>
 #include <QDialog>
@@ -97,6 +98,38 @@ void MapCanvas::set_player_snapshot(PlayerSnapshot snapshot) {
     update();
 }
 
+void MapCanvas::set_spawn_snapshot(SpawnCollectionSnapshot snapshot) {
+    if (spawns_ == snapshot) {
+        return;
+    }
+    spawns_ = std::move(snapshot);
+    if (!spawns_.available()) {
+        selected_spawn_.reset();
+    } else if (selected_spawn_ &&
+               std::ranges::none_of(
+                   spawns_.spawns,
+                   [this](const SpawnSnapshot& spawn) {
+                       return spawn.id == *selected_spawn_;
+                   })) {
+        selected_spawn_.reset();
+    }
+    update();
+}
+
+void MapCanvas::set_selected_spawn(
+    std::optional<std::uint32_t> id) {
+    if (selected_spawn_ == id) {
+        return;
+    }
+    selected_spawn_ = id;
+    update();
+}
+
+void MapCanvas::set_spawn_selected_callback(
+    std::function<void(std::uint32_t)> callback) {
+    spawn_selected_callback_ = std::move(callback);
+}
+
 void MapCanvas::set_layer_visible(unsigned int layer, bool visible) {
     const std::size_t index = static_cast<std::size_t>(layer);
     if (index >= visible_layers_.size()) {
@@ -161,6 +194,37 @@ void MapCanvas::reset_view() {
 bool MapCanvas::layer_visible(unsigned int layer) const {
     const std::size_t index = static_cast<std::size_t>(layer);
     return index < visible_layers_.size() && visible_layers_[index];
+}
+
+bool MapCanvas::spawn_visible(const SpawnSnapshot& spawn) const {
+    if (!map_ || !spawns_.available() ||
+        spawns_.zone != map_->zone) {
+        return false;
+    }
+    return !height_filter_center_ ||
+           map_height_range_visible(
+               spawn.z, spawn.z, *height_filter_center_,
+               height_filter_below_, height_filter_above_);
+}
+
+std::optional<std::uint32_t> MapCanvas::spawn_at_screen_point(
+    const QPointF& point) const {
+    std::optional<std::uint32_t> closest;
+    double closest_distance = 11.0;
+    for (const SpawnSnapshot& spawn : spawns_.spawns) {
+        if (!spawn_visible(spawn)) {
+            continue;
+        }
+        const MapPoint2D screen =
+            viewport_.map_to_screen(spawn_map_position(spawn));
+        const double distance =
+            std::hypot(point.x() - screen.x, point.y() - screen.y);
+        if (distance <= closest_distance) {
+            closest_distance = distance;
+            closest = spawn.id;
+        }
+    }
+    return closest;
 }
 
 void MapCanvas::refresh_height_filter_center(bool force) {
@@ -299,6 +363,38 @@ void MapCanvas::paintEvent(QPaintEvent* event) {
     }
     painter.drawPixmap(0, 0, map_cache_);
 
+    if (spawns_.available() && spawns_.zone == map_->zone) {
+        for (const SpawnSnapshot& spawn : spawns_.spawns) {
+            if (!spawn_visible(spawn)) {
+                continue;
+            }
+            const MapPoint2D screen =
+                viewport_.map_to_screen(spawn_map_position(spawn));
+            const QPointF center(screen.x, screen.y);
+            QColor color;
+            switch (spawn.type) {
+                case SpawnType::player:
+                    color = QColor(65, 160, 255);
+                    break;
+                case SpawnType::npc:
+                    color = QColor(235, 90, 75);
+                    break;
+                case SpawnType::corpse:
+                    color = QColor(155, 155, 155);
+                    break;
+            }
+            const bool selected =
+                selected_spawn_ && *selected_spawn_ == spawn.id;
+            QPen pen(
+                selected ? QColor(255, 210, 55) : color);
+            pen.setWidthF(selected ? 2.5 : 1.0);
+            painter.setPen(pen);
+            painter.setBrush(color);
+            const double radius = selected ? 6.0 : 3.5;
+            painter.drawEllipse(center, radius, radius);
+        }
+    }
+
     if (player_.available() && player_.zone == map_->zone) {
         const MapPoint2D map_position = player_map_position(player_);
         const MapPoint2D screen = viewport_.map_to_screen(map_position);
@@ -364,6 +460,15 @@ void MapCanvas::resizeEvent(QResizeEvent* event) {
 
 void MapCanvas::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton) {
+        if (const auto spawn =
+                spawn_at_screen_point(event->position())) {
+            set_selected_spawn(spawn);
+            if (spawn_selected_callback_) {
+                spawn_selected_callback_(*spawn);
+            }
+            event->accept();
+            return;
+        }
         dragging_ = true;
         drag_origin_ = event->position().toPoint();
         setCursor(Qt::ClosedHandCursor);

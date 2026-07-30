@@ -6,12 +6,69 @@ work done.
 
 ## Current phase
 
-Phase 1 and Phase 2 were verified and merged into `main`. Phase 3 is complete
-on `phase3/lifecycle-completion`: bounded map parsing and rendering,
-exact-profile zone/player reads, adjustable player-Z filtering, player-follow,
-lifecycle invalidation, performance, live zoning, camping, game exit, and
-process reacquisition passed. See `docs/phase3-completion-report.md`. Phase 4
-spawn work is waiting for explicit approval.
+Phase 1 through Phase 3 were verified and merged into `main`. Phase 4 is
+complete on `phase4/spawn-vertical-slice`: the exact-profile bounded spawn
+reader, immutable model, synchronized table/map selection, lifecycle
+invalidation, performance, privacy, and live presentation gates passed. See
+`docs/phase4-completion-report.md`. Phase 5 remains unauthorized.
+
+## Completed Phase 4
+
+### P4-01: Establish the exact-profile spawn resolver
+
+- [x] Independently identify and document the smallest collection root,
+  traversal shape, and consistency invariants for the exact supported client.
+- [x] Resolve only stable ID, approved type, bounded display name, level, and
+  finite position fields.
+- [x] Require two controlled observations for every displayed field and fail
+  closed when any profile or structure invariant fails.
+- Acceptance criteria: no copied, guessed, partial, or UI-local address enters
+  the compatibility profile.
+
+### P4-02: Read a hard-bounded immutable collection
+
+- [x] Define an evidence-based maximum count and bounded string size before
+  enabling a live collection.
+- [x] Stage collection, entry, and value reads with canonical-address,
+  readable-mapping, overflow, pointer-depth, and consistency checks.
+- [x] Reject duplicate IDs, invalid types, malformed names, invalid levels,
+  non-finite positions, oversized collections, and collection changes during
+  publication.
+- [x] Publish immutable spawn snapshots containing no process addresses.
+- [x] Cover every success and rejection path with synthetic fixtures that
+  contain no Daybreak or player data.
+- Acceptance criteria: a failed or inconsistent collection publishes no stale
+  or partial spawn values.
+
+### P4-03: Add synchronized spawn presentation
+
+- [x] Replace the placeholder with a sortable and filterable spawn table.
+- [x] Draw spawn markers without rebuilding unchanged map geometry.
+- [x] Synchronize map, table, and detail selection by stable ID without
+  affecting the game target.
+- [x] Show explicit empty, unavailable, no-selection, and stale states.
+- Acceptance criteria: every presentation surface consumes immutable values
+  only and agrees on the selected stable ID.
+
+### P4-04: Complete lifecycle and performance behavior
+
+- [x] Cover add, remove, change, duplicate, oversized, and inconsistent
+  collection behavior.
+- [x] Invalidate all spawn state on zoning, camping, character select, read
+  failure, profile change, and process exit.
+- [x] Measure bounded reader, publication, filtering, sorting, selection, and
+  large-fixture rendering cost.
+- Acceptance criteria: no stale spawn survives a transition and the live game
+  shows no visible frame-pacing regression.
+
+### P4-05: Complete the Phase 4 gate
+
+- [x] Run the complete Phase 3 gate plus spawn reader, model, selection,
+  lifecycle, privacy, and large-fixture checks.
+- [x] Validate approved fields against two controlled live observations.
+- [x] Audit logs, fixtures, diffs, package contents, and artifacts for
+  character names, spawn names, addresses, and Daybreak content.
+- [x] Stop for approval before Phase 5 hardening work.
 
 ## Completed Phase 3
 
@@ -231,7 +288,6 @@ spawn work is waiting for explicit approval.
 
 ## Queued
 
-- [ ] Phase 4: Validated bounded spawn vertical slice.
 - [ ] Phase 5: Hardening and release readiness.
 
 ## Completed Phase 0

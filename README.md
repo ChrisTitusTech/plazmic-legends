@@ -5,12 +5,12 @@ the 64-bit EverQuest Legends `eqgame.exe` running under Wine on Linux. It uses
 an independent Linux window for maps, spawns, and diagnostics rather than
 drawing over the game.
 
-Status: Phase 0 through Phase 3 are complete. Phase 3 adds installed-map
-rendering, an exact-profile read-only live zone/player marker, player-follow,
-bounded lifecycle invalidation, and process reacquisition to the independent
-Qt 6 companion on DWM tag 5. Map orientation, player position, heading, zoning,
-camping, game exit, and relaunch have passed live validation. Phase 4 spawn
-research is waiting at its explicit approval checkpoint.
+Status: Phase 0 through Phase 4 are complete. The independent Qt 6 companion
+on DWM tag 5 renders installed maps, the live player, and a bounded
+exact-profile spawn collection. Its sortable/filterable table, map markers,
+details, and shared stable-ID selection passed synthetic, performance,
+privacy, lifecycle, and live acceptance gates. Phase 5 hardening remains
+behind its explicit approval checkpoint.
 
 ## Development and EULA notice
 

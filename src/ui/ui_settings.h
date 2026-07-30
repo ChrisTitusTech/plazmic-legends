@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <optional>
 
 #include <QByteArray>
@@ -14,6 +15,11 @@ struct UiState {
     double height_filter_below{15.0};
     double height_filter_above{15.0};
     bool player_follow_enabled{false};
+    QString spawn_filter;
+    int spawn_type_filter{-1};
+    int spawn_sort_column{3};
+    bool spawn_sort_descending{false};
+    std::array<int, 4> spawn_column_widths{220, 70, 90, 100};
 };
 
 class UiSettings {

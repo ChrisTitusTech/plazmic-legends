@@ -284,6 +284,11 @@ spawn collection research.
 
 ## Phase 4: Validated spawn vertical slice
 
+Status: Complete on `phase4/spawn-vertical-slice`. The exact-profile spawn
+reader, immutable model, synchronized presentation, lifecycle, performance,
+privacy, and live acceptance gates passed on 2026-07-30. See
+`docs/phase4-completion-report.md`.
+
 ### Outcome
 
 The tag 5 companion window displays a trustworthy bounded spawn table and map

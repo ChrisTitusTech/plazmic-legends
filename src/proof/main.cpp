@@ -1,15 +1,18 @@
 #include "common/sha256.h"
 #include "game/client_profile.h"
+#include "game/game_state_reader.h"
 #include "integration/process_discovery.h"
 #include "integration/process_reader.h"
 #include "overlay/x11_overlay.h"
 
+#include <algorithm>
 #include <charconv>
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <string_view>
 
@@ -166,6 +169,35 @@ int main(int argc, char** argv) {
     }
 
     if (arguments->diagnose_only) {
+        if (using_live_proc) {
+            const plazmic::GameStateReadResult state =
+                plazmic::read_game_state(
+                    discovery.process, profile->game_state,
+                    profile->spawns);
+            if (!state) {
+                std::cout << "world_snapshot=unavailable\n"
+                          << "world_detail=" << state.detail << '\n';
+            } else {
+                const auto count_type =
+                    [&state](plazmic::SpawnType type) {
+                        return std::ranges::count_if(
+                            state.spawns->spawns,
+                            [type](const plazmic::SpawnSnapshot& spawn) {
+                                return spawn.type == type;
+                            });
+                    };
+                std::cout
+                    << "world_snapshot=verified\n"
+                    << "spawn_count="
+                    << state.spawns->spawns.size() << '\n'
+                    << "spawn_players="
+                    << count_type(plazmic::SpawnType::player) << '\n'
+                    << "spawn_npcs="
+                    << count_type(plazmic::SpawnType::npc) << '\n'
+                    << "spawn_corpses="
+                    << count_type(plazmic::SpawnType::corpse) << '\n';
+            }
+        }
         return 0;
     }
     const plazmic::OverlayOptions overlay_options{

@@ -39,6 +39,7 @@ PlayerSnapshot invalid_snapshot(const GameStateReadResult& result) {
         case GameStateReadError::invalid_pointer:
         case GameStateReadError::invalid_zone:
         case GameStateReadError::invalid_player:
+        case GameStateReadError::invalid_spawns:
         case GameStateReadError::read_failed:
             break;
     }
@@ -50,6 +51,17 @@ PlayerSnapshot invalid_snapshot(const GameStateReadResult& result) {
         .z = 0.0,
         .heading_degrees = 0.0,
         .detail = prefixed_detail(label, result.detail),
+    };
+}
+
+SpawnCollectionSnapshot invalid_spawns(
+    const GameStateReadResult& result) {
+    const PlayerSnapshot player = invalid_snapshot(result);
+    return {
+        .state = player.state,
+        .zone = {},
+        .spawns = {},
+        .detail = player.detail,
     };
 }
 
@@ -81,18 +93,22 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
         map_detail_.clear();
         return {
             .player = invalid_snapshot(refresh.state),
+            .spawns = invalid_spawns(refresh.state),
             .map = std::nullopt,
             .clear_map = true,
         };
     }
 
     PlayerSnapshot player = std::move(*refresh.state.snapshot);
+    SpawnCollectionSnapshot spawns =
+        std::move(*refresh.state.spawns);
     if (!refresh.map_load) {
         if (!map_detail_.empty()) {
             player.detail = map_detail_;
         }
         return {
             .player = std::move(player),
+            .spawns = std::move(spawns),
             .map = std::nullopt,
             .clear_map = false,
         };
@@ -104,6 +120,7 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
         player.detail = map_detail_;
         return {
             .player = std::move(player),
+            .spawns = std::move(spawns),
             .map = std::nullopt,
             .clear_map = true,
         };
@@ -112,6 +129,7 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
     map_detail_.clear();
     return {
         .player = std::move(player),
+        .spawns = std::move(spawns),
         .map = std::move(refresh.map_load->map),
         .clear_map = false,
     };

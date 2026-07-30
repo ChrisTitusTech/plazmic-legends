@@ -3,6 +3,7 @@
 #include "game/client_profile.h"
 #include "integration/process_discovery.h"
 #include "model/player_snapshot.h"
+#include "model/spawn_snapshot.h"
 
 #include <chrono>
 #include <filesystem>
@@ -21,22 +22,26 @@ enum class GameStateReadError {
     inconsistent_snapshot,
     invalid_zone,
     invalid_player,
+    invalid_spawns,
     read_failed,
 };
 
 struct GameStateReadResult {
     std::optional<PlayerSnapshot> snapshot;
+    std::optional<SpawnCollectionSnapshot> spawns;
     GameStateReadError error{GameStateReadError::process_unavailable};
     std::string detail;
 
     [[nodiscard]] explicit operator bool() const {
-        return snapshot.has_value() && error == GameStateReadError::none;
+        return snapshot.has_value() && spawns.has_value() &&
+               error == GameStateReadError::none;
     }
 };
 
 [[nodiscard]] GameStateReadResult read_game_state(
     const ClientProcess& process,
-    const GameStateSymbols& symbols);
+    const GameStateSymbols& symbols,
+    const SpawnSymbols& spawn_symbols);
 
 class LiveGameStateProbe {
   public:

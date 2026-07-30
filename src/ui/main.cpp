@@ -140,6 +140,7 @@ int main(int argc, char** argv) {
                     QString::fromStdString(update.player.detail));
             }
             window.update_player_snapshot(update.player);
+            window.update_spawn_snapshot(std::move(update.spawns));
         });
 
     QTimer player_timer;
@@ -173,6 +174,7 @@ int main(int argc, char** argv) {
                         if (confirmation.snapshot->zone != loaded_zone) {
                             refresh.state = {
                                 .snapshot = std::nullopt,
+                                .spawns = std::nullopt,
                                 .error =
                                     plazmic::GameStateReadError::
                                         zoning,

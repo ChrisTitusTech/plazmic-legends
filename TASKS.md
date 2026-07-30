@@ -6,10 +6,72 @@ work done.
 
 ## Current phase
 
-Phase 2 is complete on branch `phase2/standalone-qt-shell`. The independent
-Qt 6 shell, exact-profile status boundary, DWM tag 5 placement, saved dock
-layout, package inspection, and live game-invariance gate passed. Phase 3 has
-not started and requires explicit approval.
+Phase 1 and Phase 2 were verified and squash-merged locally into `main` as
+commit `8769e35`. The first Phase 3 checkpoint contains the bounded map parser,
+Qt map canvas, and exact-profile zone/player reader. The current continuation
+is player-follow and lifecycle invalidation; no spawn work is authorized.
+
+## Active Phase 3
+
+### P3-01: Parse local map geometry safely
+
+- [x] Validate zone short names and contain all selected paths under the
+  configured maps directory.
+- [x] Parse bounded `L` line and `P` label records plus numbered layer files.
+- [x] Reject missing base maps, path escapes, symlinks outside the map root,
+  oversized input, excessive records, long lines, malformed fields, invalid
+  colors, non-finite coordinates, and out-of-range values.
+- [x] Cover the parser with synthetic fixtures containing no Daybreak map
+  content.
+- Acceptance criteria: base and numbered layers produce immutable geometry,
+  every rejection has a typed error, and no installed map enters the
+  repository or package.
+
+### P3-02: Render the local map model
+
+- [x] Add map bounds and coordinate transforms, pan, zoom, and layer
+  visibility.
+- [x] Add a default-on player-Z height filter with explicit off/on control,
+  independently adjustable below/above ranges, and persisted settings.
+- [ ] Add explicit player-follow state.
+- [x] Replace the Phase 2 map placeholder with a Qt canvas driven only by
+  immutable map and player snapshots.
+- [x] Add synthetic transform and canvas snapshot tests.
+- Acceptance criteria: synthetic geometry and heading render consistently
+  without client access.
+- Checkpoint evidence: `docs/research/phase3-player-map-checkpoint.md`.
+
+### P3-03: Resolve exact-profile zone and player state
+
+- [x] Discover and document validated resolvers for world/session state, zone
+  short name, player coordinates, and heading.
+- [x] Enforce module, mapping, pointer-depth, string, finite-number, and
+  lifecycle bounds through the existing read-only reader.
+- [ ] Require two controlled observations for each live field and fail closed
+  when any invariant fails.
+- Acceptance criteria: no guessed or copied offset reaches the compatibility
+  profile.
+- Checkpoint evidence: player position and heading matched controlled ground
+  truth at multiple locations; a second zone transition is still required.
+
+### P3-04: Publish lifecycle-safe player snapshots
+
+- [x] Convert validated reads into immutable zone/player snapshots.
+- [ ] Invalidate state on character select, zoning, camping, read failure, and
+  process exit.
+- [x] Select map paths only from validated zone short names.
+- Acceptance criteria: stale player markers cannot survive a lifecycle
+  transition.
+
+### P3-05: Complete the Phase 3 gate
+
+- [ ] Run the full Phase 2 gate plus parser, transform, renderer, reader,
+  snapshot, and lifecycle tests.
+- [ ] Validate map orientation, multiple controlled positions and headings,
+  layer behavior, missing maps, zoning, camping, and exit against the live
+  client.
+- [ ] Measure parsing, snapshot publication, and UI update cost.
+- [ ] Stop for approval before Phase 4 spawn collection research.
 
 ### P1-01: Capture the Linux/Wine runtime baseline
 
@@ -166,7 +228,6 @@ not started and requires explicit approval.
 
 ## Queued
 
-- [ ] Phase 3: Local map parser and validated zone/player vertical slice.
 - [ ] Phase 4: Validated bounded spawn vertical slice.
 - [ ] Phase 5: Hardening and release readiness.
 

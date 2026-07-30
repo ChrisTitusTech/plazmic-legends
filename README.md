@@ -5,11 +5,12 @@ the 64-bit EverQuest Legends `eqgame.exe` running under Wine on Linux. It uses
 an independent Linux window for maps, spawns, and diagnostics rather than
 drawing over the game.
 
-Status: Phase 0 cleanup and Phase 1 research are complete. Phase 2 is complete
-on a local branch. The native Linux product now opens an independent Qt 6
-companion shell on DWM tag 5, reports exact-profile client status, and restores
-its dock layout without changing the fullscreen game. Map and gameplay-state
-work has not started.
+Status: Phase 0 through Phase 2 are complete and squash-merged locally. The
+first Phase 3 checkpoint adds installed-map rendering and an exact-profile,
+read-only live zone/player marker to the independent Qt 6 companion on DWM tag
+5. Map orientation, player position, and heading have been manually verified
+against the in-game map. Player-follow and lifecycle-transition validation
+remain active Phase 3 work.
 
 ## Development and EULA notice
 
@@ -44,6 +45,11 @@ distribution are outside the authorized scope.
   standalone UI, DWM, packaging, and game-invariance evidence.
 - [Phase 2 dependency audit](docs/phase2-dependency-audit.md) records the Qt,
   X11, removal, and ShowEQ provenance boundaries.
+- [Phase 3 map baseline](docs/research/phase3-map-baseline.md) records the
+  installed-map inventory, parser bounds, and content-free validation evidence.
+- [Phase 3 map/player checkpoint](docs/research/phase3-player-map-checkpoint.md)
+  records the exact-profile reader, renderer, controlled manual validation,
+  and remaining Phase 3 risks.
 - [EULA-risk decision](docs/research/phase1-policy-risk.md) records the
   explicit decision to continue private read-only development despite the
   published restrictions.
@@ -92,7 +98,7 @@ The proof refuses unsupported hashes, missing clients, and ambiguous
 processes. Its external X11 panel mode remains research evidence only and is
 not the planned product interface.
 
-## Run the Phase 2 companion
+## Run the companion
 
 With the exact supported client installed:
 
@@ -109,6 +115,15 @@ ignore saved placement for one run.
 The reference DWM configuration assigns class `PlazmicLegends` to human tag 5
 on monitor 1. Other window managers may place the normal application window
 according to their own rules.
+
+With the exact supported client in-world, the companion validates the live
+zone short name, loads that zone from the installation's `maps` directory, and
+displays the player position and heading. Unknown client builds and invalid
+live values fail closed. A player-relative height filter is enabled by default
+to separate vertical map floors. Right-click the map to toggle the filter,
+show all elevations, or independently adjust how far below and above the
+player's Z axis the map remains visible. The filter state and ranges persist
+with the window settings.
 
 The window follows the active system dark or light preference. On the reference
 DWM session it reads `dwm-titus/themes.toml`; on other desktops it falls back

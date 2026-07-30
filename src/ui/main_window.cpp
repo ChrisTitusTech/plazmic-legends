@@ -1,5 +1,7 @@
 #include "ui/main_window.h"
 
+#include "ui/map_canvas.h"
+
 #include <algorithm>
 #include <ranges>
 #include <utility>
@@ -7,7 +9,6 @@
 #include <QCloseEvent>
 #include <QCoreApplication>
 #include <QDockWidget>
-#include <QFrame>
 #include <QGuiApplication>
 #include <QHeaderView>
 #include <QLabel>
@@ -78,14 +79,9 @@ void MainWindow::build_ui() {
                    QMainWindow::AllowTabbedDocks);
     resize(1200, 780);
 
-    auto* map_frame = new QFrame;
-    map_frame->setObjectName("map-view");
-    map_frame->setFrameShape(QFrame::StyledPanel);
-    auto* map_layout = new QVBoxLayout(map_frame);
-    map_layout->addWidget(placeholder_label(
-        "Map",
-        "Map loading and the validated player marker begin in Phase 3."));
-    setCentralWidget(map_frame);
+    map_canvas_ = new MapCanvas;
+    map_canvas_->setObjectName("map-view");
+    setCentralWidget(map_canvas_);
 
     auto* spawn_container = new QWidget;
     auto* spawn_layout = new QVBoxLayout(spawn_container);
@@ -142,11 +138,31 @@ void MainWindow::update_snapshot(const StatusSnapshot& snapshot) {
     detail_value_->setText(QString::fromStdString(snapshot.detail));
 }
 
+void MainWindow::update_player_snapshot(const PlayerSnapshot& snapshot) {
+    map_canvas_->set_player_snapshot(snapshot);
+    if (!snapshot.detail.empty()) {
+        detail_value_->setText(QString::fromStdString(snapshot.detail));
+    }
+}
+
+void MainWindow::set_zone_map(ZoneMap map) {
+    map_canvas_->set_zone_map(std::move(map));
+}
+
+void MainWindow::clear_zone_map(const QString& detail) {
+    map_canvas_->clear_zone_map(detail);
+}
+
 void MainWindow::restore_ui_state() {
     if (!reset_layout_) {
         if (const auto state = settings_.load()) {
             const bool layout_restored = restoreState(state->layout);
             const bool geometry_restored = restoreGeometry(state->geometry);
+            map_canvas_->set_height_filter_range(
+                state->height_filter_below,
+                state->height_filter_above);
+            map_canvas_->set_height_filter_enabled(
+                state->height_filter_enabled);
             if (!geometry_restored || !layout_restored) {
                 resize(1200, 780);
             }
@@ -179,6 +195,12 @@ void MainWindow::save_ui_state() {
     const UiState state{
         .geometry = saveGeometry(),
         .layout = saveState(),
+        .height_filter_enabled =
+            map_canvas_->height_filter_enabled(),
+        .height_filter_below =
+            map_canvas_->height_filter_below(),
+        .height_filter_above =
+            map_canvas_->height_filter_above(),
     };
     (void)settings_.save(state);
 }

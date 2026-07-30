@@ -1,6 +1,7 @@
 #include "ui/ui_settings.h"
 
 #include <algorithm>
+#include <cmath>
 #include <ranges>
 #include <utility>
 
@@ -42,6 +43,34 @@ std::optional<QByteArray> quoted_value(const QByteArray& line,
     return QByteArray::fromBase64(encoded);
 }
 
+std::optional<QByteArray> scalar_value(const QByteArray& line,
+                                       const QByteArray& key) {
+    const QByteArray prefix = key + " = ";
+    if (!line.startsWith(prefix)) {
+        return std::nullopt;
+    }
+    const QByteArray value = line.mid(prefix.size()).trimmed();
+    if (value.isEmpty()) {
+        return std::nullopt;
+    }
+    return value;
+}
+
+std::optional<double> height_range_value(const QByteArray& line,
+                                         const QByteArray& key) {
+    const auto value = scalar_value(line, key);
+    if (!value) {
+        return std::nullopt;
+    }
+    bool valid = false;
+    const double number = value->toDouble(&valid);
+    if (!valid || !std::isfinite(number) || number < 0.0 ||
+        number > 1000.0) {
+        return std::nullopt;
+    }
+    return number;
+}
+
 }  // namespace
 
 UiSettings::UiSettings(QString path) : path_(std::move(path)) {}
@@ -63,30 +92,66 @@ std::optional<UiState> UiSettings::load() const {
     }
 
     const QList<QByteArray> lines = file.readAll().split('\n');
-    bool in_window_section = false;
+    enum class Section {
+        other,
+        window,
+        map,
+    };
+    Section section = Section::other;
     std::optional<QByteArray> geometry;
     std::optional<QByteArray> layout;
+    bool height_filter_enabled = true;
+    double height_filter_below = 25.0;
+    double height_filter_above = 25.0;
     for (QByteArray line : lines) {
         line = line.trimmed();
         if (line.isEmpty() || line.startsWith('#')) {
             continue;
         }
         if (line.startsWith('[')) {
-            in_window_section = line == "[window]";
-            continue;
-        }
-        if (!in_window_section) {
-            continue;
-        }
-        if (line.startsWith("geometry")) {
-            geometry = quoted_value(line, "geometry");
-            if (!geometry) {
-                return std::nullopt;
+            if (line == "[window]") {
+                section = Section::window;
+            } else if (line == "[map]") {
+                section = Section::map;
+            } else {
+                section = Section::other;
             }
-        } else if (line.startsWith("layout")) {
-            layout = quoted_value(line, "layout");
-            if (!layout) {
-                return std::nullopt;
+            continue;
+        }
+        if (section == Section::window) {
+            if (line.startsWith("geometry")) {
+                geometry = quoted_value(line, "geometry");
+                if (!geometry) {
+                    return std::nullopt;
+                }
+            } else if (line.startsWith("layout")) {
+                layout = quoted_value(line, "layout");
+                if (!layout) {
+                    return std::nullopt;
+                }
+            }
+        } else if (section == Section::map) {
+            if (line.startsWith("height_filter_enabled")) {
+                const auto value =
+                    scalar_value(line, "height_filter_enabled");
+                if (!value || (*value != "true" && *value != "false")) {
+                    return std::nullopt;
+                }
+                height_filter_enabled = *value == "true";
+            } else if (line.startsWith("height_filter_below")) {
+                const auto value =
+                    height_range_value(line, "height_filter_below");
+                if (!value) {
+                    return std::nullopt;
+                }
+                height_filter_below = *value;
+            } else if (line.startsWith("height_filter_above")) {
+                const auto value =
+                    height_range_value(line, "height_filter_above");
+                if (!value) {
+                    return std::nullopt;
+                }
+                height_filter_above = *value;
             }
         }
     }
@@ -97,11 +162,20 @@ std::optional<UiState> UiSettings::load() const {
     return UiState{
         .geometry = *geometry,
         .layout = *layout,
+        .height_filter_enabled = height_filter_enabled,
+        .height_filter_below = height_filter_below,
+        .height_filter_above = height_filter_above,
     };
 }
 
 bool UiSettings::save(const UiState& state) const {
-    if (state.geometry.isEmpty() || state.layout.isEmpty()) {
+    if (state.geometry.isEmpty() || state.layout.isEmpty() ||
+        !std::isfinite(state.height_filter_below) ||
+        !std::isfinite(state.height_filter_above) ||
+        state.height_filter_below < 0.0 ||
+        state.height_filter_below > 1000.0 ||
+        state.height_filter_above < 0.0 ||
+        state.height_filter_above > 1000.0) {
         return false;
     }
     const QFileInfo info(path_);
@@ -118,6 +192,15 @@ bool UiSettings::save(const UiState& state) const {
     contents += "[window]\n";
     contents += "geometry = \"" + state.geometry.toBase64() + "\"\n";
     contents += "layout = \"" + state.layout.toBase64() + "\"\n";
+    contents += "\n[map]\n";
+    contents += QByteArray("height_filter_enabled = ") +
+                (state.height_filter_enabled ? "true\n" : "false\n");
+    contents += "height_filter_below = " +
+                QByteArray::number(state.height_filter_below, 'f', 1) +
+                "\n";
+    contents += "height_filter_above = " +
+                QByteArray::number(state.height_filter_above, 'f', 1) +
+                "\n";
     if (file.write(contents) != contents.size()) {
         file.cancelWriting();
         return false;

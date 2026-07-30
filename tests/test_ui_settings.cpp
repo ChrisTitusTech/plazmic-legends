@@ -29,6 +29,9 @@ int main() {
         const plazmic::UiState expected{
             .geometry = QByteArray("geometry-bytes"),
             .layout = QByteArray("layout-bytes"),
+            .height_filter_enabled = false,
+            .height_filter_below = 12.5,
+            .height_filter_above = 47.5,
         };
         require(settings.save(expected), "cannot save UI state");
         const auto loaded = settings.load();
@@ -37,6 +40,13 @@ int main() {
                 "geometry did not round trip");
         require(loaded->layout == expected.layout,
                 "layout did not round trip");
+        require(loaded->height_filter_enabled ==
+                    expected.height_filter_enabled &&
+                    loaded->height_filter_below ==
+                        expected.height_filter_below &&
+                    loaded->height_filter_above ==
+                        expected.height_filter_above,
+                "map height filter settings did not round trip");
 
         QFile corrupt(path);
         require(corrupt.open(QIODevice::WriteOnly | QIODevice::Truncate),

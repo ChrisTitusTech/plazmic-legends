@@ -91,11 +91,12 @@ receive target-process addresses or traverse client memory. Synthetic snapshot
 fixtures drive all Phase 2 UI work; live zone and player acquisition belongs to
 Phase 3, and spawn acquisition belongs to Phase 4.
 
-The reference Legends installation contains a `maps` directory with 192 text
-files: 133 base zone files and 59 numbered layer files. These are user-installed
-inputs. Plazmic may parse them in place after validating the zone name, record
-count, line length, numeric values, and path containment, but must never copy
-them into the repository or package.
+The current reference Legends installation contains 1,710 text files: 570 base
+map files and 1,140 numbered layer files. These are user-installed inputs.
+Plazmic may parse them in place after validating the zone name, record count,
+line length, numeric values, and path containment, but must never copy them
+into the repository or package. The current inventory and approved parser
+bounds are recorded in `docs/research/phase3-map-baseline.md`.
 
 ## Dependency decision
 

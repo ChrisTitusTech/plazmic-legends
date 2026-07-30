@@ -14,7 +14,7 @@ check_pie_supported()
 
 find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
 find_package(X11 REQUIRED COMPONENTS Xext Xfixes)
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core DBus Gui Widgets)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Concurrent Core DBus Gui Widgets)
 find_program(RUFF_EXECUTABLE NAMES ruff REQUIRED)
 find_program(MARKDOWNLINT_EXECUTABLE NAMES markdownlint-cli2 REQUIRED)
 
@@ -22,9 +22,12 @@ add_library(
     plazmic_core
     src/common/sha256.cpp
     src/game/client_profile.cpp
+    src/game/game_state_reader.cpp
     src/integration/process_discovery.cpp
     src/integration/process_reader.cpp
     src/launcher/client_status.cpp
+    src/map/map_parser.cpp
+    src/map/map_view_model.cpp
     src/model/status_snapshot.cpp
 )
 
@@ -118,6 +121,7 @@ target_link_libraries(plazmic-legends-proof PRIVATE plazmic_proof_lib)
 add_executable(
     plazmic-legends
     src/ui/main.cpp
+    src/ui/map_canvas.cpp
     src/ui/main_window.cpp
     src/ui/system_theme.cpp
     src/ui/ui_settings.cpp
@@ -151,6 +155,7 @@ target_link_libraries(
     plazmic-legends
     PRIVATE
         plazmic_core
+        Qt6::Concurrent
         Qt6::Core
         Qt6::DBus
         Qt6::Gui
@@ -251,6 +256,57 @@ if(BUILD_TESTING)
     add_dependencies(check client_status_test)
     add_test(NAME client_status.unit COMMAND client_status_test)
 
+    add_executable(map_parser_test tests/test_map_parser.cpp)
+    target_compile_features(map_parser_test PRIVATE cxx_std_20)
+    target_compile_options(
+        map_parser_test
+        PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+    )
+    target_link_libraries(map_parser_test PRIVATE plazmic_core)
+    add_dependencies(check map_parser_test)
+    add_test(NAME map_parser.unit COMMAND map_parser_test)
+
+    add_executable(map_view_model_test tests/test_map_view_model.cpp)
+    target_compile_features(map_view_model_test PRIVATE cxx_std_20)
+    target_compile_options(
+        map_view_model_test
+        PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+    )
+    target_link_libraries(map_view_model_test PRIVATE plazmic_core)
+    add_dependencies(check map_view_model_test)
+    add_test(NAME map_view_model.unit COMMAND map_view_model_test)
+
+    add_executable(
+        game_state_reader_test
+        tests/test_game_state_reader.cpp
+    )
+    target_compile_features(game_state_reader_test PRIVATE cxx_std_20)
+    target_compile_options(
+        game_state_reader_test
+        PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+    )
+    target_link_libraries(game_state_reader_test PRIVATE plazmic_core)
+    add_dependencies(check game_state_reader_test)
+    add_test(NAME game_state_reader.unit COMMAND game_state_reader_test)
+
     add_executable(
         ui_settings_test
         tests/test_ui_settings.cpp
@@ -316,6 +372,7 @@ if(BUILD_TESTING)
         add_executable(
             main_window_test
             tests/test_main_window.cpp
+            src/ui/map_canvas.cpp
             src/ui/main_window.cpp
             src/ui/ui_settings.cpp
             src/ui/x11_window_class.cpp

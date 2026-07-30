@@ -219,6 +219,13 @@ gameplay-state work.
 
 ## Phase 3: Local map and player vertical slice
 
+Status: In progress. The first checkpoint contains bounded local-map parsing,
+the Qt map canvas with toggleable player-relative height filtering, and
+exact-profile zone/player snapshots. Map orientation, player position, and
+heading passed controlled live comparison against the in-game map.
+Player-follow, lifecycle transitions, a second-zone observation, and the final
+Phase 3 gate remain.
+
 ### Outcome
 
 The tag 5 companion window loads the current zone's installed map geometry and
@@ -228,8 +235,9 @@ displays a validated live player marker and heading.
 
 - Implement a bounded parser for approved line and label records in the user's
   installed `maps/<zone>.txt` and numbered layer files.
-- Implement map transforms, pan, zoom, layer visibility, player-follow, and
-  synthetic renderer tests.
+- Implement map transforms, pan, zoom, layer visibility, toggleable and
+  adjustable player-relative height filtering, player-follow, and synthetic
+  renderer tests.
 - Discover and validate only world/session state, zone short name, player
   position, and heading for the exact client profile.
 - Convert reads into immutable zone and player snapshots.

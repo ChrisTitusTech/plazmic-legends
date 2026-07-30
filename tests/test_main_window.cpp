@@ -1,4 +1,7 @@
+#include "map/map_parser.h"
+#include "model/player_snapshot.h"
 #include "model/status_snapshot.h"
+#include "ui/map_canvas.h"
 #include "ui/main_window.h"
 #include "ui/ui_settings.h"
 #include "ui/x11_window_class.h"
@@ -87,7 +90,7 @@ int main(int argc, char** argv) {
         require(window.objectName() == "plazmic-main-window",
                 "main window object name mismatch");
         require(window.findChild<QWidget*>("map-view") != nullptr,
-                "map placeholder is missing");
+                "map canvas is missing");
         require(window.findChild<QWidget*>("spawn-table") != nullptr,
                 "spawn table placeholder is missing");
         require(window.findChild<QLabel*>("compatibility-status")->text() ==
@@ -96,6 +99,85 @@ int main(int argc, char** argv) {
         require(window.findChild<QLabel*>("profile-status")->text() ==
                     "synthetic-profile",
                 "profile status did not render");
+
+        const plazmic::ZoneMap map{
+            .zone = "synthetic",
+            .layers =
+                {
+                    {
+                        .index = 0,
+                        .source = "synthetic.txt",
+                        .lines =
+                            {
+                                {
+                                    .start = {-10.0, -20.0, 0.0},
+                                    .end = {30.0, 40.0, 0.0},
+                                    .color = {255, 255, 255},
+                                },
+                            },
+                        .labels = {},
+                    },
+                },
+        };
+        const plazmic::PlayerSnapshot player{
+            .state = plazmic::PlayerSnapshotState::in_world,
+            .zone = "synthetic",
+            .x = 12.0,
+            .y = -8.0,
+            .z = 3.0,
+            .heading_degrees = 180.0,
+            .detail = "Synthetic player snapshot",
+        };
+        window.set_zone_map(map);
+        window.update_player_snapshot(player);
+        process_events();
+        require(window.map_canvas()->zone_map().has_value(),
+                "map canvas did not retain immutable geometry");
+        require(window.map_canvas()->zone_map()->zone == "synthetic",
+                "map canvas loaded the wrong zone");
+        require(window.map_canvas()->player_snapshot().zone == "synthetic",
+                "map canvas did not retain the player snapshot");
+        require(window.map_canvas()->height_filter_enabled(),
+                "height filter did not default to enabled");
+        window.map_canvas()->set_height_filter_enabled(false);
+        require(!window.map_canvas()->height_filter_enabled(),
+                "height filter could not be disabled");
+        window.map_canvas()->set_height_filter_enabled(true);
+        require(window.map_canvas()->height_filter_enabled(),
+                "height filter could not be re-enabled");
+        window.map_canvas()->set_height_filter_range(10.0, 35.0);
+        require(window.map_canvas()->height_filter_below() == 10.0 &&
+                    window.map_canvas()->height_filter_above() == 35.0,
+                "height filter did not retain asymmetric player-Z ranges");
+        window.map_canvas()->set_height_filter_range(-5.0, 2000.0);
+        require(window.map_canvas()->height_filter_below() == 0.0 &&
+                    window.map_canvas()->height_filter_above() ==
+                        plazmic::kMaximumHeightFilterRange,
+                "height filter ranges were not bounded");
+
+        plazmic::ZoneMap oversized_map{
+            .zone = "oversized",
+            .layers =
+                {
+                    {
+                        .index = 0,
+                        .source = "oversized.txt",
+                        .lines = {},
+                        .labels = {},
+                    },
+                },
+        };
+        oversized_map.layers.front().lines.resize(
+            plazmic::kMaximumRenderableMapRecords + 1U,
+            {
+                .start = {0.0, 0.0, 0.0},
+                .end = {1.0, 1.0, 0.0},
+                .color = {255, 255, 255},
+            });
+        window.set_zone_map(std::move(oversized_map));
+        require(!window.map_canvas()->zone_map().has_value(),
+                "oversized map reached the renderer");
+        window.set_zone_map(map);
 
         Display* display = XOpenDisplay(nullptr);
         require(display != nullptr, "cannot open verification display");
@@ -120,6 +202,11 @@ int main(int argc, char** argv) {
                 "close did not persist UI state");
         require(saved_state->geometry == expected_geometry_state,
                 "persisted window geometry did not match the closed window");
+        require(saved_state->height_filter_enabled &&
+                    saved_state->height_filter_below == 0.0 &&
+                    saved_state->height_filter_above ==
+                        plazmic::kMaximumHeightFilterRange,
+                "close did not persist the map height filter state");
 
         QMainWindow geometry_reference;
         require(geometry_reference.restoreGeometry(expected_geometry_state),
@@ -141,6 +228,11 @@ int main(int argc, char** argv) {
         restored.show();
         process_events();
         require(restored.isVisible(), "restored window is not visible");
+        require(restored.map_canvas()->height_filter_enabled() &&
+                    restored.map_canvas()->height_filter_below() == 0.0 &&
+                    restored.map_canvas()->height_filter_above() ==
+                        plazmic::kMaximumHeightFilterRange,
+                "saved map height filter state was not restored");
         auto* restored_spawn_dock =
             restored.findChild<QDockWidget*>("spawn-dock");
         require(restored_spawn_dock != nullptr,

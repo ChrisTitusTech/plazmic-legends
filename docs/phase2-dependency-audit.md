@@ -15,10 +15,13 @@ validated Fedora 44 host provides:
 | `libXext` | 1.3.6-5.fc44 | permissive X11-family licenses |
 | `libXfixes` | 6.0.1-7.fc44 | MIT and HPND-sell-variant |
 
-The product links to the system Qt and X11 shared libraries. `readelf -d`
-reports `libQt6Widgets.so.6`, `libQt6Gui.so.6`, `libQt6Core.so.6`, and
-`libX11.so.6` as needed libraries and reports no project RPATH or RUNPATH.
-No Qt or X11 library is copied into the repository or install image.
+The product links to the system Qt and X11 shared libraries. Phase 3 also uses
+the Qt Concurrent module from the same `qt6-qtbase` package to keep bounded
+process discovery and map parsing off the GUI event thread. `readelf -d`
+reports `libQt6Concurrent.so.6`, `libQt6Widgets.so.6`, `libQt6Gui.so.6`,
+`libQt6DBus.so.6`, `libQt6Core.so.6`, and `libX11.so.6` as needed libraries
+and reports no project RPATH or RUNPATH. No Qt or X11 library is copied into
+the repository or install image.
 
 Fedora installs the applicable Qt license texts under
 `/usr/share/licenses/qt6-qtbase`. Any future distribution must repeat the

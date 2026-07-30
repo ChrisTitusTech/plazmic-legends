@@ -15,6 +15,8 @@ approved or implemented.
 - [Tasks](TASKS.md) identifies the current authorized work.
 - [Agent instructions](AGENTS.md) define repository boundaries and commands.
 - [Cleanup inventory](docs/cleanup-inventory.md) classifies the imported tree.
+- [Phase 0 report](docs/phase0-cleanup-report.md) records cleanup and validation
+  evidence.
 - [Legends baseline](docs/research/legends-baseline.md) records the reference
   Linux, Wine, and executable evidence.
 - [Import provenance](docs/research/import-provenance.md) records the recovery

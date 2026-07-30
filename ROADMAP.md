@@ -5,6 +5,9 @@ reviewable result and stops at its approval checkpoint.
 
 ## Phase 0: Inventory-driven cleanup
 
+Status: Complete on 2026-07-29. See
+`docs/phase0-cleanup-report.md` for evidence.
+
 ### Outcome
 
 The broad, incomplete MacroQuest import becomes a small, recoverable research
@@ -67,8 +70,8 @@ or force-update the baseline.
 
 ### Pause point
 
-Present the final keep/remove inventory and cleanup evidence. Wait for approval
-before runtime reconnaissance.
+The final keep/remove inventory and cleanup evidence are recorded. Phase 1 is
+waiting for explicit approval before runtime reconnaissance.
 
 ## Phase 1: Native Linux/Wine architecture proof
 

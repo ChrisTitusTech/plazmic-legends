@@ -64,15 +64,12 @@ active task.
 
 ## Working boundaries
 
-- The scaffold is pre-phase planning. Start with Phase 0 only after the user
-  says to begin.
+- Phase 0 is complete. Do not start Phase 1 until the user explicitly says to
+  continue.
 - Preserve the imported tree in a recoverable baseline commit before deleting
   files.
-- Phase 0 is cleanup. Do not mix new product implementation into cleanup
-  commits.
-- Remove files only from a reviewed keep/remove/replace inventory. Validate
-  every deletion batch for dangling build, include, documentation, and license
-  references.
+- Use `phase0-import-baseline` only as read-only research unless restoration is
+  explicitly justified and approved.
 - Preserve copyright and license notices for retained third-party or
   MacroQuest-derived code. Record provenance when code is moved.
 - Never commit Daybreak executables, game assets, account data, Wine prefix

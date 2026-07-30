@@ -265,12 +265,11 @@ void MainWindow::update_spawn_detail(const SpawnSnapshot* spawn) {
         QString::fromStdString(spawn->name).toHtmlEscaped();
     selection_detail_->setText(
         QString("<h3>%1</h3>"
-                "<p>Level %2 %3 - ID %4</p>"
-                "<p>X %5 - Y %6 - Z %7 - Distance %8</p>")
+                "<p>Level %2 %3</p>"
+                "<p>X %4 - Y %5 - Z %6 - Distance %7</p>")
             .arg(name)
             .arg(spawn->level)
             .arg(QString::fromLatin1(spawn_type_label(spawn->type)))
-            .arg(spawn->id)
             .arg(spawn->x, 0, 'f', 1)
             .arg(spawn->y, 0, 'f', 1)
             .arg(spawn->z, 0, 'f', 1)

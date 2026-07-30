@@ -1,11 +1,26 @@
 # Plazmic Legends
 
-Plazmic Legends is planned as a minimal, read-only information overlay for the
-64-bit EverQuest Legends `eqgame.exe` running under Wine on Linux.
+Plazmic Legends is planned as a minimal, read-only companion application for
+the 64-bit EverQuest Legends `eqgame.exe` running under Wine on Linux. It uses
+an independent Linux window for maps, spawns, and diagnostics rather than
+drawing over the game.
 
-Status: Phase 0 cleanup is complete. The active tree is a minimal Linux
-research scaffold; no live process integration or product runtime has been
-approved or implemented.
+Status: Phase 0 cleanup and Phase 1 research are complete. Phase 2 is complete
+on a local branch. The native Linux product now opens an independent Qt 6
+companion shell on DWM tag 5, reports exact-profile client status, and restores
+its dock layout without changing the fullscreen game. Map and gameplay-state
+work has not started.
+
+## Development and EULA notice
+
+This private development project knowingly operates against the Daybreak EULA
+and related published rules. The owner explicitly accepts that risk. This does
+not grant permission, prevent account action, or imply affiliation with
+Daybreak.
+
+Development remains read-only and external. Memory writes, injection, client
+patching, protection bypass, gameplay automation, credentials, and public
+distribution are outside the authorized scope.
 
 ## Project documents
 
@@ -19,6 +34,25 @@ approved or implemented.
   evidence.
 - [Legends baseline](docs/research/legends-baseline.md) records the reference
   Linux, Wine, and executable evidence.
+- [Phase 1 runtime baseline](docs/research/phase1-runtime-baseline.md) records
+  the live Lutris, Proton, process, renderer, and X11 evidence.
+- [Phase 1 architecture proof](docs/phase1-architecture-proof.md) records the
+  implemented safety boundary and remaining manual checks.
+- [Phase 1 Codex review](docs/phase1-codex-review.md) records the independent
+  implementation review and resolved findings.
+- [Phase 2 completion report](docs/phase2-completion-report.md) records the
+  standalone UI, DWM, packaging, and game-invariance evidence.
+- [Phase 2 dependency audit](docs/phase2-dependency-audit.md) records the Qt,
+  X11, removal, and ShowEQ provenance boundaries.
+- [EULA-risk decision](docs/research/phase1-policy-risk.md) records the
+  explicit decision to continue private read-only development despite the
+  published restrictions.
+- [MacroQuest boundary review](docs/research/macroquest-boundary-review.md)
+  records the safe staged-read concept retained and the injection and
+  automation paths rejected.
+- [ShowEQ UI review](docs/research/showeq-ui-review.md) records the standalone
+  map/spawn concepts retained and the packet-capture and GPL implementation
+  rejected.
 - [Import provenance](docs/research/import-provenance.md) records the recovery
   tag and retained-code audit.
 
@@ -26,6 +60,7 @@ approved or implemented.
 
 ```bash
 cmake --preset dev
+cmake --build --preset dev
 cmake --build --preset check
 ctest --preset dev
 ```
@@ -43,6 +78,43 @@ python3 tools/inspect_eqgame.py "$EQ_LEGENDS_DIR"
 This reports executable architecture, PE timestamp, image metadata, and
 SHA-256 without launching or modifying the game.
 
+## Run the Phase 1 diagnostics proof
+
+With the exact supported client already running:
+
+```bash
+build/dev/plazmic-legends-proof \
+  --client "$EQ_LEGENDS_DIR/eqgame.exe" \
+  --diagnose-only
+```
+
+The proof refuses unsupported hashes, missing clients, and ambiguous
+processes. Its external X11 panel mode remains research evidence only and is
+not the planned product interface.
+
+## Run the Phase 2 companion
+
+With the exact supported client installed:
+
+```bash
+build/dev/plazmic-legends \
+  --client "$EQ_LEGENDS_DIR/eqgame.exe"
+```
+
+The application stores geometry and dock layout in
+`$XDG_CONFIG_HOME/plazmic-legends/config.toml`, or the equivalent Qt user
+configuration path when `XDG_CONFIG_HOME` is unset. Use `--reset-layout` to
+ignore saved placement for one run.
+
+The reference DWM configuration assigns class `PlazmicLegends` to human tag 5
+on monitor 1. Other window managers may place the normal application window
+according to their own rules.
+
+The window follows the active system dark or light preference. On the reference
+DWM session it reads `dwm-titus/themes.toml`; on other desktops it falls back
+to the standard appearance portal and Qt color-scheme hint. Changes are applied
+while the application remains open.
+
 ## Platform
 
 - Build host: Linux only.
@@ -50,16 +122,23 @@ SHA-256 without launching or modifying the game.
 - Native Windows and Visual Studio builds: not supported.
 - Wayland: deferred beyond the MVP.
 
-Phase 1 will validate a least-privilege native Linux reader and external X11
-overlay. Project artifacts are native Linux ELF files; the project will not
-inject a DLL or modify the Wine prefix.
+The Phase 1 proof and Phase 2 product use native Linux code. The normal Qt 6
+Widgets companion window is placed on DWM tag 5 (HDMI-0) by its stable window
+class. Project artifacts are native Linux ELF files and do not inject a DLL or
+modify the Wine prefix.
 
 ## Scope
 
-The proposed MVP shows compatibility status, zone, player position and heading,
-and limited target information. It excludes scripting, plugins, automation,
-gameplay input, remote control, and traditional EverQuest clients. Exact fields
-and process integration remain Phase 1 approval decisions.
+The proposed MVP shows compatibility status, a zone map, player position and
+heading, a filtered spawn list, and selected-spawn details. It excludes
+scripting, plugins, automation, gameplay input, remote control, and traditional
+EverQuest clients. Phase 2 builds the standalone tag 5 shell, Phase 3 adds local
+maps and validated player state, and Phase 4 adds the bounded spawn view.
+
+Static geometry will be parsed read-only from the user's installed Legends
+`maps` directory. Dynamic zone, player, and spawn values will come from
+exact-profile bounded external reads converted into immutable snapshots.
+Plazmic does not use ShowEQ packet capture and does not package game maps.
 
 ## Provenance and license
 

@@ -13,7 +13,7 @@ include(GNUInstallDirs)
 check_pie_supported()
 
 find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
-find_package(X11 REQUIRED COMPONENTS Xext Xfixes)
+find_package(X11 REQUIRED)
 find_package(Qt6 6.8 REQUIRED COMPONENTS Concurrent Core DBus Gui Widgets)
 find_program(RUFF_EXECUTABLE NAMES ruff REQUIRED)
 find_program(MARKDOWNLINT_EXECUTABLE NAMES markdownlint-cli2 REQUIRED)
@@ -55,70 +55,6 @@ target_include_directories(
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
-
-add_library(
-    plazmic_proof_lib
-    src/overlay/x11_overlay.cpp
-)
-
-target_compile_features(plazmic_proof_lib PUBLIC cxx_std_20)
-set_target_properties(
-    plazmic_proof_lib
-    PROPERTIES
-        POSITION_INDEPENDENT_CODE ON
-)
-target_compile_options(
-    plazmic_proof_lib
-    PRIVATE
-        -fstack-protector-strong
-        -Wall
-        -Wextra
-        -Wpedantic
-        -Wconversion
-        -Wsign-conversion
-        -Werror
-)
-target_include_directories(
-    plazmic_proof_lib
-    PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/src"
-)
-target_link_libraries(
-    plazmic_proof_lib
-    PUBLIC
-        plazmic_core
-    PRIVATE
-        X11::X11
-        X11::Xext
-        X11::Xfixes
-)
-
-add_executable(plazmic-legends-proof src/proof/main.cpp)
-target_compile_features(plazmic-legends-proof PRIVATE cxx_std_20)
-target_compile_options(
-    plazmic-legends-proof
-    PRIVATE
-        -fstack-protector-strong
-        -Wall
-        -Wextra
-        -Wpedantic
-        -Wconversion
-        -Wsign-conversion
-        -Werror
-)
-set_target_properties(
-    plazmic-legends-proof
-    PROPERTIES
-        POSITION_INDEPENDENT_CODE ON
-)
-target_link_options(
-    plazmic-legends-proof
-    PRIVATE
-        -Wl,-z,now
-        -Wl,-z,relro
-        -Wl,-z,noexecstack
-)
-target_link_libraries(plazmic-legends-proof PRIVATE plazmic_proof_lib)
 
 add_executable(
     plazmic-legends
@@ -220,7 +156,7 @@ add_custom_target(
     COMMENT "Running the repository gate"
     VERBATIM
 )
-add_dependencies(check plazmic-legends plazmic-legends-proof)
+add_dependencies(check plazmic-legends)
 
 if(BUILD_TESTING)
     add_executable(
@@ -354,43 +290,8 @@ if(BUILD_TESTING)
     add_dependencies(check ui_settings_test)
     add_test(NAME ui_settings.unit COMMAND ui_settings_test)
 
-    add_executable(
-        x11_overlay_lifecycle_test
-        tests/test_x11_overlay_lifecycle.cpp
-    )
-    target_compile_features(x11_overlay_lifecycle_test PRIVATE cxx_std_20)
-    target_compile_options(
-        x11_overlay_lifecycle_test
-        PRIVATE
-            -Wall
-            -Wextra
-            -Wpedantic
-            -Wconversion
-            -Wsign-conversion
-            -Werror
-    )
-    target_link_libraries(
-        x11_overlay_lifecycle_test
-        PRIVATE
-            plazmic_proof_lib
-            X11::X11
-    )
-    add_dependencies(check x11_overlay_lifecycle_test)
-
-    add_test(
-        NAME x11_overlay.lifecycle
-        COMMAND x11_overlay_lifecycle_test
-    )
-    set_tests_properties(
-        x11_overlay.lifecycle
-        PROPERTIES
-            SKIP_RETURN_CODE 77
-            TIMEOUT 15
-    )
-
-    find_package(X11 QUIET COMPONENTS Xtst)
     find_program(XVFB_RUN_EXECUTABLE NAMES xvfb-run)
-    if(TARGET X11::Xtst AND XVFB_RUN_EXECUTABLE)
+    if(XVFB_RUN_EXECUTABLE)
         add_executable(
             main_window_test
             tests/test_main_window.cpp
@@ -576,42 +477,6 @@ if(BUILD_TESTING)
                 TIMEOUT 15
         )
 
-        add_executable(
-            x11_overlay_hotkey_test
-            tests/test_x11_overlay_hotkey.cpp
-        )
-        target_compile_features(x11_overlay_hotkey_test PRIVATE cxx_std_20)
-        target_compile_options(
-            x11_overlay_hotkey_test
-            PRIVATE
-                -Wall
-                -Wextra
-                -Wpedantic
-                -Wconversion
-                -Wsign-conversion
-                -Werror
-        )
-        target_link_libraries(
-            x11_overlay_hotkey_test
-            PRIVATE
-                plazmic_proof_lib
-                X11::X11
-                X11::Xtst
-        )
-        add_dependencies(check x11_overlay_hotkey_test)
-
-        add_test(
-            NAME x11_overlay.hotkey
-            COMMAND
-                "${XVFB_RUN_EXECUTABLE}"
-                -a
-                "$<TARGET_FILE:x11_overlay_hotkey_test>"
-        )
-        set_tests_properties(
-            x11_overlay.hotkey
-            PROPERTIES
-                TIMEOUT 15
-        )
     endif()
 
     add_test(

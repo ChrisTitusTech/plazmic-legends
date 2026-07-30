@@ -9,8 +9,9 @@ Status: Phase 0 through Phase 4 are complete. The independent Qt 6 companion
 on DWM tag 5 renders installed maps, the live player, and a bounded
 exact-profile spawn collection. Its sortable/filterable table, map markers,
 details, and shared stable-ID selection passed synthetic, performance,
-privacy, lifecycle, and live acceptance gates. Phase 5 hardening remains
-behind its explicit approval checkpoint.
+privacy, lifecycle, and live acceptance gates. Phase 5 hardening is active on
+`phase5/release-hardening` for a private/local Fedora artifact.
+Public release or distribution remains outside the approved scope.
 
 ## Development and EULA notice
 
@@ -85,20 +86,6 @@ python3 tools/inspect_eqgame.py "$EQ_LEGENDS_DIR"
 
 This reports executable architecture, PE timestamp, image metadata, and
 SHA-256 without launching or modifying the game.
-
-## Run the Phase 1 diagnostics proof
-
-With the exact supported client already running:
-
-```bash
-build/dev/plazmic-legends-proof \
-  --client "$EQ_LEGENDS_DIR/eqgame.exe" \
-  --diagnose-only
-```
-
-The proof refuses unsupported hashes, missing clients, and ambiguous
-processes. Its external X11 panel mode remains research evidence only and is
-not the planned product interface.
 
 ## Run the companion
 

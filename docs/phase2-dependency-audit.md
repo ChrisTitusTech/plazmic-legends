@@ -37,6 +37,14 @@ entry removes the Qt dependency while retaining the Phase 1 native reader and
 diagnostics proof. X11 remains a Phase 1 proof dependency until the historical
 overlay proof is also removed.
 
+## Phase 5 update
+
+Phase 5 removed the historical overlay proof, its lifecycle and hotkey tests,
+and the project's direct Xext, Xfixes, and XTest dependencies. The supported
+Qt companion still links directly to libX11 for its stable X11 class and DWM
+placement. Historical sections above retain the Phase 2 package observations
+as captured evidence.
+
 ## ShowEQ provenance boundary
 
 The ShowEQ 6.4.25 checkout was used only to identify useful product concepts:

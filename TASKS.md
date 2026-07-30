@@ -10,7 +10,74 @@ Phase 1 through Phase 3 were verified and merged into `main`. Phase 4 is
 complete on `phase4/spawn-vertical-slice`: the exact-profile bounded spawn
 reader, immutable model, synchronized table/map selection, lifecycle
 invalidation, performance, privacy, and live presentation gates passed. See
-`docs/phase4-completion-report.md`. Phase 5 remains unauthorized.
+`docs/phase4-completion-report.md`.
+
+Phase 5 is now authorized on `phase5/release-hardening` for a private/local
+Fedora package. Public release or distribution remains unauthorized.
+
+## Active Phase 5
+
+### P5-01: Reduce to the supported product boundary
+
+- [x] Remove the historical overlay proof, proof-only tests, and unused
+  Xext/Xfixes/XTest dependencies.
+- [x] Map every retained source path, executable, test, tool, and runtime
+  dependency to a current `SPEC.md` requirement.
+- [x] Record source provenance, project-license status, dependency licenses,
+  and removal impact without restoring imported implementation.
+- Acceptance criteria: the configured build contains only the supported
+  product, its deterministic tests, the PE inspector, and required system
+  dependencies.
+
+### P5-02: Harden compatibility and privacy-safe diagnostics
+
+- [ ] Expose the project version and exact compatibility profile in local
+  status and diagnostics.
+- [ ] Write bounded XDG-state logs containing only approved lifecycle,
+  compatibility, integration, and error-category values.
+- [ ] Detect client executable changes, invalidate live state, and show an
+  actionable unsupported-build result without weakening profile matching.
+- [ ] Document the immutable profile-refresh workflow for a newly fingerprinted
+  client.
+- Acceptance criteria: a changed or unsupported client never receives old
+  offsets, and diagnostics contain no credentials, tokens, runtime names,
+  process addresses, memory content, or Wine-prefix data.
+
+### P5-03: Build the private Fedora artifact
+
+- [ ] Produce a versioned private/local Fedora RPM from the CMake install
+  boundary with explicit runtime dependencies.
+- [ ] Include required project and dependency notices, support matrix, known
+  risks, and private-distribution status without bundling system libraries.
+- [ ] Document install, upgrade, removal, troubleshooting, and rollback.
+- [ ] Generate SHA-256 checksums from a clean artifact build.
+- Acceptance criteria: the RPM contains only approved native product files and
+  can be installed, upgraded, removed, and rolled back without modifying the
+  game installation or Wine prefix.
+
+### P5-04: Establish exact-commit reproducibility gates
+
+- [ ] Add Linux CI for configure, warnings-as-errors build, repository checks,
+  CTest/Xvfb, and clean package inspection.
+- [ ] Bind CI and local evidence to the exact release-candidate commit.
+- [ ] Rebuild from a clean checkout and compare staged contents and checksums.
+- Acceptance criteria: local and CI gates produce the same approved file
+  inventory from the audited commit.
+
+### P5-05: Complete the release-candidate gate
+
+- [ ] Run clean install, upgrade, launch, unsupported-client, and uninstall
+  tests on the reference Fedora/Wine/X11 tier.
+- [ ] Repeat lifecycle, accuracy, accessibility, DWM placement, privacy, and
+  performance scenarios against the exact candidate.
+- [ ] Complete security, privacy, provenance, dependency, license, retained
+  path, and package-content audits.
+- [ ] Obtain an independent review without using CodeRabbit.
+- [ ] Record checksums, support matrix, known risks, rollback evidence, and all
+  skipped validation.
+- [ ] Stop for explicit approval before any public release or distribution.
+- Acceptance criteria: the private release candidate satisfies `AC-01` through
+  `AC-12`, and every unsupported or changed-client path fails closed.
 
 ## Completed Phase 4
 
@@ -285,10 +352,6 @@ invalidation, performance, privacy, and live presentation gates passed. See
   Nord to Catppuccin Latte to Nord transition.
 - Acceptance criteria: the open companion follows the system theme without a
   restart and does not change the game window.
-
-## Queued
-
-- [ ] Phase 5: Hardening and release readiness.
 
 ## Completed Phase 0
 

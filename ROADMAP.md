@@ -344,6 +344,12 @@ Review spawn accuracy, privacy, performance, and scope before hardening.
 
 ## Phase 5: Hardening and release readiness
 
+Status: In progress on `phase5/release-hardening`. The owner approved Phase 5
+on 2026-07-30 for a private/local Fedora package. Public release or
+distribution still requires a separate explicit decision. The first checkpoint
+removes research-only targets and records the retained product and dependency
+boundary before packaging or release-candidate work.
+
 ### Outcome
 
 A minimal, reproducible Linux package is ready for the approved distribution

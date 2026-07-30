@@ -37,7 +37,15 @@ int main() {
                                     .color = {255, 255, 255},
                                 },
                             },
-                        .labels = {},
+                        .labels =
+                            {
+                                {
+                                    .position = {5000.0, 6000.0, 0.0},
+                                    .color = {255, 255, 255},
+                                    .size = 3,
+                                    .text = "Off-map legend",
+                                },
+                            },
                     },
                 },
         };
@@ -51,6 +59,9 @@ int main() {
                 "minimum Y is incorrect");
         require(close_to(bounds->maximum_y, 150.0),
                 "maximum Y is incorrect");
+        require(bounds->maximum_x < 5000.0 &&
+                    bounds->maximum_y < 6000.0,
+                "off-map label expanded line-geometry fit bounds");
 
         const plazmic::ZoneMap label_map{
             .zone = "labels",

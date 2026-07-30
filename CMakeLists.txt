@@ -26,6 +26,7 @@ add_library(
     src/integration/process_discovery.cpp
     src/integration/process_reader.cpp
     src/launcher/client_status.cpp
+    src/launcher/player_lifecycle.cpp
     src/map/map_parser.cpp
     src/map/map_view_model.cpp
     src/model/status_snapshot.cpp
@@ -308,6 +309,25 @@ if(BUILD_TESTING)
     add_test(NAME game_state_reader.unit COMMAND game_state_reader_test)
 
     add_executable(
+        player_lifecycle_test
+        tests/test_player_lifecycle.cpp
+    )
+    target_compile_features(player_lifecycle_test PRIVATE cxx_std_20)
+    target_compile_options(
+        player_lifecycle_test
+        PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+    )
+    target_link_libraries(player_lifecycle_test PRIVATE plazmic_core)
+    add_dependencies(check player_lifecycle_test)
+    add_test(NAME player_lifecycle.unit COMMAND player_lifecycle_test)
+
+    add_executable(
         ui_settings_test
         tests/test_ui_settings.cpp
         src/ui/ui_settings.cpp
@@ -415,6 +435,52 @@ if(BUILD_TESTING)
             PROPERTIES
                 SKIP_RETURN_CODE 77
                 TIMEOUT 15
+        )
+
+        add_executable(
+            phase3_performance_test
+            tests/test_phase3_performance.cpp
+            src/ui/map_canvas.cpp
+        )
+        target_compile_features(
+            phase3_performance_test
+            PRIVATE cxx_std_20
+        )
+        target_compile_options(
+            phase3_performance_test
+            PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wconversion
+                -Wsign-conversion
+                -Werror
+        )
+        target_include_directories(
+            phase3_performance_test
+            PRIVATE
+                "${CMAKE_CURRENT_SOURCE_DIR}/src"
+        )
+        target_link_libraries(
+            phase3_performance_test
+            PRIVATE
+                plazmic_core
+                Qt6::Core
+                Qt6::Gui
+                Qt6::Widgets
+        )
+        add_dependencies(check phase3_performance_test)
+        add_test(
+            NAME phase3_performance.x11
+            COMMAND
+                "${XVFB_RUN_EXECUTABLE}"
+                -a
+                "$<TARGET_FILE:phase3_performance_test>"
+        )
+        set_tests_properties(
+            phase3_performance.x11
+            PROPERTIES
+                TIMEOUT 30
         )
 
         add_executable(

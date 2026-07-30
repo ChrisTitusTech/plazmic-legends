@@ -5,6 +5,10 @@
 namespace plazmic {
 
 enum class PlayerSnapshotState {
+    client_not_running,
+    not_in_world,
+    zoning,
+    stale,
     unavailable,
     in_world,
 };

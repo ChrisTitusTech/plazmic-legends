@@ -13,7 +13,7 @@ std::optional<MapBounds> calculate_map_bounds(const ZoneMap& map) {
         .minimum_y = std::numeric_limits<double>::max(),
         .maximum_y = std::numeric_limits<double>::lowest(),
     };
-    bool found = false;
+    bool found_lines = false;
     for (const MapLayer& layer : map.layers) {
         for (const MapLineRecord& line : layer.lines) {
             bounds.minimum_x =
@@ -24,21 +24,27 @@ std::optional<MapBounds> calculate_map_bounds(const ZoneMap& map) {
                 std::min({bounds.minimum_y, line.start.y, line.end.y});
             bounds.maximum_y =
                 std::max({bounds.maximum_y, line.start.y, line.end.y});
-            found = true;
-        }
-        for (const MapLabelRecord& label : layer.labels) {
-            bounds.minimum_x =
-                std::min(bounds.minimum_x, label.position.x);
-            bounds.maximum_x =
-                std::max(bounds.maximum_x, label.position.x);
-            bounds.minimum_y =
-                std::min(bounds.minimum_y, label.position.y);
-            bounds.maximum_y =
-                std::max(bounds.maximum_y, label.position.y);
-            found = true;
+            found_lines = true;
         }
     }
-    if (!found) {
+
+    bool found_labels = false;
+    if (!found_lines) {
+        for (const MapLayer& layer : map.layers) {
+            for (const MapLabelRecord& label : layer.labels) {
+                bounds.minimum_x =
+                    std::min(bounds.minimum_x, label.position.x);
+                bounds.maximum_x =
+                    std::max(bounds.maximum_x, label.position.x);
+                bounds.minimum_y =
+                    std::min(bounds.minimum_y, label.position.y);
+                bounds.maximum_y =
+                    std::max(bounds.maximum_y, label.position.y);
+                found_labels = true;
+            }
+        }
+    }
+    if (!found_lines && !found_labels) {
         return std::nullopt;
     }
     if (bounds.width() < 1.0) {

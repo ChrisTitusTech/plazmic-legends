@@ -88,6 +88,20 @@ struct ReaderFixture {
         .zone_id_mask = 0x7fff,
         .maximum_zone_id = 1000,
     };
+    plazmic::SpawnSymbols spawn_symbols{
+        .next_offset = 0x08,
+        .previous_offset = 0x10,
+        .name_offset = 0xb8,
+        .name_bytes = 64,
+        .type_offset = 0x139,
+        .id_offset = 0x178,
+        .level_offset = 0x6b4,
+        .y_offset = 0x78,
+        .x_offset = 0x74,
+        .z_offset = 0x7c,
+        .record_bytes = 0x6b5,
+        .maximum_count = 32,
+    };
     plazmic::ClientProcess process{
         .pid = getpid(),
         .uid = getuid(),
@@ -118,6 +132,17 @@ struct ReaderFixture {
         store(memory, kPlayer + 0x7c, -9.75F);
         store(memory, kPlayer + 0x94, 256.0F);
         store(memory, kPlayer + 0x2fc, kZoneId);
+        store(memory, kPlayer, base + 0x200);
+        store(memory, kPlayer + 0x08, std::uintptr_t{0});
+        store(memory, kPlayer + 0x10, std::uintptr_t{0});
+        store(memory, kPlayer + 0x139, std::uint8_t{0});
+        store(memory, kPlayer + 0x178, std::uint32_t{100});
+        store(memory, kPlayer + 0x6b4, std::uint8_t{50});
+        constexpr std::array<char, 7> kPlayerName{
+            'p', 'l', 'a', 'y', 'e', 'r', '\0'};
+        std::memcpy(
+            memory.data() + kPlayer + 0xb8,
+            kPlayerName.data(), kPlayerName.size());
         store(
             memory,
             kWorld + 0x30 +
@@ -144,6 +169,13 @@ plazmic::GameStateReadResult live_state(double coordinate) {
                 .z = coordinate / 100.0,
                 .heading_degrees = coordinate,
                 .detail = "Synthetic performance snapshot",
+            },
+        .spawns =
+            plazmic::SpawnCollectionSnapshot{
+                .state = plazmic::PlayerSnapshotState::in_world,
+                .zone = "synthetic",
+                .spawns = {},
+                .detail = "Synthetic performance spawns",
             },
         .error = plazmic::GameStateReadError::none,
         .detail = {},
@@ -187,7 +219,8 @@ int main(int argc, char** argv) {
         const auto reader_start = Clock::now();
         for (std::size_t index = 0; index < kReaderSamples; ++index) {
             const auto result = plazmic::read_game_state(
-                reader_fixture.process, reader_fixture.symbols);
+                reader_fixture.process, reader_fixture.symbols,
+                reader_fixture.spawn_symbols);
             require(static_cast<bool>(result),
                     "synthetic bounded read became unavailable");
         }

@@ -17,7 +17,7 @@ namespace {
 constexpr qint64 kMaximumSettingsBytes = 1024 * 1024;
 
 bool is_base64(const QByteArray& value) {
-    if (value.isEmpty() || value.size() % 4 != 0) {
+    if (value.size() % 4 != 0) {
         return false;
     }
     return std::ranges::all_of(value, [](char character) {
@@ -71,6 +71,22 @@ std::optional<double> height_range_value(const QByteArray& line,
     return number;
 }
 
+std::optional<int> integer_value(const QByteArray& line,
+                                 const QByteArray& key,
+                                 int minimum,
+                                 int maximum) {
+    const auto value = scalar_value(line, key);
+    if (!value) {
+        return std::nullopt;
+    }
+    bool valid = false;
+    const int number = value->toInt(&valid);
+    if (!valid || number < minimum || number > maximum) {
+        return std::nullopt;
+    }
+    return number;
+}
+
 }  // namespace
 
 UiSettings::UiSettings(QString path) : path_(std::move(path)) {}
@@ -96,6 +112,7 @@ std::optional<UiState> UiSettings::load() const {
         other,
         window,
         map,
+        spawns,
     };
     Section section = Section::other;
     std::optional<QByteArray> geometry;
@@ -104,6 +121,11 @@ std::optional<UiState> UiSettings::load() const {
     double height_filter_below = 15.0;
     double height_filter_above = 15.0;
     bool player_follow_enabled = false;
+    QString spawn_filter;
+    int spawn_type_filter = -1;
+    int spawn_sort_column = 3;
+    bool spawn_sort_descending = false;
+    std::array<int, 4> spawn_column_widths{220, 70, 90, 100};
     for (QByteArray line : lines) {
         line = line.trimmed();
         if (line.isEmpty() || line.startsWith('#')) {
@@ -114,6 +136,8 @@ std::optional<UiState> UiSettings::load() const {
                 section = Section::window;
             } else if (line == "[map]") {
                 section = Section::map;
+            } else if (line == "[spawns]") {
+                section = Section::spawns;
             } else {
                 section = Section::other;
             }
@@ -161,6 +185,59 @@ std::optional<UiState> UiSettings::load() const {
                 }
                 player_follow_enabled = *value == "true";
             }
+        } else if (section == Section::spawns) {
+            if (line.startsWith("filter")) {
+                const auto value = quoted_value(line, "filter");
+                if (!value || value->size() > 1024 ||
+                    value->contains('\0')) {
+                    return std::nullopt;
+                }
+                spawn_filter = QString::fromUtf8(*value);
+                if (spawn_filter.size() > 256) {
+                    return std::nullopt;
+                }
+            } else if (line.startsWith("type")) {
+                const auto value =
+                    integer_value(line, "type", -1, 2);
+                if (!value) {
+                    return std::nullopt;
+                }
+                spawn_type_filter = *value;
+            } else if (line.startsWith("sort_column")) {
+                const auto value =
+                    integer_value(line, "sort_column", 0, 3);
+                if (!value) {
+                    return std::nullopt;
+                }
+                spawn_sort_column = *value;
+            } else if (line.startsWith("sort_descending")) {
+                const auto value =
+                    scalar_value(line, "sort_descending");
+                if (!value || (*value != "true" && *value != "false")) {
+                    return std::nullopt;
+                }
+                spawn_sort_descending = *value == "true";
+            } else if (line.startsWith("column_widths")) {
+                const auto value =
+                    scalar_value(line, "column_widths");
+                if (!value) {
+                    return std::nullopt;
+                }
+                const QList<QByteArray> widths = value->split(',');
+                if (widths.size() != 4) {
+                    return std::nullopt;
+                }
+                for (qsizetype index = 0; index < widths.size(); ++index) {
+                    bool valid = false;
+                    const int width =
+                        widths[index].trimmed().toInt(&valid);
+                    if (!valid || width < 40 || width > 1000) {
+                        return std::nullopt;
+                    }
+                    spawn_column_widths[
+                        static_cast<std::size_t>(index)] = width;
+                }
+            }
         }
     }
 
@@ -174,6 +251,11 @@ std::optional<UiState> UiSettings::load() const {
         .height_filter_below = height_filter_below,
         .height_filter_above = height_filter_above,
         .player_follow_enabled = player_follow_enabled,
+        .spawn_filter = spawn_filter,
+        .spawn_type_filter = spawn_type_filter,
+        .spawn_sort_column = spawn_sort_column,
+        .spawn_sort_descending = spawn_sort_descending,
+        .spawn_column_widths = spawn_column_widths,
     };
 }
 
@@ -184,7 +266,15 @@ bool UiSettings::save(const UiState& state) const {
         state.height_filter_below < 0.0 ||
         state.height_filter_below > 1000.0 ||
         state.height_filter_above < 0.0 ||
-        state.height_filter_above > 1000.0) {
+        state.height_filter_above > 1000.0 ||
+        state.spawn_filter.size() > 256 ||
+        state.spawn_type_filter < -1 ||
+        state.spawn_type_filter > 2 ||
+        state.spawn_sort_column < 0 ||
+        state.spawn_sort_column > 3 ||
+        std::ranges::any_of(
+            state.spawn_column_widths,
+            [](int width) { return width < 40 || width > 1000; })) {
         return false;
     }
     const QFileInfo info(path_);
@@ -212,6 +302,24 @@ bool UiSettings::save(const UiState& state) const {
                 "\n";
     contents += QByteArray("player_follow_enabled = ") +
                 (state.player_follow_enabled ? "true\n" : "false\n");
+    contents += "\n[spawns]\n";
+    contents += "filter = \"" +
+                state.spawn_filter.toUtf8().toBase64() + "\"\n";
+    contents += "type = " +
+                QByteArray::number(state.spawn_type_filter) + "\n";
+    contents += "sort_column = " +
+                QByteArray::number(state.spawn_sort_column) + "\n";
+    contents += QByteArray("sort_descending = ") +
+                (state.spawn_sort_descending ? "true\n" : "false\n");
+    contents += "column_widths = ";
+    for (std::size_t index = 0;
+         index < state.spawn_column_widths.size(); ++index) {
+        if (index != 0U) {
+            contents += ",";
+        }
+        contents += QByteArray::number(state.spawn_column_widths[index]);
+    }
+    contents += "\n";
     if (file.write(contents) != contents.size()) {
         file.cancelWriting();
         return false;

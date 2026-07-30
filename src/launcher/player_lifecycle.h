@@ -3,6 +3,7 @@
 #include "game/game_state_reader.h"
 #include "map/map_parser.h"
 #include "model/player_snapshot.h"
+#include "model/spawn_snapshot.h"
 
 #include <optional>
 #include <string>
@@ -16,6 +17,7 @@ struct PlayerRefresh {
 
 struct PlayerLifecycleUpdate {
     PlayerSnapshot player;
+    SpawnCollectionSnapshot spawns;
     std::optional<ZoneMap> map;
     bool clear_map{false};
 };

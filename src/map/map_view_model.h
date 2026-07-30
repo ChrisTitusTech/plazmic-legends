@@ -2,6 +2,7 @@
 
 #include "map/map_parser.h"
 #include "model/player_snapshot.h"
+#include "model/spawn_snapshot.h"
 
 #include <optional>
 
@@ -30,6 +31,8 @@ struct MapBounds {
     const ZoneMap& map);
 [[nodiscard]] MapPoint2D player_map_position(
     const PlayerSnapshot& player);
+[[nodiscard]] MapPoint2D spawn_map_position(
+    const SpawnSnapshot& spawn);
 [[nodiscard]] double player_map_heading_degrees(
     const PlayerSnapshot& player);
 [[nodiscard]] bool map_height_range_visible(

@@ -1,8 +1,10 @@
 #include "map/map_parser.h"
+#include "map/map_view_model.h"
 #include "model/player_snapshot.h"
 #include "model/status_snapshot.h"
 #include "ui/map_canvas.h"
 #include "ui/main_window.h"
+#include "ui/spawn_table_model.h"
 #include "ui/ui_settings.h"
 #include "ui/x11_window_class.h"
 
@@ -13,7 +15,12 @@
 
 #include <QApplication>
 #include <QDockWidget>
+#include <QComboBox>
 #include <QLabel>
+#include <QLineEdit>
+#include <QHeaderView>
+#include <QMouseEvent>
+#include <QTableView>
 #include <QTemporaryDir>
 #include <QTimer>
 
@@ -130,6 +137,45 @@ int main(int argc, char** argv) {
         };
         window.set_zone_map(map);
         window.update_player_snapshot(player);
+        const plazmic::SpawnCollectionSnapshot spawns{
+            .state = plazmic::PlayerSnapshotState::in_world,
+            .zone = "synthetic",
+            .spawns =
+                {
+                    {
+                        .id = 10,
+                        .type = plazmic::SpawnType::player,
+                        .name = "synthetic_player",
+                        .level = 50,
+                        .x = 12.0,
+                        .y = -8.0,
+                        .z = 3.0,
+                        .distance = 0.0,
+                    },
+                    {
+                        .id = 11,
+                        .type = plazmic::SpawnType::npc,
+                        .name = "synthetic_<guard>",
+                        .level = 12,
+                        .x = 20.0,
+                        .y = -10.0,
+                        .z = 3.0,
+                        .distance = 8.2,
+                    },
+                    {
+                        .id = 12,
+                        .type = plazmic::SpawnType::corpse,
+                        .name = "synthetic_corpse",
+                        .level = 8,
+                        .x = 25.0,
+                        .y = -12.0,
+                        .z = 3.0,
+                        .distance = 13.6,
+                    },
+                },
+            .detail = "Synthetic spawn snapshot",
+        };
+        window.update_spawn_snapshot(spawns);
         process_events();
         require(window.map_canvas()->zone_map().has_value(),
                 "map canvas did not retain immutable geometry");
@@ -137,6 +183,96 @@ int main(int argc, char** argv) {
                 "map canvas loaded the wrong zone");
         require(window.map_canvas()->player_snapshot().zone == "synthetic",
                 "map canvas did not retain the player snapshot");
+        require(window.map_canvas()->spawn_snapshot().spawns.size() == 3,
+                "map canvas did not retain the spawn snapshot");
+        auto* spawn_table =
+            window.findChild<QTableView*>("spawn-table");
+        auto* spawn_filter =
+            window.findChild<QLineEdit*>("spawn-filter");
+        auto* spawn_type =
+            window.findChild<QComboBox*>("spawn-type-filter");
+        require(spawn_table != nullptr && spawn_filter != nullptr &&
+                    spawn_type != nullptr,
+                "spawn table controls are incomplete");
+        require(spawn_table->model()->rowCount() == 3,
+                "spawn table did not publish all rows");
+        spawn_filter->setText("guard");
+        process_events();
+        require(spawn_table->model()->rowCount() == 1,
+                "spawn name filter did not narrow the table");
+        spawn_table->selectRow(0);
+        process_events();
+        require(window.map_canvas()->selected_spawn() == 11,
+                "table selection did not synchronize to the map");
+        require(
+            window.findChild<QLabel*>("selection-detail")
+                ->text()
+                .contains("synthetic_&lt;guard&gt;"),
+            "spawn selection did not publish escaped details");
+        auto removed = spawns;
+        removed.spawns.erase(removed.spawns.begin() + 1);
+        window.update_spawn_snapshot(std::move(removed));
+        process_events();
+        require(spawn_table->model()->rowCount() == 0,
+                "selected spawn removal did not update the active filter");
+        require(!window.map_canvas()->selected_spawn(),
+                "removed stable ID remained selected on the map");
+        window.update_spawn_snapshot({
+            .state = plazmic::PlayerSnapshotState::stale,
+            .zone = {},
+            .spawns = {},
+            .detail = "Stale synthetic snapshot rejected",
+        });
+        process_events();
+        require(spawn_table->model()->rowCount() == 0 &&
+                    window.findChild<QLabel*>("spawn-state")
+                        ->text()
+                        .contains("Stale"),
+                "stale spawn state retained rows or lost its detail");
+        window.update_spawn_snapshot({
+            .state = plazmic::PlayerSnapshotState::in_world,
+            .zone = "synthetic",
+            .spawns = {},
+            .detail = "Synthetic empty snapshot",
+        });
+        process_events();
+        require(
+            window.findChild<QLabel*>("spawn-state")
+                ->text()
+                .startsWith("0 live"),
+            "empty live spawn state was not explicit");
+        window.update_spawn_snapshot(spawns);
+        process_events();
+        plazmic::MapViewport click_viewport;
+        click_viewport.fit(
+            *plazmic::calculate_map_bounds(map),
+            static_cast<double>(window.map_canvas()->width()),
+            static_cast<double>(window.map_canvas()->height()));
+        const plazmic::MapPoint2D corpse_screen =
+            click_viewport.map_to_screen(
+                plazmic::spawn_map_position(spawns.spawns[2]));
+        const QPointF corpse_point(corpse_screen.x, corpse_screen.y);
+        QMouseEvent map_press(
+            QEvent::MouseButtonPress, corpse_point,
+            window.map_canvas()->mapToGlobal(corpse_point.toPoint()),
+            Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(window.map_canvas(), &map_press);
+        process_events();
+        require(
+            spawn_table->currentIndex()
+                    .data(plazmic::kSpawnIdRole)
+                    .toUInt() == 12U,
+            "map marker selection did not synchronize to the table");
+        require(spawn_filter->text().isEmpty(),
+                "map selection did not reveal a filtered table row");
+        spawn_type->setCurrentIndex(spawn_type->findData(2));
+        process_events();
+        require(spawn_table->model()->rowCount() == 1,
+                "spawn type filter did not narrow the table");
+        spawn_type->setCurrentIndex(spawn_type->findData(1));
+        spawn_filter->setText("guard");
+        spawn_table->setColumnWidth(0, 260);
+        spawn_table->sortByColumn(1, Qt::DescendingOrder);
         require(window.map_canvas()->height_filter_enabled(),
                 "height filter did not default to enabled");
         require(window.map_canvas()->height_filter_below() == 15.0 &&
@@ -217,6 +353,12 @@ int main(int argc, char** argv) {
                 "close did not persist the map height filter state");
         require(saved_state->player_follow_enabled,
                 "close did not persist player-follow state");
+        require(saved_state->spawn_filter == "guard" &&
+                    saved_state->spawn_type_filter == 1 &&
+                    saved_state->spawn_sort_column == 1 &&
+                    saved_state->spawn_sort_descending &&
+                    saved_state->spawn_column_widths[0] == 260,
+                "close did not persist spawn table state");
 
         QMainWindow geometry_reference;
         require(geometry_reference.restoreGeometry(expected_geometry_state),
@@ -245,6 +387,21 @@ int main(int argc, char** argv) {
                 "saved map height filter state was not restored");
         require(restored.map_canvas()->player_follow_enabled(),
                 "saved player-follow state was not restored");
+        require(
+            restored.findChild<QLineEdit*>("spawn-filter")->text() ==
+                    "guard" &&
+                restored.findChild<QComboBox*>("spawn-type-filter")
+                        ->currentData()
+                        .toInt() == 1,
+            "saved spawn filters were not restored");
+        require(
+            restored.findChild<QTableView*>("spawn-table")
+                    ->horizontalHeader()
+                    ->sortIndicatorSection() == 1 &&
+                restored.findChild<QTableView*>("spawn-table")
+                        ->horizontalHeader()
+                        ->sortIndicatorOrder() == Qt::DescendingOrder,
+            "saved spawn sorting was not restored");
         auto* restored_spawn_dock =
             restored.findChild<QDockWidget*>("spawn-dock");
         require(restored_spawn_dock != nullptr,

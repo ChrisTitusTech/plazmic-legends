@@ -1,34 +1,32 @@
 #include "ui/main_window.h"
 
 #include "ui/map_canvas.h"
+#include "ui/spawn_table_model.h"
 
 #include <algorithm>
+#include <array>
 #include <ranges>
 #include <utility>
 
+#include <QAbstractItemView>
 #include <QCloseEvent>
+#include <QComboBox>
 #include <QCoreApplication>
 #include <QDockWidget>
 #include <QGuiApplication>
 #include <QHeaderView>
+#include <QHBoxLayout>
+#include <QItemSelectionModel>
 #include <QLabel>
+#include <QLineEdit>
 #include <QScreen>
 #include <QStatusBar>
-#include <QTableWidget>
+#include <QTableView>
 #include <QTimer>
 #include <QVBoxLayout>
 
 namespace plazmic {
 namespace {
-
-QLabel* placeholder_label(const QString& title, const QString& detail) {
-    auto* label = new QLabel(
-        QString("<h2>%1</h2><p>%2</p>").arg(title, detail));
-    label->setAlignment(Qt::AlignCenter);
-    label->setWordWrap(true);
-    label->setObjectName(title.toLower().replace(' ', '-') + "-placeholder");
-    return label;
-}
 
 QDockWidget* create_dock(const QString& title,
                          const QString& object_name,
@@ -85,29 +83,87 @@ void MainWindow::build_ui() {
 
     auto* spawn_container = new QWidget;
     auto* spawn_layout = new QVBoxLayout(spawn_container);
-    auto* spawn_notice = new QLabel(
-        "Spawn acquisition remains unavailable until Phase 4.");
-    spawn_notice->setObjectName("spawn-unavailable");
-    spawn_notice->setWordWrap(true);
-    spawn_layout->addWidget(spawn_notice);
-    auto* spawn_table = new QTableWidget(0, 4);
-    spawn_table->setObjectName("spawn-table");
-    spawn_table->setHorizontalHeaderLabels(
-        {"Name", "Level", "Type", "Distance"});
-    spawn_table->horizontalHeader()->setStretchLastSection(true);
-    spawn_table->setSortingEnabled(true);
-    spawn_layout->addWidget(spawn_table);
+    spawn_state_ = new QLabel("Waiting for live spawn data");
+    spawn_state_->setObjectName("spawn-state");
+    spawn_state_->setWordWrap(true);
+    spawn_layout->addWidget(spawn_state_);
+
+    auto* filter_row = new QHBoxLayout;
+    spawn_filter_ = new QLineEdit;
+    spawn_filter_->setObjectName("spawn-filter");
+    spawn_filter_->setPlaceholderText("Filter names");
+    spawn_filter_->setMaxLength(256);
+    filter_row->addWidget(spawn_filter_, 1);
+    spawn_type_filter_ = new QComboBox;
+    spawn_type_filter_->setObjectName("spawn-type-filter");
+    spawn_type_filter_->addItem("All types", -1);
+    spawn_type_filter_->addItem("Players", 0);
+    spawn_type_filter_->addItem("NPCs", 1);
+    spawn_type_filter_->addItem("Corpses", 2);
+    filter_row->addWidget(spawn_type_filter_);
+    spawn_layout->addLayout(filter_row);
+
+    spawn_model_ = new SpawnTableModel(this);
+    spawn_proxy_ = new SpawnFilterProxyModel(this);
+    spawn_proxy_->setSourceModel(spawn_model_);
+    spawn_table_ = new QTableView;
+    spawn_table_->setObjectName("spawn-table");
+    spawn_table_->setModel(spawn_proxy_);
+    spawn_table_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    spawn_table_->setSelectionMode(QAbstractItemView::SingleSelection);
+    spawn_table_->setSortingEnabled(true);
+    spawn_table_->setAlternatingRowColors(true);
+    spawn_table_->verticalHeader()->setVisible(false);
+    spawn_table_->horizontalHeader()->setStretchLastSection(true);
+    spawn_table_->sortByColumn(
+        SpawnTableModel::distance_column, Qt::AscendingOrder);
+    spawn_layout->addWidget(spawn_table_);
     auto* spawn_dock = create_dock(
         "Spawns", "spawn-dock", spawn_container, this);
     addDockWidget(Qt::RightDockWidgetArea, spawn_dock);
 
+    selection_detail_ = new QLabel("No spawn selected.");
+    selection_detail_->setObjectName("selection-detail");
+    selection_detail_->setAlignment(Qt::AlignCenter);
+    selection_detail_->setWordWrap(true);
     auto* detail_dock = create_dock(
-        "Details", "detail-dock",
-        placeholder_label(
-            "Selection",
-            "No selection. Map and spawn selection arrive in Phase 4."),
-        this);
+        "Details", "detail-dock", selection_detail_, this);
     addDockWidget(Qt::BottomDockWidgetArea, detail_dock);
+
+    connect(
+        spawn_filter_, &QLineEdit::textChanged, spawn_proxy_,
+        &SpawnFilterProxyModel::set_name_filter);
+    connect(
+        spawn_type_filter_, &QComboBox::currentIndexChanged, this,
+        [this](int index) {
+            const int value =
+                spawn_type_filter_->itemData(index).toInt();
+            std::optional<SpawnType> type;
+            if (value >= 0 && value <= 2) {
+                type = static_cast<SpawnType>(value);
+            }
+            spawn_proxy_->set_type_filter(type);
+        });
+    connect(
+        spawn_table_->selectionModel(),
+        &QItemSelectionModel::currentRowChanged, this,
+        [this](const QModelIndex& current) {
+            if (!current.isValid()) {
+                clear_spawn_selection();
+                return;
+            }
+            const std::uint32_t id =
+                current.data(kSpawnIdRole).toUInt();
+            const int source_row =
+                spawn_proxy_->mapToSource(current).row();
+            const SpawnSnapshot* spawn =
+                spawn_model_->spawn_at(source_row);
+            selected_spawn_ = id;
+            map_canvas_->set_selected_spawn(id);
+            update_spawn_detail(spawn);
+        });
+    map_canvas_->set_spawn_selected_callback(
+        [this](std::uint32_t id) { select_spawn(id); });
 
     compatibility_value_ = new QLabel;
     compatibility_value_->setObjectName("compatibility-status");
@@ -145,6 +201,82 @@ void MainWindow::update_player_snapshot(const PlayerSnapshot& snapshot) {
     }
 }
 
+void MainWindow::update_spawn_snapshot(
+    SpawnCollectionSnapshot snapshot) {
+    const std::optional<std::uint32_t> retained = selected_spawn_;
+    map_canvas_->set_spawn_snapshot(snapshot);
+    spawn_model_->set_snapshot(std::move(snapshot));
+    if (spawn_model_->snapshot().available()) {
+        spawn_state_->setText(
+            QString("%1 live spawns")
+                .arg(spawn_model_->snapshot().spawns.size()));
+    } else {
+        spawn_state_->setText(
+            QString::fromStdString(spawn_model_->snapshot().detail));
+    }
+    if (retained && spawn_model_->row_for_id(*retained) >= 0) {
+        select_spawn(*retained);
+    } else {
+        clear_spawn_selection();
+    }
+}
+
+void MainWindow::select_spawn(std::uint32_t id) {
+    const int source_row = spawn_model_->row_for_id(id);
+    if (source_row < 0) {
+        clear_spawn_selection();
+        return;
+    }
+    const QModelIndex source =
+        spawn_model_->index(source_row, 0);
+    QModelIndex proxy = spawn_proxy_->mapFromSource(source);
+    if (!proxy.isValid()) {
+        spawn_filter_->clear();
+        spawn_type_filter_->setCurrentIndex(0);
+        proxy = spawn_proxy_->mapFromSource(source);
+    }
+    if (!proxy.isValid()) {
+        clear_spawn_selection();
+        return;
+    }
+    selected_spawn_ = id;
+    spawn_table_->setCurrentIndex(proxy);
+    spawn_table_->selectRow(proxy.row());
+    spawn_table_->scrollTo(proxy);
+    map_canvas_->set_selected_spawn(id);
+    update_spawn_detail(spawn_model_->spawn_at(source_row));
+}
+
+void MainWindow::clear_spawn_selection() {
+    selected_spawn_.reset();
+    if (spawn_table_->selectionModel() != nullptr) {
+        spawn_table_->selectionModel()->clearSelection();
+    }
+    map_canvas_->set_selected_spawn(std::nullopt);
+    update_spawn_detail(nullptr);
+}
+
+void MainWindow::update_spawn_detail(const SpawnSnapshot* spawn) {
+    if (spawn == nullptr) {
+        selection_detail_->setText("No spawn selected.");
+        return;
+    }
+    const QString name =
+        QString::fromStdString(spawn->name).toHtmlEscaped();
+    selection_detail_->setText(
+        QString("<h3>%1</h3>"
+                "<p>Level %2 %3 - ID %4</p>"
+                "<p>X %5 - Y %6 - Z %7 - Distance %8</p>")
+            .arg(name)
+            .arg(spawn->level)
+            .arg(QString::fromLatin1(spawn_type_label(spawn->type)))
+            .arg(spawn->id)
+            .arg(spawn->x, 0, 'f', 1)
+            .arg(spawn->y, 0, 'f', 1)
+            .arg(spawn->z, 0, 'f', 1)
+            .arg(spawn->distance, 0, 'f', 1));
+}
+
 void MainWindow::set_zone_map(ZoneMap map) {
     map_canvas_->set_zone_map(std::move(map));
 }
@@ -165,6 +297,23 @@ void MainWindow::restore_ui_state() {
                 state->height_filter_enabled);
             map_canvas_->set_player_follow_enabled(
                 state->player_follow_enabled);
+            spawn_filter_->setText(state->spawn_filter);
+            const int type_index =
+                spawn_type_filter_->findData(state->spawn_type_filter);
+            spawn_type_filter_->setCurrentIndex(
+                type_index >= 0 ? type_index : 0);
+            for (int column = 0;
+                 column < SpawnTableModel::column_count; ++column) {
+                spawn_table_->setColumnWidth(
+                    column,
+                    state->spawn_column_widths[
+                        static_cast<std::size_t>(column)]);
+            }
+            spawn_table_->sortByColumn(
+                state->spawn_sort_column,
+                state->spawn_sort_descending
+                    ? Qt::DescendingOrder
+                    : Qt::AscendingOrder);
             if (!geometry_restored || !layout_restored) {
                 resize(1200, 780);
             }
@@ -194,6 +343,17 @@ void MainWindow::ensure_on_screen() {
 }
 
 void MainWindow::save_ui_state() {
+    std::array<int, 4> column_widths{};
+    for (int column = 0;
+         column < SpawnTableModel::column_count; ++column) {
+        column_widths[static_cast<std::size_t>(column)] =
+            spawn_table_->columnWidth(column);
+    }
+    const int type_filter =
+        spawn_type_filter_
+            ->itemData(spawn_type_filter_->currentIndex())
+            .toInt();
+    const QHeaderView* header = spawn_table_->horizontalHeader();
     const UiState state{
         .geometry = saveGeometry(),
         .layout = saveState(),
@@ -205,6 +365,12 @@ void MainWindow::save_ui_state() {
             map_canvas_->height_filter_above(),
         .player_follow_enabled =
             map_canvas_->player_follow_enabled(),
+        .spawn_filter = spawn_filter_->text(),
+        .spawn_type_filter = type_filter,
+        .spawn_sort_column = header->sortIndicatorSection(),
+        .spawn_sort_descending =
+            header->sortIndicatorOrder() == Qt::DescendingOrder,
+        .spawn_column_widths = column_widths,
     };
     (void)settings_.save(state);
 }

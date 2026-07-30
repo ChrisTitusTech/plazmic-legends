@@ -22,6 +22,21 @@ struct GameStateSymbols {
     std::uint32_t maximum_zone_id;
 };
 
+struct SpawnSymbols {
+    std::size_t next_offset;
+    std::size_t previous_offset;
+    std::size_t name_offset;
+    std::size_t name_bytes;
+    std::size_t type_offset;
+    std::size_t id_offset;
+    std::size_t level_offset;
+    std::size_t y_offset;
+    std::size_t x_offset;
+    std::size_t z_offset;
+    std::size_t record_bytes;
+    std::size_t maximum_count;
+};
+
 struct ClientProfile {
     std::string_view id;
     std::string_view sha256;
@@ -30,6 +45,7 @@ struct ClientProfile {
     std::uint16_t optional_magic;
     std::uint32_t image_size;
     GameStateSymbols game_state;
+    SpawnSymbols spawns;
 };
 
 [[nodiscard]] const ClientProfile& legends_reference_profile();

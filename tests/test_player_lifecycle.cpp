@@ -20,12 +20,31 @@ plazmic::GameStateReadResult live_state(std::string zone) {
         .snapshot =
             plazmic::PlayerSnapshot{
                 .state = plazmic::PlayerSnapshotState::in_world,
-                .zone = std::move(zone),
+                .zone = zone,
                 .x = 10.0,
                 .y = 20.0,
                 .z = 30.0,
                 .heading_degrees = 90.0,
                 .detail = "Live synthetic player",
+            },
+        .spawns =
+            plazmic::SpawnCollectionSnapshot{
+                .state = plazmic::PlayerSnapshotState::in_world,
+                .zone = zone,
+                .spawns =
+                    {
+                        {
+                            .id = 1,
+                            .type = plazmic::SpawnType::npc,
+                            .name = "synthetic_spawn",
+                            .level = 10,
+                            .x = 11.0,
+                            .y = 21.0,
+                            .z = 30.0,
+                            .distance = 1.414,
+                        },
+                    },
+                .detail = "Live synthetic spawns",
             },
         .error = plazmic::GameStateReadError::none,
         .detail = {},
@@ -48,6 +67,7 @@ plazmic::GameStateReadResult failed_state(
     plazmic::GameStateReadError error) {
     return {
         .snapshot = std::nullopt,
+        .spawns = std::nullopt,
         .error = error,
         .detail = "synthetic transition",
     };
@@ -64,6 +84,9 @@ int main() {
         });
         require(first.player.available(),
                 "initial live player was unavailable");
+        require(first.spawns.available() &&
+                    first.spawns.spawns.size() == 1,
+                "initial live spawn collection was unavailable");
         require(first.map && first.map->zone == "zone_a",
                 "initial zone map was not published");
         require(!first.clear_map,
@@ -110,6 +133,10 @@ int main() {
                 plazmic::PlayerSnapshotState::stale,
             },
             std::pair{
+                plazmic::GameStateReadError::invalid_spawns,
+                plazmic::PlayerSnapshotState::unavailable,
+            },
+            std::pair{
                 plazmic::GameStateReadError::read_failed,
                 plazmic::PlayerSnapshotState::unavailable,
             },
@@ -126,6 +153,9 @@ int main() {
             });
             require(!invalidated.player.available(),
                     "lifecycle transition retained an available player");
+            require(!invalidated.spawns.available() &&
+                        invalidated.spawns.spawns.empty(),
+                    "lifecycle transition retained stale spawns");
             require(invalidated.player.state == expected_state,
                     "lifecycle transition used the wrong explicit state");
             require(invalidated.player.zone.empty(),

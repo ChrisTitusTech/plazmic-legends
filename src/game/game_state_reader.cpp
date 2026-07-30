@@ -1,6 +1,7 @@
 #include "game/game_state_reader.h"
 
 #include "common/sha256.h"
+#include "game/spawn_reader.h"
 #include "integration/process_reader.h"
 #include "map/map_parser.h"
 
@@ -60,6 +61,7 @@ bool checked_index(std::uintptr_t base,
 GameStateReadResult failure(GameStateReadError error, std::string detail) {
     return {
         .snapshot = std::nullopt,
+        .spawns = std::nullopt,
         .error = error,
         .detail = std::move(detail),
     };
@@ -117,7 +119,8 @@ bool valid_player_value(double value) {
 
 GameStateReadResult read_game_state(
     const ClientProcess& process,
-    const GameStateSymbols& symbols) {
+    const GameStateSymbols& symbols,
+    const SpawnSymbols& spawn_symbols) {
     if (process.pid <= 0 || process.image_base == 0U ||
         symbols.local_player_pointer_rva == 0U ||
         symbols.world_data_pointer_rva == 0U ||
@@ -247,6 +250,32 @@ GameStateReadResult read_game_state(
             "player coordinates or heading are outside profile bounds");
     }
 
+    PlayerSnapshot player{
+        .state = PlayerSnapshotState::in_world,
+        .zone = *zone,
+        .x = static_cast<double>(*x),
+        .y = static_cast<double>(*y),
+        .z = static_cast<double>(*z),
+        .heading_degrees =
+            static_cast<double>(*heading) * (360.0 / 512.0),
+        .detail = "Live read-only player snapshot",
+    };
+    SpawnReadResult spawn_result = read_spawn_collection(
+        process, *local_player, spawn_symbols, player);
+    if (!spawn_result) {
+        GameStateReadError error = GameStateReadError::invalid_spawns;
+        if (spawn_result.error ==
+            SpawnReadError::inconsistent_collection) {
+            error = GameStateReadError::inconsistent_snapshot;
+        } else if (spawn_result.error == SpawnReadError::read_failed) {
+            error = GameStateReadError::read_failed;
+        } else if (spawn_result.error ==
+                   SpawnReadError::invalid_profile) {
+            error = GameStateReadError::invalid_profile;
+        }
+        return failure(error, std::move(spawn_result.detail));
+    }
+
     const auto final_local =
         read_value<std::uintptr_t>(reader, local_pointer_address, detail);
     const auto final_zone =
@@ -262,17 +291,8 @@ GameStateReadResult read_game_state(
     }
 
     return {
-        .snapshot =
-            PlayerSnapshot{
-                .state = PlayerSnapshotState::in_world,
-                .zone = *zone,
-                .x = static_cast<double>(*x),
-                .y = static_cast<double>(*y),
-                .z = static_cast<double>(*z),
-                .heading_degrees =
-                    static_cast<double>(*heading) * (360.0 / 512.0),
-                .detail = "Live read-only player snapshot",
-            },
+        .snapshot = std::move(player),
+        .spawns = std::move(spawn_result.snapshot),
         .error = GameStateReadError::none,
         .detail = {},
     };
@@ -370,7 +390,8 @@ GameStateReadResult LiveGameStateProbe::refresh() {
     }
 
     GameStateReadResult result =
-        read_game_state(*process_, profile_->game_state);
+        read_game_state(
+            *process_, profile_->game_state, profile_->spawns);
     if (result.error == GameStateReadError::read_failed) {
         process_.reset();
         next_discovery_check_ = now + kDiscoveryInterval;

@@ -81,8 +81,14 @@ active task.
   orientation, adjustable player-Z filtering, player-follow state, lifecycle
   invalidation, and process reacquisition. See
   `docs/phase3-completion-report.md`.
-- Phase 4 spawn work is not authorized. Stop at the Phase 3 approval
-  checkpoint until the owner explicitly approves spawn collection research.
+- Phase 4 is authorized on `phase4/spawn-vertical-slice`. Its first checkpoint
+  is limited to independently validated exact-profile spawn-root research,
+  immutable bounded spawn values, staged synthetic reader coverage, and
+  privacy-safe evidence. Do not publish live spawn values to the UI until the
+  collection root, traversal, identity, type, name, level, and position fields
+  pass the documented validation strategy.
+- Phase 5 hardening work is not authorized. Stop at the Phase 4 approval
+  checkpoint after the complete spawn vertical-slice gate.
 - The owner explicitly accepts that this private development project operates
   against the Daybreak EULA. Read-only symbol and gameplay-state research may
   proceed after the normal phase checkpoints. The EULA-risk decision does not

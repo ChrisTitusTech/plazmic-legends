@@ -10,7 +10,8 @@ rendering, an exact-profile read-only live zone/player marker, player-follow,
 bounded lifecycle invalidation, and process reacquisition to the independent
 Qt 6 companion on DWM tag 5. Map orientation, player position, heading, zoning,
 camping, game exit, and relaunch have passed live validation. Phase 4 spawn
-research is waiting at its explicit approval checkpoint.
+research is active on `phase4/spawn-vertical-slice`, beginning with bounded
+exact-profile collection research and synthetic immutable-model coverage.
 
 ## Development and EULA notice
 

@@ -35,6 +35,12 @@ implementing the conflicting behavior.
   fullscreen above override windows, so the overlay is not the product UI.
 - Phase 2 is complete. The Qt 6 product shell, client status boundary, saved
   dock layout, live DWM tag 5 rule, and game-invariance gate passed.
+- Phase 3 is complete. Bounded installed maps, exact-profile zone/player
+  reads, player-follow, lifecycle invalidation, and process reacquisition
+  passed the complete live gate.
+- Phase 4 is complete. The exact-profile bounded spawn reader, immutable
+  model, synchronized table/map selection, lifecycle behavior, performance,
+  privacy, and live presentation gates passed.
 - No inherited implementation or third-party source is retained.
 - The local reference client is a Windows x86-64 PE executable running through
   GE-Proton11-3 in an X11 session.
@@ -75,18 +81,12 @@ active task.
 
 ## Working boundaries
 
-- Phase 0 through Phase 3 are complete. Phase 3 completion is on
-  `phase3/lifecycle-completion` and includes the bounded map parser, map
-  canvas, exact-profile zone/player reader, manually verified marker
-  orientation, adjustable player-Z filtering, player-follow state, lifecycle
-  invalidation, and process reacquisition. See
-  `docs/phase3-completion-report.md`.
-- Phase 4 is authorized on `phase4/spawn-vertical-slice`. Its first checkpoint
-  is limited to independently validated exact-profile spawn-root research,
-  immutable bounded spawn values, staged synthetic reader coverage, and
-  privacy-safe evidence. Do not publish live spawn values to the UI until the
-  collection root, traversal, identity, type, name, level, and position fields
-  pass the documented validation strategy.
+- Phase 0 through Phase 4 are complete. Phase 4 completion is on
+  `phase4/spawn-vertical-slice` and includes the independently validated
+  exact-profile spawn root, immutable bounded values, staged consistency
+  checks, synchronized table/map selection, lifecycle invalidation,
+  performance, privacy, and live acceptance. See
+  `docs/phase4-completion-report.md`.
 - Phase 5 hardening work is not authorized. Stop at the Phase 4 approval
   checkpoint after the complete spawn vertical-slice gate.
 - The owner explicitly accepts that this private development project operates

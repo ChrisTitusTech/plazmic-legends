@@ -284,10 +284,10 @@ spawn collection research.
 
 ## Phase 4: Validated spawn vertical slice
 
-Status: In progress on `phase4/spawn-vertical-slice`. The owner approved Phase
-4 on 2026-07-30. The first checkpoint establishes independently validated
-exact-profile collection evidence and a bounded synthetic spawn model before
-any live spawn value reaches the UI.
+Status: Complete on `phase4/spawn-vertical-slice`. The exact-profile spawn
+reader, immutable model, synchronized presentation, lifecycle, performance,
+privacy, and live acceptance gates passed on 2026-07-30. See
+`docs/phase4-completion-report.md`.
 
 ### Outcome
 

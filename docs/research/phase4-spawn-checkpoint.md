@@ -126,7 +126,12 @@ world_snapshot=verified spawn_count=117 spawn_players=3 spawn_npcs=114 spawn_cor
 ```
 
 These reads prove repeatable bounded collection acquisition and observed
-add/remove/type-count change without recording runtime names. The remaining
-Phase 4 live gate is controlled visible comparison of every displayed field
-and the zoning, camping, character-select, process-exit, and reacquisition
-sequence.
+add/remove/type-count change without recording runtime names.
+
+## Subsequent Phase 4 completion
+
+The owner accepted the controlled visible-field, shared-selection, lifecycle,
+and game-performance result after the current build was relaunched on the
+reference session. The complete automated, package, privacy, performance, and
+live evidence is recorded in `docs/phase4-completion-report.md`. Phase 4 is
+complete and Phase 5 remains behind its explicit approval checkpoint.

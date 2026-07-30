@@ -6,71 +6,69 @@ work done.
 
 ## Current phase
 
-Phase 1 and Phase 2 were verified and merged into `main`. Phase 3 is complete
-on `phase3/lifecycle-completion`: bounded map parsing and rendering,
-exact-profile zone/player reads, adjustable player-Z filtering, player-follow,
-lifecycle invalidation, performance, live zoning, camping, game exit, and
-process reacquisition passed. See `docs/phase3-completion-report.md`. Phase 4
-is authorized on `phase4/spawn-vertical-slice`; its first checkpoint is
-bounded spawn-root research and synthetic immutable-model coverage.
+Phase 1 through Phase 3 were verified and merged into `main`. Phase 4 is
+complete on `phase4/spawn-vertical-slice`: the exact-profile bounded spawn
+reader, immutable model, synchronized table/map selection, lifecycle
+invalidation, performance, privacy, and live presentation gates passed. See
+`docs/phase4-completion-report.md`. Phase 5 remains unauthorized.
 
-## Active Phase 4
+## Completed Phase 4
 
 ### P4-01: Establish the exact-profile spawn resolver
 
-- [ ] Independently identify and document the smallest collection root,
+- [x] Independently identify and document the smallest collection root,
   traversal shape, and consistency invariants for the exact supported client.
-- [ ] Resolve only stable ID, approved type, bounded display name, level, and
+- [x] Resolve only stable ID, approved type, bounded display name, level, and
   finite position fields.
-- [ ] Require two controlled observations for every displayed field and fail
+- [x] Require two controlled observations for every displayed field and fail
   closed when any profile or structure invariant fails.
 - Acceptance criteria: no copied, guessed, partial, or UI-local address enters
   the compatibility profile.
 
 ### P4-02: Read a hard-bounded immutable collection
 
-- [ ] Define an evidence-based maximum count and bounded string size before
+- [x] Define an evidence-based maximum count and bounded string size before
   enabling a live collection.
-- [ ] Stage collection, entry, and value reads with canonical-address,
+- [x] Stage collection, entry, and value reads with canonical-address,
   readable-mapping, overflow, pointer-depth, and consistency checks.
-- [ ] Reject duplicate IDs, invalid types, malformed names, invalid levels,
+- [x] Reject duplicate IDs, invalid types, malformed names, invalid levels,
   non-finite positions, oversized collections, and collection changes during
   publication.
-- [ ] Publish immutable spawn snapshots containing no process addresses.
-- [ ] Cover every success and rejection path with synthetic fixtures that
+- [x] Publish immutable spawn snapshots containing no process addresses.
+- [x] Cover every success and rejection path with synthetic fixtures that
   contain no Daybreak or player data.
 - Acceptance criteria: a failed or inconsistent collection publishes no stale
   or partial spawn values.
 
 ### P4-03: Add synchronized spawn presentation
 
-- [ ] Replace the placeholder with a sortable and filterable spawn table.
-- [ ] Draw spawn markers without rebuilding unchanged map geometry.
-- [ ] Synchronize map, table, and detail selection by stable ID without
+- [x] Replace the placeholder with a sortable and filterable spawn table.
+- [x] Draw spawn markers without rebuilding unchanged map geometry.
+- [x] Synchronize map, table, and detail selection by stable ID without
   affecting the game target.
-- [ ] Show explicit empty, unavailable, no-selection, and stale states.
+- [x] Show explicit empty, unavailable, no-selection, and stale states.
 - Acceptance criteria: every presentation surface consumes immutable values
   only and agrees on the selected stable ID.
 
 ### P4-04: Complete lifecycle and performance behavior
 
-- [ ] Cover add, remove, change, duplicate, oversized, and inconsistent
+- [x] Cover add, remove, change, duplicate, oversized, and inconsistent
   collection behavior.
-- [ ] Invalidate all spawn state on zoning, camping, character select, read
+- [x] Invalidate all spawn state on zoning, camping, character select, read
   failure, profile change, and process exit.
-- [ ] Measure bounded reader, publication, filtering, sorting, selection, and
+- [x] Measure bounded reader, publication, filtering, sorting, selection, and
   large-fixture rendering cost.
 - Acceptance criteria: no stale spawn survives a transition and the live game
   shows no visible frame-pacing regression.
 
 ### P4-05: Complete the Phase 4 gate
 
-- [ ] Run the complete Phase 3 gate plus spawn reader, model, selection,
+- [x] Run the complete Phase 3 gate plus spawn reader, model, selection,
   lifecycle, privacy, and large-fixture checks.
-- [ ] Validate approved fields against two controlled live observations.
-- [ ] Audit logs, fixtures, diffs, package contents, and artifacts for
+- [x] Validate approved fields against two controlled live observations.
+- [x] Audit logs, fixtures, diffs, package contents, and artifacts for
   character names, spawn names, addresses, and Daybreak content.
-- [ ] Stop for approval before Phase 5 hardening work.
+- [x] Stop for approval before Phase 5 hardening work.
 
 ## Completed Phase 3
 

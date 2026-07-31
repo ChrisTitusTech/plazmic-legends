@@ -10,19 +10,19 @@ on DWM tag 5 renders installed maps, the live player, and a bounded
 exact-profile spawn collection. Its sortable/filterable table, map markers,
 details, and shared stable-ID selection passed synthetic, performance,
 privacy, lifecycle, and live acceptance gates. Phase 5 hardening is active on
-`phase5/release-hardening` for a private/local Fedora artifact.
-Public release or distribution remains outside the approved scope.
+`phase5/release-hardening`. Fedora COPR, RPM, AppImage, and other package
+publication are authorized.
 
 ## Development and EULA notice
 
-This private development project knowingly operates against the Daybreak EULA
+This project knowingly operates against the Daybreak EULA
 and related published rules. The owner explicitly accepts that risk. This does
 not grant permission, prevent account action, or imply affiliation with
 Daybreak.
 
 Development remains read-only and external. Memory writes, injection, client
-patching, protection bypass, gameplay automation, credentials, and public
-distribution are outside the authorized scope.
+patching, protection bypass, gameplay automation, and credentials remain
+outside the authorized scope.
 
 ## Project documents
 
@@ -53,8 +53,12 @@ distribution are outside the authorized scope.
   validation.
 - [Phase 3 completion report](docs/phase3-completion-report.md) records
   lifecycle, performance, packaging, DWM, and live-client evidence.
+- [Package operations](docs/package-operations.md) records the support matrix,
+  install, upgrade, removal, AppImage, troubleshooting, and rollback paths.
+- [Phase 5 product boundary](docs/phase5-product-boundary.md) maps every
+  retained source, dependency, and artifact to its current requirement.
 - [EULA-risk decision](docs/research/phase1-policy-risk.md) records the
-  explicit decision to continue private read-only development despite the
+  explicit decision to continue read-only development despite the
   published restrictions.
 - [MacroQuest boundary review](docs/research/macroquest-boundary-review.md)
   records the safe staged-read concept retained and the injection and
@@ -95,6 +99,30 @@ With the exact supported client installed:
 build/dev/plazmic-legends \
   --client "$EQ_LEGENDS_DIR/eqgame.exe"
 ```
+
+## Install a packaged build
+
+The reference Fedora package is published through the owner's COPR:
+
+```bash
+sudo dnf copr enable christitustech/copr-fedora
+sudo dnf install plazmic-legends
+```
+
+The Linux-distribution-neutral option is the x86-64 AppImage:
+
+```bash
+sha256sum --check Plazmic-Legends-0.1.0-x86_64.AppImage.sha256
+chmod 0755 Plazmic-Legends-0.1.0-x86_64.AppImage
+./Plazmic-Legends-0.1.0-x86_64.AppImage \
+  --client "$EQ_LEGENDS_DIR/eqgame.exe"
+```
+
+The AppImage is built on Ubuntu 22.04 for a glibc 2.35 floor and bundles Qt
+6.8.3. It targets x86-64 X11 and XWayland desktops; no one native artifact can
+guarantee musl, other CPU architectures, old kernels, or every graphics stack.
+See [Package operations](docs/package-operations.md) for exact support,
+rollback, removal, and FUSE-free launch instructions.
 
 The application stores geometry and dock layout in
 `$XDG_CONFIG_HOME/plazmic-legends/config.toml`, or the equivalent Qt user
@@ -166,5 +194,5 @@ Plazmic does not use ShowEQ packet capture and does not package game maps.
 The removed import was derived from MacroQuest and is preserved at
 `phase0-import-baseline`. No MacroQuest implementation or bundled dependency is
 retained in the active tree. Future code licensing is unresolved and must be
-decided before distribution. EverQuest and its assets are the property of
-their respective owners and are not part of this repository.
+resolved separately. EverQuest and its assets are the property of their
+respective owners and are not part of this repository.

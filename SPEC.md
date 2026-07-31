@@ -182,8 +182,8 @@ approved architecture decision requires otherwise.
 - Retained MacroQuest-derived code remains subject to GPLv2 notices.
   Third-party dependencies require a documented license and provenance audit.
 - The project does not assert that process inspection or a companion
-  application is permitted by current game rules. Live integration testing and
-  distribution require an explicit risk decision.
+  application is permitted by current game rules. The owner accepted that risk
+  for live integration testing and package publication.
 
 ## Performance and compatibility
 
@@ -260,11 +260,10 @@ approved architecture decision requires otherwise.
   companion window does not stack above or alter it.
 - Use GCC C++20, CMake, Ninja, system X11 libraries, and no vendored runtime
   dependency.
-- Keep development private and local; do not push, package for distribution,
-  or publish it without a separate explicit decision.
+- Package publication is authorized.
 - Record that the owner knowingly accepts development contrary to the Daybreak
-  EULA. This permits private read-only research but does not authorize writes,
-  injection, automation, protection bypass, or distribution.
+  EULA. This permits read-only research but does not authorize writes,
+  injection, automation, or protection bypass.
 - Use plain F11 for the proof toggle.
 - Reserve `$XDG_CONFIG_HOME/plazmic-legends/config.toml` for configuration and
   `$XDG_STATE_HOME/plazmic-legends/plazmic-legends.log` for logs, with standard

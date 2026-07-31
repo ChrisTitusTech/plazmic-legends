@@ -24,10 +24,9 @@ and reports no project RPATH or RUNPATH. No Qt or X11 library is copied into
 the repository or install image.
 
 Fedora installs the applicable Qt license texts under
-`/usr/share/licenses/qt6-qtbase`. Any future distribution must repeat the
-license review and provide the notices and replacement rights required by the
-selected Qt license. Phase 2 remains private and is not a distribution
-approval.
+`/usr/share/licenses/qt6-qtbase`. Package builds repeat the license review and
+provide the notices and replacement rights required by the selected Qt
+license.
 
 ## Removal impact
 

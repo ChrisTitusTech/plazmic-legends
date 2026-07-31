@@ -6,20 +6,13 @@ Branch: `phase5/release-hardening`
 
 ## Decision
 
-Phase 5 prepares a private/local Fedora package for the reference Linux,
-Wine, and X11 tier. It does not authorize a public release, repository
-publication beyond the existing development workflow, or distribution to
-other users.
+Phase 5 prepares Fedora RPM and x86-64 AppImage packages for the reference
+Linux, Wine, and X11 tier. Package publication is authorized.
 
 The active project contains independently written Plazmic Legends code. The
 removed MacroQuest import remains recoverable only from
 `phase0-import-baseline`. No imported implementation, ShowEQ implementation,
 game executable, game asset, Wine-prefix content, or account data is restored.
-
-The new project's license remains unresolved. Until the owner selects a
-license and separately approves distribution, the Phase 5 artifact is private
-and local only. This is a release blocker for public distribution, not for
-local package validation.
 
 ## Removed research boundary
 
@@ -49,7 +42,9 @@ the bounded process reader or the independent Qt companion.
 | `src/ui` | Independent Qt companion, map, table, selection, theme, and settings |
 | `tools/inspect_eqgame.py` | Offline client fingerprint and profile-refresh input |
 | `tests` | Deterministic AC-03 through AC-09 and performance coverage |
-| `packaging` | Desktop integration for the installed native product |
+| `packaging` | RPM, AppImage, desktop integration, metadata, and dependency notices |
+| `.copr` | Deterministic source-RPM entrypoint for external-SCM COPR builds |
+| `.github/workflows` | Exact-commit Linux configure, build, test, and install inspection |
 | `CMakeLists.txt` and `CMakePresets.json` | Linux configure, build, test, and install gate |
 | `SPEC.md`, `ROADMAP.md`, `TASKS.md`, `AGENTS.md` | Scope, safety, phase, and validation contract |
 | `docs` | Provenance, risk decisions, research evidence, audits, and operations |
@@ -70,17 +65,25 @@ No retained source directory exists solely for an abandoned feature.
 | Qt 6.8 or newer | Concurrent worker, DBus theme fallback, GUI, widgets, settings, and its OpenGL/GLX link closure | No product UI |
 | libX11 development files | Stable X11 class and live DWM placement | No supported X11 product tier |
 | Xvfb | Headless Qt/X11 lifecycle, theme, and performance tests | GUI tests cannot run headlessly |
+| RPM toolchain | Fedora source/binary package and metadata validation | No Fedora artifact |
+| Podman or Docker | Reproducible Ubuntu 22.04 AppImage build environment | No portable artifact |
+| linuxdeploy and Qt plugin | Checked-by-SHA dependency collection and AppImage creation | No AppImage |
 
 Xext, Xfixes, and XTest are no longer direct project dependencies. Historical
 documents may still name them when describing the removed Phase 1 experiment.
 
 ## Runtime dependencies
 
-The installed ELF dynamically links to the system C++/GCC, C, and math
-runtimes; Qt 6 Concurrent/Core/DBus/Gui/Widgets; libX11; and the system GLX and
-OpenGL dispatch libraries selected by Qt. The package does not copy those
-libraries. Fedora package metadata will express the required runtime ABI
-dependencies.
+The RPM ELF dynamically links to the system C++/GCC, C, and math runtimes; Qt
+6 Concurrent/Core/DBus/Gui/Widgets; libX11; and the system GLX and OpenGL
+dispatch libraries selected by Qt. The RPM does not copy those libraries and
+declares its Qt and X11 runtime requirements.
+
+The x86-64 AppImage bundles Qt 6.8.3 and non-base runtime dependencies selected
+by linuxdeploy. It intentionally retains the host kernel, glibc, graphics
+driver, X11 client ABI, and D-Bus boundary. Building on Ubuntu 22.04 establishes
+a glibc 2.35 floor; it does not guarantee musl systems, other architectures,
+old kernels, or every graphics stack.
 
 Qt remains isolated to the supported product and UI tests. libX11 remains
 required because the supported tier is X11 and every Plazmic top-level window
@@ -89,18 +92,23 @@ the product UI but leaves the offline PE inspector.
 
 ## Package boundary
 
-Before RPM metadata and notices are added, the CMake install image contains
-only:
+The CMake install image contains only:
 
 ```text
 bin/plazmic-legends
 share/applications/plazmic-legends.desktop
+share/doc/plazmic-legends/README.md
+share/doc/plazmic-legends/THIRD-PARTY-NOTICES.md
+share/doc/plazmic-legends/package-operations.md
+share/doc/plazmic-legends/phase5-product-boundary.md
+share/icons/hicolor/scalable/apps/plazmic-legends.svg
+share/metainfo/io.github.ChristitusTech.PlazmicLegends.metainfo.xml
 ```
 
-Phase 5 may add only version, license/status notices, support documentation,
-and package metadata required by P5-03. It must not add the historical proof,
-research executables, test fixtures, game maps, runtime names, local settings,
-logs, Wine files, or system libraries.
+The RPM adds no files beyond this install image. The AppImage adds only its
+runtime launcher and audited shared-library/plugin closure. Neither artifact
+may add the historical proof, research executables, test fixtures, game maps,
+runtime names, local settings, logs, Wine files, or game/system data.
 
 ## Validation
 

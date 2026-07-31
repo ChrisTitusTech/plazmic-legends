@@ -1,0 +1,59 @@
+Name:           plazmic-legends
+Version:        0.1.0
+Release:        1%{?dist}
+Summary:        Read-only EverQuest Legends companion for Linux
+License:        LicenseRef-Proprietary
+URL:            https://github.com/ChrisTitusTech/plazmic-legends
+Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+
+BuildRequires:  appstream
+BuildRequires:  cmake >= 3.28
+BuildRequires:  desktop-file-utils
+BuildRequires:  gcc-c++
+BuildRequires:  libX11-devel
+BuildRequires:  ninja-build
+BuildRequires:  python3 >= 3.11
+BuildRequires:  qt6-qtbase-devel >= 6.8
+BuildRequires:  xorg-x11-server-Xvfb
+BuildRequires:  xorg-x11-xauth
+Requires:       qt6-qtbase%{?_isa} >= 6.8
+
+%description
+Plazmic Legends is an independent Qt 6 companion window for the 64-bit
+EverQuest Legends client running under Wine on Linux. It displays installed
+map geometry and a bounded read-only snapshot for one exact supported client
+profile. It does not inject into, write to, or modify the game or Wine prefix.
+
+%prep
+%autosetup
+
+%build
+%cmake \
+    -G Ninja \
+    -DBUILD_TESTING=ON \
+    -DPLAZMIC_ENABLE_REPOSITORY_CHECKS=OFF
+%cmake_build
+
+%install
+%cmake_install
+
+%check
+desktop-file-validate \
+    %{buildroot}%{_datadir}/applications/plazmic-legends.desktop
+appstreamcli validate --no-net \
+    %{buildroot}%{_metainfodir}/io.github.ChristitusTech.PlazmicLegends.metainfo.xml
+ctest --test-dir %{__cmake_builddir} --output-on-failure
+
+%files
+%{_bindir}/plazmic-legends
+%{_datadir}/applications/plazmic-legends.desktop
+%{_datadir}/icons/hicolor/scalable/apps/plazmic-legends.svg
+%{_metainfodir}/io.github.ChristitusTech.PlazmicLegends.metainfo.xml
+%doc %{_docdir}/%{name}/README.md
+%doc %{_docdir}/%{name}/package-operations.md
+%doc %{_docdir}/%{name}/phase5-product-boundary.md
+%doc %{_docdir}/%{name}/THIRD-PARTY-NOTICES.md
+
+%changelog
+* Thu Jul 30 2026 Chris Titus Tech <contact@christitus.com> - 0.1.0-1
+- Initial Fedora COPR artifact

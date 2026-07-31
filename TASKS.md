@@ -12,8 +12,8 @@ reader, immutable model, synchronized table/map selection, lifecycle
 invalidation, performance, privacy, and live presentation gates passed. See
 `docs/phase4-completion-report.md`.
 
-Phase 5 is now authorized on `phase5/release-hardening` for a private/local
-Fedora package. Public release or distribution remains unauthorized.
+Phase 5 is now authorized on `phase5/release-hardening`. Package publication is
+authorized.
 
 ## Active Phase 5
 
@@ -43,12 +43,12 @@ Fedora package. Public release or distribution remains unauthorized.
   offsets, and diagnostics contain no credentials, tokens, runtime names,
   process addresses, memory content, or Wine-prefix data.
 
-### P5-03: Build the private Fedora artifact
+### P5-03: Build the Fedora artifact
 
-- [ ] Produce a versioned private/local Fedora RPM from the CMake install
+- [ ] Produce a versioned Fedora RPM from the CMake install
   boundary with explicit runtime dependencies.
 - [ ] Include required project and dependency notices, support matrix, known
-  risks, and private-distribution status without bundling system libraries.
+  risks, and package status without bundling system libraries.
 - [ ] Document install, upgrade, removal, troubleshooting, and rollback.
 - [ ] Generate SHA-256 checksums from a clean artifact build.
 - Acceptance criteria: the RPM contains only approved native product files and
@@ -75,8 +75,8 @@ Fedora package. Public release or distribution remains unauthorized.
 - [ ] Obtain an independent review without using CodeRabbit.
 - [ ] Record checksums, support matrix, known risks, rollback evidence, and all
   skipped validation.
-- [ ] Stop for explicit approval before any public release or distribution.
-- Acceptance criteria: the private release candidate satisfies `AC-01` through
+- [x] Confirm package publication authorization.
+- Acceptance criteria: the release candidate satisfies `AC-01` through
   `AC-12`, and every unsupported or changed-client path fails closed.
 
 ## Completed Phase 4
@@ -261,9 +261,9 @@ Fedora package. Public release or distribution remains unauthorized.
   `docs/research/phase1-symbol-plan.md`,
   `docs/research/phase1-policy-risk.md`, and
   `docs/phase1-codex-review.md`.
-- Decision update: private read-only memory research is approved despite the
-  recorded EULA conflict. Push, release, distribution, writes, injection,
-  automation, and protection bypass remain prohibited.
+- Decision update: read-only memory research is approved despite the recorded
+  EULA conflict. Writes, injection, automation, and protection bypass remain
+  prohibited.
 - Acceptance criteria: every unresolved Phase 1 decision in `SPEC.md` is
   answered or explicitly deferred outside MVP.
 - Validation: independent Codex review, official-policy review, dependency

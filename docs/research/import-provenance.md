@@ -53,4 +53,4 @@ standard-library Python inspection tool and its tests.
 Because no inherited implementation remains, the imported GPLv2 license file
 was removed from the active tree with the source it governed. It remains
 available from `phase0-import-baseline`. The license for future original
-Plazmic Legends code is unresolved and must be selected before distribution.
+Plazmic Legends code is unresolved.

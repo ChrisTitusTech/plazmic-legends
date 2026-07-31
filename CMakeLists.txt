@@ -12,14 +12,26 @@ include(CheckPIESupported)
 include(GNUInstallDirs)
 check_pie_supported()
 
-find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
+option(
+    PLAZMIC_ENABLE_REPOSITORY_CHECKS
+    "Require and expose the repository lint and source-validation tools"
+    ON
+)
+
+if(BUILD_TESTING OR PLAZMIC_ENABLE_REPOSITORY_CHECKS)
+    find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
+endif()
 find_package(X11 REQUIRED)
 find_package(Qt6 6.8 REQUIRED COMPONENTS Concurrent Core DBus Gui Widgets)
-find_program(RUFF_EXECUTABLE NAMES ruff REQUIRED)
-find_program(MARKDOWNLINT_EXECUTABLE NAMES markdownlint-cli2 REQUIRED)
+
+if(PLAZMIC_ENABLE_REPOSITORY_CHECKS)
+    find_program(RUFF_EXECUTABLE NAMES ruff REQUIRED)
+    find_program(MARKDOWNLINT_EXECUTABLE NAMES markdownlint-cli2 REQUIRED)
+endif()
 
 add_library(
     plazmic_core
+    STATIC
     src/common/client_file_monitor.cpp
     src/common/sha256.cpp
     src/game/client_profile.cpp
@@ -117,6 +129,22 @@ install(
     FILES packaging/plazmic-legends.desktop
     DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
 )
+install(
+    FILES packaging/plazmic-legends.svg
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps"
+)
+install(
+    FILES packaging/io.github.ChristitusTech.PlazmicLegends.metainfo.xml
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/metainfo"
+)
+install(
+    FILES
+        README.md
+        docs/package-operations.md
+        docs/phase5-product-boundary.md
+        packaging/THIRD-PARTY-NOTICES.md
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/plazmic-legends"
+)
 
 set(PLAZMIC_MARKDOWN_FILES
     AGENTS.md
@@ -127,42 +155,46 @@ set(PLAZMIC_MARKDOWN_FILES
     "docs/**/*.md"
 )
 
-add_custom_target(
-    check
-    COMMAND
-        "${MARKDOWNLINT_EXECUTABLE}"
-        ${PLAZMIC_MARKDOWN_FILES}
-    COMMAND
-        "${RUFF_EXECUTABLE}"
+if(PLAZMIC_ENABLE_REPOSITORY_CHECKS)
+    add_custom_target(
         check
-        tools/inspect_eqgame.py
-        tests/test_inspect_eqgame.py
-    COMMAND
-        "${RUFF_EXECUTABLE}"
-        format
-        --check
-        tools/inspect_eqgame.py
-        tests/test_inspect_eqgame.py
-    COMMAND
-        "${Python3_EXECUTABLE}"
-        -m
-        py_compile
-        tools/inspect_eqgame.py
-        tests/test_inspect_eqgame.py
-    COMMAND
-        "${Python3_EXECUTABLE}"
-        -m
-        unittest
-        discover
-        -s
-        tests
-        -p
-        "test_*.py"
-        -v
-    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-    COMMENT "Running the repository gate"
-    VERBATIM
-)
+        COMMAND
+            "${MARKDOWNLINT_EXECUTABLE}"
+            ${PLAZMIC_MARKDOWN_FILES}
+        COMMAND
+            "${RUFF_EXECUTABLE}"
+            check
+            tools/inspect_eqgame.py
+            tests/test_inspect_eqgame.py
+        COMMAND
+            "${RUFF_EXECUTABLE}"
+            format
+            --check
+            tools/inspect_eqgame.py
+            tests/test_inspect_eqgame.py
+        COMMAND
+            "${Python3_EXECUTABLE}"
+            -m
+            py_compile
+            tools/inspect_eqgame.py
+            tests/test_inspect_eqgame.py
+        COMMAND
+            "${Python3_EXECUTABLE}"
+            -m
+            unittest
+            discover
+            -s
+            tests
+            -p
+            "test_*.py"
+            -v
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        COMMENT "Running the repository gate"
+        VERBATIM
+    )
+else()
+    add_custom_target(check)
+endif()
 add_dependencies(check plazmic-legends)
 
 if(BUILD_TESTING)

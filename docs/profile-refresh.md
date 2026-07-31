@@ -82,7 +82,7 @@ assets. Retain only privacy-safe aggregate evidence.
 
 ## Release handling
 
-A client patch immediately invalidates any private release candidate that does
+A client patch immediately invalidates any release candidate that does
 not contain the new validated profile. Withdraw the incompatible artifact
 rather than weakening compatibility checks. Retain the prior artifact and
 immutable profile for rollback against the corresponding old client only.

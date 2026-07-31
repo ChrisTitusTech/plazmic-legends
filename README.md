@@ -98,7 +98,7 @@ names, memory contents, and process addresses.
 The original Macroquest was released open source by a developer named Plazmic.
 He only wanted to extend the tradeskill automation, macro capabilities, and other
 limitations the original Everquest had. He passed in 2007, and this project
-is a homage to him. 
+is a homage to him.
 
 ## Important notice
 

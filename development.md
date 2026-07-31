@@ -4,6 +4,9 @@ Plazmic Legends is feature complete as of version 0.1.2. This document is the
 entrypoint for contributors and anyone interested in the project's design,
 history, validation, and research evidence.
 
+For the contribution workflow, issue expectations, and pull request checklist,
+see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Product boundary
 
 Plazmic Legends is a native Linux Qt 6 application that observes the supported

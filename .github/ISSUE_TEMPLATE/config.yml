@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/ChrisTitusTech/plazmic-legends/security/policy
+    about: Report security issues privately; do not open a public issue.
+  - name: Support guide
+    url: https://github.com/ChrisTitusTech/plazmic-legends/blob/main/.github/SUPPORT.md
+    about: Review supported platforms, troubleshooting, and safe diagnostics.

@@ -1,0 +1,98 @@
+name: Bug report
+description: Report a reproducible problem with Plazmic Legends
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not attach game executables, maps, Wine prefixes, memory captures,
+        credentials, character or spawn names, or unredacted personal paths.
+
+  - type: input
+    id: version
+    attributes:
+      label: Plazmic Legends version
+      description: Run `plazmic-legends --version`.
+      placeholder: "0.1.2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installation method
+      options:
+        - Fedora COPR
+        - Downloaded RPM
+        - AppImage
+        - Source build
+    validations:
+      required: true
+
+  - type: input
+    id: linux
+    attributes:
+      label: Linux distribution
+      placeholder: "Fedora 44"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: display
+    attributes:
+      label: Display session
+      options:
+        - X11
+        - XWayland
+        - Native Wayland
+        - Unknown
+    validations:
+      required: true
+
+  - type: input
+    id: wine
+    attributes:
+      label: Wine or Proton runner
+      placeholder: "GE-Proton11-3"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the visible problem and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Start...
+        2. Select...
+        3. Observe...
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Include only relevant, privacy-safe status or log categories.
+      render: text
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmation
+      options:
+        - label: I tested the latest release and searched existing issues.
+          required: true
+        - label: I removed proprietary game data and personal information.
+          required: true
+        - label: I understand native Wayland is outside the supported tier.
+          required: true

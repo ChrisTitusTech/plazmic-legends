@@ -159,7 +159,11 @@ install(
 )
 
 set(PLAZMIC_MARKDOWN_FILES
+    ".github/**/*.md"
     AGENTS.md
+    CODE_OF_CONDUCT.md
+    CONTRIBUTING.md
+    development.md
     README.md
     ROADMAP.md
     SPEC.md

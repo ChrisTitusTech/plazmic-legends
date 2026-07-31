@@ -106,7 +106,9 @@ client protections, or modify the game installation or Wine prefix.
 ## Development
 
 Build instructions, architecture, project history, validation requirements,
-and research references are in [development.md](development.md).
+and research references are in [development.md](development.md). Before
+submitting a change, read the
+[contribution guide](https://github.com/ChrisTitusTech/plazmic-legends/blob/main/CONTRIBUTING.md).
 
 ## License
 

@@ -2,6 +2,8 @@ SHELL := /bin/bash
 .ONESHELL:
 .SHELLFLAGS := -eu -o pipefail -c
 
+REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
+
 .PHONY: srpm
 
 srpm:
@@ -20,7 +22,13 @@ srpm:
 	temp_dir="$$(mktemp -d -t plazmic-legends-srpm.XXXXXXXX)"
 	trap 'rm -rf -- "$$temp_dir"' EXIT
 	mkdir -p "$(outdir)" "$$temp_dir/sources"
-	spectool -g -C "$$temp_dir/sources" "$$spec_path"
+	name="$$(rpmspec -q --srpm --qf '%{NAME}' "$$spec_path")"
+	version="$$(rpmspec -q --srpm --qf '%{VERSION}' "$$spec_path")"
+	git -C "$(REPO_ROOT)" archive \
+		--format=tar \
+		--prefix="$$name-$$version/" \
+		HEAD \
+		| gzip -n >"$$temp_dir/sources/$$name-$$version.tar.gz"
 	rpmbuild -bs "$$spec_path" \
 		--define "_sourcedir $$temp_dir/sources" \
 		--define "_srcrpmdir $(abspath $(outdir))"

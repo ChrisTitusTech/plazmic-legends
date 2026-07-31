@@ -112,9 +112,9 @@ sudo dnf install plazmic-legends
 The Linux-distribution-neutral option is the x86-64 AppImage:
 
 ```bash
-sha256sum --check Plazmic-Legends-0.1.0-x86_64.AppImage.sha256
-chmod 0755 Plazmic-Legends-0.1.0-x86_64.AppImage
-./Plazmic-Legends-0.1.0-x86_64.AppImage \
+sha256sum --check Plazmic-Legends-0.1.1-x86_64.AppImage.sha256
+chmod 0755 Plazmic-Legends-0.1.1-x86_64.AppImage
+./Plazmic-Legends-0.1.1-x86_64.AppImage \
   --client "$EQ_LEGENDS_DIR/eqgame.exe"
 ```
 

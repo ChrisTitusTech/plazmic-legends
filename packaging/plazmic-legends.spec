@@ -1,5 +1,5 @@
 Name:           plazmic-legends
-Version:        0.1.0
+Version:        0.1.1
 Release:        1%{?dist}
 Summary:        Read-only EverQuest Legends companion for Linux
 License:        LicenseRef-Proprietary
@@ -55,5 +55,8 @@ ctest --test-dir %{__cmake_builddir} --output-on-failure
 %doc %{_docdir}/%{name}/THIRD-PARTY-NOTICES.md
 
 %changelog
+* Thu Jul 30 2026 Chris Titus Tech <contact@christitus.com> - 0.1.1-1
+- Build the SRPM from the exact SCM checkout and include the custom icon
+
 * Thu Jul 30 2026 Chris Titus Tech <contact@christitus.com> - 0.1.0-1
 - Initial Fedora COPR artifact

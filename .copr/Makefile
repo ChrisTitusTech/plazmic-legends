@@ -25,6 +25,11 @@ srpm:
 	name="$$(rpmspec -q --srpm --qf '%{NAME}' "$$spec_path")"
 	version="$$(rpmspec -q --srpm --qf '%{VERSION}' "$$spec_path")"
 	if command -v git >/dev/null 2>&1; then
+		if ! git -C "$(REPO_ROOT)" diff --quiet --ignore-submodules -- \
+			|| ! git -C "$(REPO_ROOT)" diff --cached --quiet --ignore-submodules --; then
+			printf '%s\n' 'tracked source changes must be committed before building an SRPM' >&2
+			exit 2
+		fi
 		git -C "$(REPO_ROOT)" ls-files \
 			| diff --unified "$(REPO_ROOT)/.copr/source-files" -
 	fi

@@ -42,10 +42,25 @@ sudo dnf copr enable christitustech/copr-fedora
 sudo dnf install plazmic-legends
 ```
 
-Launch with an explicit client path:
+Launch the application:
 
 ```bash
-plazmic-legends --client "/path/to/EverQuest Legends/eqgame.exe"
+plazmic-legends
+```
+
+On first launch, a valid `--client` path or `EQ_LEGENDS_DIR` is saved to the
+per-user configuration. Without either input, a short bounded scan looks below
+the current user's home directory for
+`Daybreak Game Company/Installed Games/EverQuest Legends`. A valid environment
+or saved path skips that scan. If multiple installations are found, select one
+with `--client "/path/to/EverQuest Legends/eqgame.exe"`.
+
+The saved value can be edited in
+`$XDG_CONFIG_HOME/plazmic-legends/config.toml`:
+
+```toml
+[client]
+game_directory = "/path/to/EverQuest Legends"
 ```
 
 An unsupported or changed executable fails closed. Refreshing a compatibility
@@ -106,17 +121,18 @@ Verify the adjacent checksum, make the artifact executable, and launch it:
 ```bash
 sha256sum --check Plazmic-Legends-0.1.2-x86_64.AppImage.sha256
 chmod 0755 Plazmic-Legends-0.1.2-x86_64.AppImage
-./Plazmic-Legends-0.1.2-x86_64.AppImage \
-  --client "/path/to/EverQuest Legends/eqgame.exe"
+./Plazmic-Legends-0.1.2-x86_64.AppImage
 ```
 
 FUSE is optional. On hosts without a usable FUSE setup:
 
 ```bash
 ./Plazmic-Legends-0.1.2-x86_64.AppImage \
-  --appimage-extract-and-run \
-  --client "/path/to/EverQuest Legends/eqgame.exe"
+  --appimage-extract-and-run
 ```
+
+The AppImage uses the same client discovery and saved XDG configuration as the
+installed package.
 
 The AppImage has no privileged installer or updater. Remove it by deleting the
 AppImage and checksum file.

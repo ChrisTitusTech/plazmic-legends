@@ -10,6 +10,20 @@ Phase 0 through Phase 5 are complete and merged into `main`. The first official
 release is `v0.1.2`, with Fedora RPM and x86-64 AppImage assets. Package
 publication remains authorized.
 
+## Post-release maintenance
+
+### M-01: Persist and discover the Legends client directory
+
+- [x] Save a valid explicit or environment-provided game directory in
+  `[client].game_directory`.
+- [x] Reuse a valid saved directory without scanning.
+- [x] Fall back to a fast, bounded home-directory scan for the exact Daybreak
+  installation structure and fail closed on multiple matches.
+- Acceptance criteria: a valid `EQ_LEGENDS_DIR` containing `eqgame.exe` never
+  scans; one discovered installation is saved automatically; configuration,
+  selection precedence, ambiguity, and UI-close persistence have synthetic
+  tests.
+
 ## Completed Phase 5
 
 ### P5-01: Reduce to the supported product boundary

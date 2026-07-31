@@ -27,6 +27,7 @@ class MainWindow final : public QMainWindow {
     explicit MainWindow(StatusSnapshot snapshot,
                         QString settings_path = UiSettings::default_path(),
                         bool reset_layout = false,
+                        QString client_directory = {},
                         QWidget* parent = nullptr);
 
     void update_snapshot(const StatusSnapshot& snapshot);
@@ -52,6 +53,7 @@ class MainWindow final : public QMainWindow {
     StatusSnapshot snapshot_;
     UiSettings settings_;
     bool reset_layout_;
+    QString client_directory_;
     MapCanvas* map_canvas_{nullptr};
     SpawnTableModel* spawn_model_{nullptr};
     SpawnFilterProxyModel* spawn_proxy_{nullptr};

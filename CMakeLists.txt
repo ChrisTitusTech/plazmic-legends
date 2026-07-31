@@ -39,6 +39,7 @@ add_library(
     src/game/spawn_reader.cpp
     src/integration/process_discovery.cpp
     src/integration/process_reader.cpp
+    src/launcher/client_selection.cpp
     src/launcher/client_status.cpp
     src/launcher/player_lifecycle.cpp
     src/launcher/privacy_log.cpp
@@ -233,6 +234,22 @@ if(BUILD_TESTING)
     add_dependencies(check process_discovery_test)
 
     add_test(NAME process_discovery.unit COMMAND process_discovery_test)
+
+    add_executable(client_selection_test tests/test_client_selection.cpp)
+    target_compile_features(client_selection_test PRIVATE cxx_std_20)
+    target_compile_options(
+        client_selection_test
+        PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+    )
+    target_link_libraries(client_selection_test PRIVATE plazmic_core)
+    add_dependencies(check client_selection_test)
+    add_test(NAME client_selection.unit COMMAND client_selection_test)
 
     add_executable(client_status_test tests/test_client_status.cpp)
     target_compile_features(client_status_test PRIVATE cxx_std_20)

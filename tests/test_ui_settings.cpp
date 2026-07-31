@@ -29,6 +29,8 @@ int main() {
         require(!settings.load(), "missing settings unexpectedly loaded");
 
         const plazmic::UiState expected{
+            .client_directory =
+                directory.filePath("EverQuest Legends"),
             .geometry = QByteArray("geometry-bytes"),
             .layout = QByteArray("layout-bytes"),
             .height_filter_enabled = false,
@@ -48,6 +50,9 @@ int main() {
                 "saved UI state permissions are not owner-only");
         const auto loaded = settings.load();
         require(loaded.has_value(), "saved UI state did not load");
+        require(loaded->client_directory ==
+                    expected.client_directory,
+                "client directory did not round trip");
         require(loaded->geometry == expected.geometry,
                 "geometry did not round trip");
         require(loaded->layout == expected.layout,
@@ -70,6 +75,67 @@ int main() {
                     loaded->spawn_column_widths ==
                         expected.spawn_column_widths,
                 "map settings did not round trip");
+
+        QFile readable(path);
+        require(readable.open(QIODevice::ReadOnly),
+                "cannot inspect saved settings");
+        const QByteArray readable_contents = readable.readAll();
+        require(
+            readable_contents.contains("[client]\n") &&
+                readable_contents.contains(
+                    "game_directory = \"" +
+                    expected.client_directory.toUtf8() + "\"\n"),
+            "client directory was not stored as readable TOML");
+        readable.close();
+
+        const QString partial_path =
+            directory.filePath("partial/config.toml");
+        const plazmic::UiSettings partial_settings(partial_path);
+        const QString quoted_directory =
+            directory.filePath("EverQuest \"Legends\"\\prefix");
+        plazmic::UiState partial_state;
+        partial_state.client_directory = quoted_directory;
+        require(
+            partial_settings.save(partial_state),
+            "cannot save client-only settings");
+        const auto partial = partial_settings.load();
+        require(
+            partial &&
+                partial->client_directory == quoted_directory &&
+                partial->geometry.isEmpty() &&
+                partial->layout.isEmpty(),
+            "client-only settings or TOML escaping did not round trip");
+
+        plazmic::UiState relative_state;
+        relative_state.client_directory =
+            "relative/EverQuest Legends";
+        require(
+            !partial_settings.save(relative_state),
+            "relative client directory unexpectedly saved");
+
+        const QString legacy_path =
+            directory.filePath("legacy/config.toml");
+        plazmic::UiState legacy_state = expected;
+        legacy_state.client_directory.clear();
+        const plazmic::UiSettings legacy_settings(legacy_path);
+        require(legacy_settings.save(legacy_state),
+                "cannot save legacy-compatible UI state");
+        const auto legacy = legacy_settings.load();
+        require(legacy && legacy->client_directory.isEmpty(),
+                "settings without [client] did not remain compatible");
+
+        QFile malformed(partial_path);
+        require(malformed.open(
+                    QIODevice::WriteOnly | QIODevice::Truncate),
+                "cannot open malformed client fixture");
+        require(
+            malformed.write(
+                "[client]\n"
+                "game_directory = \"/tmp/invalid\\q\"\n") > 0,
+            "cannot write malformed client fixture");
+        malformed.close();
+        require(!partial_settings.load(),
+                "malformed TOML escape unexpectedly loaded");
 
         QFile corrupt(path);
         require(corrupt.open(QIODevice::WriteOnly | QIODevice::Truncate),

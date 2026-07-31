@@ -15,6 +15,7 @@ namespace plazmic {
 namespace {
 
 constexpr qint64 kMaximumSettingsBytes = 1024 * 1024;
+constexpr qsizetype kMaximumClientDirectoryBytes = 4096;
 
 bool is_base64(const QByteArray& value) {
     if (value.size() % 4 != 0) {
@@ -41,6 +42,79 @@ std::optional<QByteArray> quoted_value(const QByteArray& line,
         return std::nullopt;
     }
     return QByteArray::fromBase64(encoded);
+}
+
+bool valid_client_directory(const QString& directory) {
+    if (directory.isEmpty() || !QDir::isAbsolutePath(directory)) {
+        return false;
+    }
+    const QByteArray encoded = directory.toUtf8();
+    if (encoded.isEmpty() ||
+        encoded.size() > kMaximumClientDirectoryBytes) {
+        return false;
+    }
+    for (QChar character : directory) {
+        if (character.isNull() ||
+            character.category() == QChar::Other_Control) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::optional<QString> toml_string_value(const QByteArray& line,
+                                         const QByteArray& key) {
+    const QByteArray prefix = key + " = \"";
+    if (!line.startsWith(prefix) || !line.endsWith('"')) {
+        return std::nullopt;
+    }
+    const QByteArray encoded =
+        line.mid(prefix.size(), line.size() - prefix.size() - 1);
+    QByteArray decoded;
+    decoded.reserve(encoded.size());
+    bool escaped = false;
+    for (char character : encoded) {
+        if (escaped) {
+            if (character != '\\' && character != '"') {
+                return std::nullopt;
+            }
+            decoded += character;
+            escaped = false;
+            continue;
+        }
+        if (character == '\\') {
+            escaped = true;
+            continue;
+        }
+        const auto byte = static_cast<unsigned char>(character);
+        if (byte < 0x20U || byte == 0x7FU) {
+            return std::nullopt;
+        }
+        decoded += character;
+    }
+    if (escaped || decoded.size() > kMaximumClientDirectoryBytes) {
+        return std::nullopt;
+    }
+    const QString result = QString::fromUtf8(decoded);
+    if (result.toUtf8() != decoded || !valid_client_directory(result)) {
+        return std::nullopt;
+    }
+    return QDir::cleanPath(result);
+}
+
+QByteArray toml_string(const QString& value) {
+    QByteArray encoded;
+    const QByteArray bytes = value.toUtf8();
+    encoded.reserve(bytes.size() + 2);
+    encoded += '"';
+    for (char character : bytes) {
+        if (character == '\\' || character == '"') {
+            encoded += '\\';
+        }
+        encoded += character;
+    }
+    encoded += '"';
+    return encoded;
 }
 
 std::optional<QByteArray> scalar_value(const QByteArray& line,
@@ -110,11 +184,13 @@ std::optional<UiState> UiSettings::load() const {
     const QList<QByteArray> lines = file.readAll().split('\n');
     enum class Section {
         other,
+        client,
         window,
         map,
         spawns,
     };
     Section section = Section::other;
+    std::optional<QString> client_directory;
     std::optional<QByteArray> geometry;
     std::optional<QByteArray> layout;
     bool height_filter_enabled = true;
@@ -132,7 +208,9 @@ std::optional<UiState> UiSettings::load() const {
             continue;
         }
         if (line.startsWith('[')) {
-            if (line == "[window]") {
+            if (line == "[client]") {
+                section = Section::client;
+            } else if (line == "[window]") {
                 section = Section::window;
             } else if (line == "[map]") {
                 section = Section::map;
@@ -143,7 +221,18 @@ std::optional<UiState> UiSettings::load() const {
             }
             continue;
         }
-        if (section == Section::window) {
+        if (section == Section::client) {
+            if (line.startsWith("game_directory")) {
+                if (client_directory) {
+                    return std::nullopt;
+                }
+                client_directory =
+                    toml_string_value(line, "game_directory");
+                if (!client_directory) {
+                    return std::nullopt;
+                }
+            }
+        } else if (section == Section::window) {
             if (line.startsWith("geometry")) {
                 geometry = quoted_value(line, "geometry");
                 if (!geometry) {
@@ -241,12 +330,17 @@ std::optional<UiState> UiSettings::load() const {
         }
     }
 
-    if (!geometry || geometry->isEmpty() || !layout || layout->isEmpty()) {
+    const bool has_geometry = geometry && !geometry->isEmpty();
+    const bool has_layout = layout && !layout->isEmpty();
+    if (has_geometry != has_layout ||
+        (!has_geometry && !client_directory)) {
         return std::nullopt;
     }
     return UiState{
-        .geometry = *geometry,
-        .layout = *layout,
+        .client_directory =
+            client_directory.value_or(QString{}),
+        .geometry = geometry.value_or(QByteArray{}),
+        .layout = layout.value_or(QByteArray{}),
         .height_filter_enabled = height_filter_enabled,
         .height_filter_below = height_filter_below,
         .height_filter_above = height_filter_above,
@@ -260,7 +354,12 @@ std::optional<UiState> UiSettings::load() const {
 }
 
 bool UiSettings::save(const UiState& state) const {
-    if (state.geometry.isEmpty() || state.layout.isEmpty() ||
+    const bool has_geometry = !state.geometry.isEmpty();
+    const bool has_layout = !state.layout.isEmpty();
+    if (has_geometry != has_layout ||
+        (!has_geometry && state.client_directory.isEmpty()) ||
+        (!state.client_directory.isEmpty() &&
+         !valid_client_directory(state.client_directory)) ||
         !std::isfinite(state.height_filter_below) ||
         !std::isfinite(state.height_filter_above) ||
         state.height_filter_below < 0.0 ||
@@ -301,9 +400,23 @@ bool UiSettings::save(const UiState& state) const {
     }
     QByteArray contents;
     contents += "# Plazmic Legends per-user UI state\n";
-    contents += "[window]\n";
-    contents += "geometry = \"" + state.geometry.toBase64() + "\"\n";
-    contents += "layout = \"" + state.layout.toBase64() + "\"\n";
+    if (!state.client_directory.isEmpty()) {
+        contents += "[client]\n";
+        contents += "game_directory = " +
+                    toml_string(
+                        QDir::cleanPath(state.client_directory)) +
+                    "\n";
+    }
+    if (has_geometry) {
+        if (!state.client_directory.isEmpty()) {
+            contents += "\n";
+        }
+        contents += "[window]\n";
+        contents += "geometry = \"" +
+                    state.geometry.toBase64() + "\"\n";
+        contents += "layout = \"" +
+                    state.layout.toBase64() + "\"\n";
+    }
     contents += "\n[map]\n";
     contents += QByteArray("height_filter_enabled = ") +
                 (state.height_filter_enabled ? "true\n" : "false\n");

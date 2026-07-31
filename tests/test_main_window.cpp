@@ -83,6 +83,8 @@ int main(int argc, char** argv) {
         QTemporaryDir directory;
         require(directory.isValid(), "cannot create UI test directory");
         const QString settings_path = directory.filePath("config.toml");
+        const QString client_directory =
+            directory.filePath("EverQuest Legends");
         const plazmic::StatusSnapshot snapshot{
             .compatibility = plazmic::CompatibilityState::supported,
             .process = plazmic::ProcessState::running,
@@ -91,7 +93,8 @@ int main(int argc, char** argv) {
             .pid = getpid(),
         };
 
-        plazmic::MainWindow window(snapshot, settings_path, true);
+        plazmic::MainWindow window(
+            snapshot, settings_path, true, client_directory);
         window.show();
         process_events();
         require(window.isVisible(), "main window is not visible");
@@ -348,6 +351,8 @@ int main(int argc, char** argv) {
         const auto saved_state = plazmic::UiSettings(settings_path).load();
         require(saved_state.has_value(),
                 "close did not persist UI state");
+        require(saved_state->client_directory == client_directory,
+                "close did not persist the selected client directory");
         require(saved_state->geometry == expected_geometry_state,
                 "persisted window geometry did not match the closed window");
         require(saved_state->height_filter_enabled &&
@@ -414,6 +419,13 @@ int main(int argc, char** argv) {
                 "saved floating dock state was not restored");
         restored.close();
         process_events();
+        const auto restored_saved_state =
+            plazmic::UiSettings(settings_path).load();
+        require(
+            restored_saved_state &&
+                restored_saved_state->client_directory ==
+                    client_directory,
+            "restored window did not preserve the client directory");
 
         const QString shutdown_path = directory.filePath("shutdown.toml");
         plazmic::MainWindow lifecycle(snapshot, shutdown_path, true);

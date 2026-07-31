@@ -72,6 +72,14 @@ Run the development build:
 build/dev/plazmic-legends --client "$EQ_LEGENDS_DIR/eqgame.exe"
 ```
 
+The first valid command-line or `EQ_LEGENDS_DIR` selection is saved as
+`[client].game_directory` in the XDG configuration file. With neither input,
+the launcher first reuses that saved directory, then performs a one-second,
+depth- and count-bounded scan below `$HOME` for the exact
+`Daybreak Game Company/Installed Games/EverQuest Legends` structure. A valid
+environment or saved path skips the scan, and multiple discovered
+installations fail closed.
+
 A changed SHA-256 requires a new immutable profile and a complete validation
 cycle. It never authorizes changing old offsets in place.
 

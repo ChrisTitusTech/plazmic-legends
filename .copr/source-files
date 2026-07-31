@@ -64,6 +64,8 @@ src/integration/process_discovery.cpp
 src/integration/process_discovery.h
 src/integration/process_reader.cpp
 src/integration/process_reader.h
+src/launcher/client_selection.cpp
+src/launcher/client_selection.h
 src/launcher/client_status.cpp
 src/launcher/client_status.h
 src/launcher/player_lifecycle.cpp
@@ -91,6 +93,7 @@ src/ui/ui_settings.cpp
 src/ui/ui_settings.h
 src/ui/x11_window_class.cpp
 src/ui/x11_window_class.h
+tests/test_client_selection.cpp
 tests/test_client_status.cpp
 tests/test_game_state_reader.cpp
 tests/test_inspect_eqgame.py

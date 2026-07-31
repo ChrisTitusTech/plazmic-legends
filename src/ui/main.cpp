@@ -1,4 +1,5 @@
 #include "game/game_state_reader.h"
+#include "launcher/client_selection.h"
 #include "launcher/client_status.h"
 #include "launcher/player_lifecycle.h"
 #include "launcher/privacy_log.h"
@@ -17,7 +18,7 @@
 #include <QApplication>
 #include <QCommandLineOption>
 #include <QCommandLineParser>
-#include <QDir>
+#include <QFileInfo>
 #include <QFutureWatcher>
 #include <QIcon>
 #include <QProcessEnvironment>
@@ -26,18 +27,6 @@
 #include <QtConcurrent/QtConcurrentRun>
 
 namespace {
-
-std::filesystem::path selected_client(const QCommandLineParser& parser) {
-    if (parser.isSet("client")) {
-        return parser.value("client").toStdString();
-    }
-    const QString directory =
-        QProcessEnvironment::systemEnvironment().value("EQ_LEGENDS_DIR");
-    if (directory.isEmpty()) {
-        return {};
-    }
-    return QDir(directory).filePath("eqgame.exe").toStdString();
-}
 
 std::filesystem::path selected_maps(
     const QCommandLineParser& parser,
@@ -56,6 +45,8 @@ int main(int argc, char** argv) {
     QApplication::setApplicationVersion(PLAZMIC_VERSION);
     QApplication::setDesktopFileName("plazmic-legends");
     QApplication application(argc, argv);
+    const QProcessEnvironment environment =
+        QProcessEnvironment::systemEnvironment();
     const QPixmap icon_source(":/icons/plazmic-legends.png");
     QIcon application_icon;
     application_icon.addPixmap(icon_source.scaled(
@@ -66,8 +57,7 @@ int main(int argc, char** argv) {
     application.setQuitOnLastWindowClosed(true);
     plazmic::SystemTheme system_theme(
         application,
-        plazmic::dwm_theme_path_for_session(
-            QProcessEnvironment::systemEnvironment()));
+        plazmic::dwm_theme_path_for_session(environment));
     system_theme.start();
     const auto* class_filter =
         plazmic::install_x11_window_class_filter(application);
@@ -82,7 +72,7 @@ int main(int argc, char** argv) {
     parser.addVersionOption();
     parser.addOption({
         "client",
-        "Path to the installed Legends eqgame.exe.",
+        "Path to the installed Legends eqgame.exe; valid selections are saved.",
         "path",
     });
     parser.addOption({
@@ -114,20 +104,69 @@ int main(int argc, char** argv) {
         parser.showHelp(2);
     }
 
-    const std::filesystem::path client = selected_client(parser);
+    const QString settings_path = parser.isSet("settings-file")
+                                      ? parser.value("settings-file")
+                                      : plazmic::UiSettings::default_path();
+    const plazmic::UiSettings settings(settings_path);
+    const std::optional<plazmic::UiState> saved_state =
+        settings.load();
+    const QString environment_directory =
+        environment.value("EQ_LEGENDS_DIR");
+    const plazmic::ClientSelection selection =
+        plazmic::select_client({
+            .command_line_client =
+                parser.isSet("client")
+                    ? std::optional<std::filesystem::path>(
+                          parser.value("client").toStdString())
+                    : std::nullopt,
+            .environment_directory =
+                environment_directory.isEmpty()
+                    ? std::nullopt
+                    : std::optional<std::filesystem::path>(
+                          environment_directory.toStdString()),
+            .saved_directory =
+                saved_state &&
+                        !saved_state->client_directory.isEmpty()
+                    ? std::optional<std::filesystem::path>(
+                          saved_state->client_directory.toStdString())
+                    : std::nullopt,
+            .home_directory =
+                environment.value("HOME").toStdString(),
+        });
+    const std::filesystem::path client = selection.client;
+    const QString selected_game_directory =
+        QString::fromStdString(selection.game_directory.string());
+    bool client_directory_saved = true;
+    if (selection.should_persist &&
+        (!saved_state ||
+         saved_state->client_directory != selected_game_directory)) {
+        if (!saved_state && QFileInfo::exists(settings_path)) {
+            client_directory_saved = false;
+        } else {
+            plazmic::UiState updated =
+                saved_state.value_or(plazmic::UiState{});
+            updated.client_directory = selected_game_directory;
+            client_directory_saved = settings.save(updated);
+        }
+    }
     const std::filesystem::path map_root =
         selected_maps(parser, client);
     auto probe =
         std::make_unique<plazmic::ClientStatusProbe>(client);
     auto game_probe = std::make_shared<plazmic::LiveGameStateProbe>(
         client, probe->profile());
-    const QProcessEnvironment environment =
-        QProcessEnvironment::systemEnvironment();
     plazmic::PrivacyLog privacy_log(
         plazmic::PrivacyLog::default_path(
             environment.value("XDG_STATE_HOME").toStdString(),
             environment.value("HOME").toStdString()));
     plazmic::StatusSnapshot initial_status = probe->refresh();
+    if (!selection.detail.empty()) {
+        initial_status.detail = selection.detail;
+    }
+    if (!client_directory_saved) {
+        initial_status.detail +=
+            "; client directory could not be saved";
+    }
     privacy_log.record_startup(
         QApplication::applicationVersion().toStdString(),
         initial_status.profile);
@@ -136,19 +175,24 @@ int main(int argc, char** argv) {
         initial_status.detail +=
             "; local privacy log is unavailable";
     }
-    const QString settings_path = parser.isSet("settings-file")
-                                      ? parser.value("settings-file")
-                                      : plazmic::UiSettings::default_path();
     plazmic::MainWindow window(
-        initial_status, settings_path, parser.isSet("reset-layout"));
+        initial_status,
+        settings_path,
+        parser.isSet("reset-layout"),
+        selection.should_persist ? selected_game_directory
+                                 : QString{});
     window.setWindowIcon(application_icon);
     window.show();
 
     QTimer status_timer;
     QObject::connect(&status_timer, &QTimer::timeout, &window,
-                     [&window, &probe, &privacy_log]() {
-                         const plazmic::StatusSnapshot status =
+                     [&window, &probe, &privacy_log,
+                      selection_detail = selection.detail]() {
+                         plazmic::StatusSnapshot status =
                              probe->refresh();
+                         if (!selection_detail.empty()) {
+                             status.detail = selection_detail;
+                         }
                          privacy_log.record_status(status);
                          window.update_snapshot(status);
                      });

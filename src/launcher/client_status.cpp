@@ -15,7 +15,9 @@ ClientStatusProbe::ClientStatusProbe(std::filesystem::path client)
             .compatibility = CompatibilityState::not_configured,
             .process = ProcessState::unavailable,
             .profile = "none",
-            .detail = "Set --client or EQ_LEGENDS_DIR",
+            .detail =
+                "Set --client, EQ_LEGENDS_DIR, or "
+                "[client].game_directory",
             .pid = std::nullopt,
         };
         return;

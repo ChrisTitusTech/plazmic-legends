@@ -9,6 +9,7 @@
 namespace plazmic {
 
 struct UiState {
+    QString client_directory;
     QByteArray geometry;
     QByteArray layout;
     bool height_filter_enabled{true};

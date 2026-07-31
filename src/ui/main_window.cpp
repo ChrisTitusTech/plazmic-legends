@@ -59,11 +59,13 @@ QString pid_text(const StatusSnapshot& snapshot) {
 MainWindow::MainWindow(StatusSnapshot snapshot,
                        QString settings_path,
                        bool reset_layout,
+                       QString client_directory,
                        QWidget* parent)
     : QMainWindow(parent),
       snapshot_(std::move(snapshot)),
       settings_(std::move(settings_path)),
-      reset_layout_(reset_layout) {
+      reset_layout_(reset_layout),
+      client_directory_(std::move(client_directory)) {
     build_ui();
     update_snapshot(snapshot_);
     restore_ui_state();
@@ -289,10 +291,19 @@ void MainWindow::clear_zone_map(const QString& detail) {
 }
 
 void MainWindow::restore_ui_state() {
-    if (!reset_layout_) {
-        if (const auto state = settings_.load()) {
-            const bool layout_restored = restoreState(state->layout);
-            const bool geometry_restored = restoreGeometry(state->geometry);
+    if (const auto state = settings_.load()) {
+        if (client_directory_.isEmpty()) {
+            client_directory_ = state->client_directory;
+        }
+        if (!reset_layout_) {
+            bool layout_restored = false;
+            bool geometry_restored = false;
+            if (!state->layout.isEmpty() &&
+                !state->geometry.isEmpty()) {
+                layout_restored = restoreState(state->layout);
+                geometry_restored =
+                    restoreGeometry(state->geometry);
+            }
             map_canvas_->set_height_filter_range(
                 state->height_filter_below,
                 state->height_filter_above);
@@ -358,6 +369,7 @@ void MainWindow::save_ui_state() {
             .toInt();
     const QHeaderView* header = spawn_table_->horizontalHeader();
     const UiState state{
+        .client_directory = client_directory_,
         .geometry = saveGeometry(),
         .layout = saveState(),
         .height_filter_enabled =

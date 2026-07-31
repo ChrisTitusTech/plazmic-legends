@@ -55,19 +55,40 @@ installation, upgrades, rollback, removal, and FUSE-free AppImage launch.
 
 ## Run
 
-Point Plazmic Legends at the client executable in your existing installation:
+On first launch, Plazmic Legends looks for the game in this order:
+
+1. An explicit `--client /path/to/eqgame.exe`.
+2. `EQ_LEGENDS_DIR`, when it contains `eqgame.exe`.
+3. The saved `[client]` configuration.
+4. A short, bounded scan below your home directory for
+   `Daybreak Game Company/Installed Games/EverQuest Legends`.
+
+A valid explicit, environment, or discovered path is saved automatically, so
+later launches need no client argument:
 
 ```bash
-export EQ_LEGENDS_DIR="/path/to/Installed Games/EverQuest Legends"
-plazmic-legends --client "$EQ_LEGENDS_DIR/eqgame.exe"
+plazmic-legends
 ```
 
-For the AppImage, replace `plazmic-legends` with its local filename:
+The scan is skipped when `EQ_LEGENDS_DIR` or the saved configuration points to
+an existing `eqgame.exe`. If more than one installation is found, select one
+explicitly instead of guessing:
 
 ```bash
-./Plazmic-Legends-0.1.2-x86_64.AppImage \
-  --client "$EQ_LEGENDS_DIR/eqgame.exe"
+plazmic-legends --client "/path/to/EverQuest Legends/eqgame.exe"
 ```
+
+You can also edit
+`$XDG_CONFIG_HOME/plazmic-legends/config.toml` (normally
+`~/.config/plazmic-legends/config.toml`) directly:
+
+```toml
+[client]
+game_directory = "/path/to/EverQuest Legends"
+```
+
+The AppImage uses the same selection and saved configuration behavior. Launch
+it with `./Plazmic-Legends-0.1.2-x86_64.AppImage`.
 
 The companion opens as a normal independent desktop window. Its map reads the
 zone files already present in your game installation; no maps are included in
@@ -82,7 +103,7 @@ the package.
 - Use the status area when the client is not running, unsupported, zoning, or
   outside the world.
 
-Window layout and map preferences are stored in
+The selected client directory, window layout, and map preferences are stored in
 `$XDG_CONFIG_HOME/plazmic-legends/config.toml`, with the standard Qt user
 configuration path used when `XDG_CONFIG_HOME` is unset. Pass
 `--reset-layout` to ignore saved placement for one launch.

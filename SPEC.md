@@ -40,8 +40,13 @@ support tier.
 
 ### Target selection and compatibility
 
-- The launcher accepts an explicit Legends installation or discovers the
-  configured Wine installation and only targets its `eqgame.exe`.
+- The launcher selects an explicit `--client`, a valid `EQ_LEGENDS_DIR`, or a
+  valid saved `[client].game_directory`, in that order, and only targets its
+  `eqgame.exe`.
+- Without a valid configured directory, it performs a time-, depth-, and
+  count-bounded scan below the current user's home directory for the exact
+  `Daybreak Game Company/Installed Games/EverQuest Legends` structure. One
+  match is saved to the XDG configuration; multiple matches fail closed.
 - Before integration, it records file size, PE machine, PE timestamp, and
   SHA-256 and selects exactly one compatible build profile.
 - The MVP supports the Windows x86-64 Legends client under the approved Wine

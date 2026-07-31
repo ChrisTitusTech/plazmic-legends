@@ -45,22 +45,22 @@ authorized.
 
 ### P5-03: Build the Fedora artifact
 
-- [ ] Produce a versioned Fedora RPM from the CMake install
+- [x] Produce a versioned Fedora RPM from the CMake install
   boundary with explicit runtime dependencies.
-- [ ] Include required project and dependency notices, support matrix, known
+- [x] Include required project and dependency notices, support matrix, known
   risks, and package status without bundling system libraries.
-- [ ] Document install, upgrade, removal, troubleshooting, and rollback.
-- [ ] Generate SHA-256 checksums from a clean artifact build.
+- [x] Document install, upgrade, removal, troubleshooting, and rollback.
+- [x] Generate SHA-256 checksums from a clean artifact build.
 - Acceptance criteria: the RPM contains only approved native product files and
   can be installed, upgraded, removed, and rolled back without modifying the
   game installation or Wine prefix.
 
 ### P5-04: Establish exact-commit reproducibility gates
 
-- [ ] Add Linux CI for configure, warnings-as-errors build, repository checks,
+- [x] Add Linux CI for configure, warnings-as-errors build, repository checks,
   CTest/Xvfb, and clean package inspection.
 - [ ] Bind CI and local evidence to the exact release-candidate commit.
-- [ ] Rebuild from a clean checkout and compare staged contents and checksums.
+- [x] Rebuild from a clean checkout and compare staged contents and checksums.
 - Acceptance criteria: local and CI gates produce the same approved file
   inventory from the audited commit.
 

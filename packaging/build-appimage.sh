@@ -49,12 +49,14 @@ else
 	exit 1
 fi
 
-readonly OUTPUT_DIR="${1:-"$REPO_ROOT/build/artifacts"}"
+OUTPUT_DIR_INPUT="${1:-"$REPO_ROOT/build/artifacts"}"
+mkdir -p -- "$OUTPUT_DIR_INPUT"
+OUTPUT_DIR="$(cd -- "$OUTPUT_DIR_INPUT" && pwd -P)"
+readonly OUTPUT_DIR
 WORK_DIR="$(mktemp -d -t plazmic-appimage.XXXXXXXX)"
 readonly WORK_DIR
 trap 'rm -rf -- "$WORK_DIR"' EXIT
 
-mkdir -p -- "$OUTPUT_DIR"
 SOURCE_DATE_EPOCH="$(
 	git -C "$REPO_ROOT" log -1 --format=%ct
 )"

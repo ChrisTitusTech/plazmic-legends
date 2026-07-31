@@ -93,6 +93,13 @@ Privacy-safe diagnostics are stored under
 only by the owner, and exclude client paths, process IDs, character or spawn
 names, memory contents, and process addresses.
 
+## Why Plazmic Legeneds Name?
+
+The original Macroquest was released open source by a developer named Plazmic.
+He only wanted to extend the tradeskill automation, macro capabilities, and other
+limitations the original Everquest had. He passed in 2007, and this project
+is a homage to him. 
+
 ## Important notice
 
 Plazmic Legends is an independent project and is not affiliated with or

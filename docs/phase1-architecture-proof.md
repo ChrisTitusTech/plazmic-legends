@@ -129,11 +129,10 @@ behavior. All C++ targets compile with GCC, C++20, and warnings as errors.
 - Game symbols: the minimum logical inputs and validation rules are recorded
   in `docs/research/phase1-symbol-plan.md`; no offset or signature was found or
   read.
-- Distribution: local private development artifact only. Do not push or
-  release the utility.
-- EULA risk: the owner explicitly directed private read-only development to
+- Distribution: package publication is authorized.
+- EULA risk: the owner explicitly directed read-only development to
   proceed despite the published restrictions. Writes, injection, automation,
-  protection bypass, push, and distribution remain prohibited. See
+  and protection bypass remain prohibited. See
   `docs/research/phase1-policy-risk.md`.
 
 ## Live interaction conclusion

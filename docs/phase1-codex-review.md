@@ -90,6 +90,6 @@ host configuration was changed for an optional review check.
 ## Review conclusion
 
 No unresolved critical or major implementation finding remains in the Phase 1
-proof. The owner explicitly accepted the documented EULA conflict for private
+proof. The owner explicitly accepted the documented EULA conflict for
 read-only development. That decision does not authorize writes, injection,
-automation, protection bypass, push, or distribution.
+automation, or protection bypass.

@@ -24,10 +24,9 @@ and reports no project RPATH or RUNPATH. No Qt or X11 library is copied into
 the repository or install image.
 
 Fedora installs the applicable Qt license texts under
-`/usr/share/licenses/qt6-qtbase`. Any future distribution must repeat the
-license review and provide the notices and replacement rights required by the
-selected Qt license. Phase 2 remains private and is not a distribution
-approval.
+`/usr/share/licenses/qt6-qtbase`. Package builds repeat the license review and
+provide the notices and replacement rights required by the selected Qt
+license.
 
 ## Removal impact
 
@@ -36,6 +35,14 @@ Qt is isolated to the product UI target and its UI tests. Removing the
 entry removes the Qt dependency while retaining the Phase 1 native reader and
 diagnostics proof. X11 remains a Phase 1 proof dependency until the historical
 overlay proof is also removed.
+
+## Phase 5 update
+
+Phase 5 removed the historical overlay proof, its lifecycle and hotkey tests,
+and the project's direct Xext, Xfixes, and XTest dependencies. The supported
+Qt companion still links directly to libX11 for its stable X11 class and DWM
+placement. Historical sections above retain the Phase 2 package observations
+as captured evidence.
 
 ## ShowEQ provenance boundary
 

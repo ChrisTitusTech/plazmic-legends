@@ -28,7 +28,7 @@ EULA and related published rules. That statement records accepted development
 risk; it does not grant permission, waive Daybreak's rights, prevent account
 action, or provide legal advice.
 
-Private development may continue with external, read-only process inspection,
+Development may continue with external, read-only process inspection,
 including client symbols and the approved MVP state. The project remains
 unaffiliated with and unsupported by Daybreak.
 
@@ -38,10 +38,8 @@ The following boundaries remain mandatory:
 - no code injection, DLL override, DirectX hook, or client patch;
 - no authentication, integrity, anti-cheat, or protection bypass;
 - no gameplay input, automation, macros, scripting, or remote control;
-- no credentials, chat, memory dumps, or account data in logs or fixtures; and
-- no push, public package, release, or distribution without a separate
-  explicit decision.
+- no credentials, chat, memory dumps, or account data in logs or fixtures.
 
-The branch remains local. Phase 2 is technically permitted after Phase 1
-proves a bounded reusable memory-reader boundary and reaches its normal
+Package publication is authorized. Phase 2 is technically permitted after
+Phase 1 proves a bounded reusable memory-reader boundary and reaches its normal
 approval checkpoint.

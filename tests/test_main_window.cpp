@@ -71,6 +71,7 @@ void require_window_class(Display* display,
 
 int main(int argc, char** argv) {
     QApplication application(argc, argv);
+    QApplication::setApplicationVersion("test-version");
     const auto* class_filter =
         plazmic::install_x11_window_class_filter(application);
     if (!class_filter->available()) {
@@ -96,6 +97,9 @@ int main(int argc, char** argv) {
         require(window.isVisible(), "main window is not visible");
         require(window.objectName() == "plazmic-main-window",
                 "main window object name mismatch");
+        require(window.windowTitle() ==
+                    "Plazmic Legends test-version",
+                "main window did not expose the project version");
         require(window.findChild<QWidget*>("map-view") != nullptr,
                 "map canvas is missing");
         require(window.findChild<QWidget*>("spawn-table") != nullptr,

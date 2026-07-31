@@ -162,39 +162,77 @@ std::optional<std::vector<std::uintptr_t>> traverse(
     return addresses;
 }
 
+std::optional<std::uintptr_t> find_root(
+    const ProcessMemoryReader& reader,
+    std::uintptr_t anchor,
+    const SpawnSymbols& symbols,
+    std::uintptr_t expected_vtable) {
+    std::set<std::uintptr_t> visited;
+    std::uintptr_t current = anchor;
+    for (std::size_t count = 0U; count < symbols.maximum_count; ++count) {
+        if (!visited.insert(current).second) {
+            return std::nullopt;
+        }
+        const auto links = read_links(reader, current, symbols);
+        if (!links || links->vtable != expected_vtable) {
+            return std::nullopt;
+        }
+        if (links->previous == 0U) {
+            return current;
+        }
+        const auto previous =
+            read_links(reader, links->previous, symbols);
+        if (!previous || previous->vtable != expected_vtable ||
+            previous->next != current) {
+            return std::nullopt;
+        }
+        current = links->previous;
+    }
+    return std::nullopt;
+}
+
 }  // namespace
 
 SpawnReadResult read_spawn_collection(
     const ClientProcess& process,
-    std::uintptr_t root,
+    std::uintptr_t anchor,
     const SpawnSymbols& symbols,
     const PlayerSnapshot& player) {
-    if (process.pid <= 0 || root == 0U || !player.available() ||
+    if (process.pid <= 0 || anchor == 0U || !player.available() ||
         !valid_symbols(symbols)) {
         return failure(
             SpawnReadError::invalid_profile,
-            "spawn profile or live root is incomplete");
+            "spawn profile or live anchor is incomplete");
     }
 
     const ProcessMemoryReader reader(process);
-    const auto root_links = read_links(reader, root, symbols);
-    if (!root_links) {
+    const auto anchor_links = read_links(reader, anchor, symbols);
+    if (!anchor_links) {
         return failure(
             SpawnReadError::read_failed,
-            "cannot read the spawn collection root");
+            "cannot read the spawn collection anchor");
     }
-    if (root_links->vtable == 0U || root_links->previous != 0U) {
+    if (anchor_links->vtable == 0U) {
         return failure(
             SpawnReadError::invalid_collection,
-            "spawn root failed exact-profile validation");
+            "spawn anchor failed exact-profile validation");
+    }
+    const auto root = find_root(
+        reader, anchor, symbols, anchor_links->vtable);
+    if (!root) {
+        return failure(
+            SpawnReadError::inconsistent_collection,
+            "spawn reverse links did not resolve a bounded root");
     }
 
     const auto addresses =
-        traverse(reader, root, symbols, root_links->vtable);
-    if (!addresses || addresses->empty()) {
+        traverse(reader, *root, symbols, anchor_links->vtable);
+    if (!addresses || addresses->empty() ||
+        std::find(addresses->begin(), addresses->end(), anchor) ==
+            addresses->end()) {
         return failure(
             SpawnReadError::inconsistent_collection,
-            "spawn links changed or exceeded the bounded count");
+            "spawn links changed, lost the anchor, or exceeded the bound");
     }
 
     std::vector<SpawnSnapshot> snapshots;
@@ -210,7 +248,7 @@ SpawnReadResult read_spawn_collection(
                 "spawn record changed during the staged read");
         }
         const std::span<const std::byte> view(record);
-        if (decode<std::uintptr_t>(view, 0U) != root_links->vtable) {
+        if (decode<std::uintptr_t>(view, 0U) != anchor_links->vtable) {
             return failure(
                 SpawnReadError::inconsistent_collection,
                 "spawn record identity changed during the staged read");
@@ -254,7 +292,7 @@ SpawnReadResult read_spawn_collection(
     }
 
     const auto confirmation =
-        traverse(reader, root, symbols, root_links->vtable);
+        traverse(reader, *root, symbols, anchor_links->vtable);
     if (!confirmation || *confirmation != *addresses) {
         return failure(
             SpawnReadError::inconsistent_collection,

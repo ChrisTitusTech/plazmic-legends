@@ -1,13 +1,17 @@
+#include "common/client_file_monitor.h"
+#include "common/sha256.h"
 #include "game/client_profile.h"
 #include "launcher/client_status.h"
 #include "model/status_snapshot.h"
 
 #include <cstdlib>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 #include <unistd.h>
 
@@ -42,6 +46,25 @@ class TemporaryFile {
 
     [[nodiscard]] const std::filesystem::path& path() const { return path_; }
 
+    void append(std::string_view value) const {
+        std::ofstream output(path_, std::ios::binary | std::ios::app);
+        output << value;
+        require(output.good(), "cannot update client fixture");
+    }
+
+    void replace(std::string_view value) const {
+        std::ofstream output(
+            path_, std::ios::binary | std::ios::trunc);
+        output << value;
+        require(output.good(), "cannot replace client fixture");
+    }
+
+    void remove() const {
+        std::error_code error;
+        require(std::filesystem::remove(path_, error) && !error,
+                "cannot remove client fixture");
+    }
+
   private:
     std::filesystem::path path_;
 };
@@ -56,7 +79,7 @@ int main() {
         require(plazmic::select_client_profile("changed") == nullptr,
                 "unknown digest unexpectedly selected");
 
-        const plazmic::ClientStatusProbe unconfigured(
+        plazmic::ClientStatusProbe unconfigured(
             std::filesystem::path{});
         const auto unconfigured_status = unconfigured.refresh();
         require(
@@ -68,7 +91,7 @@ int main() {
                 "empty path unexpectedly attempted discovery");
 
         const TemporaryFile unsupported_file;
-        const plazmic::ClientStatusProbe unsupported(unsupported_file.path());
+        plazmic::ClientStatusProbe unsupported(unsupported_file.path());
         const auto unsupported_status = unsupported.refresh();
         require(unsupported_status.compatibility ==
                     plazmic::CompatibilityState::unsupported,
@@ -78,6 +101,53 @@ int main() {
                 "unsupported client unexpectedly attempted discovery");
         require(!unsupported_status.pid,
                 "unsupported client unexpectedly returned a PID");
+
+        const TemporaryFile changed_file;
+        const std::string expected =
+            plazmic::sha256_file(changed_file.path());
+        plazmic::ClientFileMonitor changed_monitor(
+            changed_file.path(), expected);
+        require(static_cast<bool>(changed_monitor.check()),
+                "unchanged client metadata was rejected");
+        changed_file.append("patch");
+        const auto changed = changed_monitor.check();
+        require(
+            changed.state == plazmic::ClientFileState::changed &&
+                changed.detail.find("new compatibility profile") !=
+                    std::string::npos,
+            "changed client did not produce an actionable fail-closed result");
+        require(changed.detail.find(changed_file.path().string()) ==
+                    std::string::npos,
+                "changed-client diagnostic leaked its local path");
+        require(changed_monitor.check().state ==
+                    plazmic::ClientFileState::changed,
+                "changed-client result was not latched for the run");
+
+        const TemporaryFile preserved_metadata_file;
+        const auto original_time = std::filesystem::last_write_time(
+            preserved_metadata_file.path());
+        plazmic::ClientFileMonitor periodic_monitor(
+            preserved_metadata_file.path(),
+            plazmic::sha256_file(preserved_metadata_file.path()),
+            std::chrono::steady_clock::duration::zero());
+        preserved_metadata_file.replace("ton a supported client");
+        std::filesystem::last_write_time(
+            preserved_metadata_file.path(), original_time);
+        require(
+            periodic_monitor.check().state ==
+                plazmic::ClientFileState::changed,
+            "periodic digest check missed preserved client metadata");
+
+        const TemporaryFile missing_file;
+        plazmic::ClientFileMonitor missing_monitor(
+            missing_file.path(),
+            plazmic::sha256_file(missing_file.path()));
+        missing_file.remove();
+        const auto missing = missing_monitor.check();
+        require(
+            missing.state == plazmic::ClientFileState::unavailable &&
+                missing.detail.find("restart") != std::string::npos,
+            "removed client did not produce an actionable unavailable result");
 
         require(plazmic::compatibility_label(
                     plazmic::CompatibilityState::supported) == "Supported",

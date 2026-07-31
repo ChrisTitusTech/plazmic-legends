@@ -137,9 +137,14 @@ void SpawnFilterProxyModel::set_name_filter(QString filter) {
     if (name_filter_ == filter) {
         return;
     }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
     beginFilterChange();
     name_filter_ = std::move(filter);
     endFilterChange(Direction::Rows);
+#else
+    name_filter_ = std::move(filter);
+    invalidateRowsFilter();
+#endif
 }
 
 void SpawnFilterProxyModel::set_type_filter(
@@ -147,9 +152,14 @@ void SpawnFilterProxyModel::set_type_filter(
     if (type_filter_ == type) {
         return;
     }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
     beginFilterChange();
     type_filter_ = type;
     endFilterChange(Direction::Rows);
+#else
+    type_filter_ = type;
+    invalidateRowsFilter();
+#endif
 }
 
 bool SpawnFilterProxyModel::filterAcceptsRow(

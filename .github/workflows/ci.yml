@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    name: Source diff audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Verify source tree
+        shell: bash
+        env:
+          BASE_SHA: >-
+            ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          git rev-parse --verify "$BASE_SHA^{commit}"
+          git diff --check "$BASE_SHA...HEAD"
+
+  fedora:
+    name: Fedora build, tests, and package audit
+    runs-on: ubuntu-latest
+    container: fedora:44
+    steps:
+      - name: Install dependencies
+        run: >
+          dnf -y install
+          appstream
+          cmake
+          desktop-file-utils
+          gcc-c++
+          git
+          libX11-devel
+          ninja-build
+          nodejs-npm
+          python3
+          qt6-qtbase-devel
+          rpm-build
+          rpmdevtools
+          rpmlint
+          ruff
+          xorg-x11-server-Xvfb
+          xorg-x11-xauth
+
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Install Markdown lint
+        run: npm install --global markdownlint-cli2
+
+      - name: Configure
+        run: cmake --preset dev --fresh
+
+      - name: Build
+        run: cmake --build --preset dev
+
+      - name: Run repository gate
+        run: cmake --build --preset check
+
+      - name: Run tests
+        run: ctest --preset dev --output-on-failure
+
+      - name: Validate package metadata
+        run: |
+          rpmlint packaging/plazmic-legends.spec
+          desktop-file-validate packaging/plazmic-legends.desktop
+          appstreamcli validate --no-net \
+            packaging/io.github.ChristitusTech.PlazmicLegends.metainfo.xml
+
+      - name: Inspect staged install
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="$(mktemp -d)"
+          inventory="$(mktemp)"
+          trap 'rm -rf -- "$stage"; rm -f -- "$inventory"' EXIT
+          DESTDIR="$stage" cmake --install build/dev --prefix /usr
+          find "$stage" -type f -printf '%P\n' | LC_ALL=C sort \
+            | tee "$inventory"
+          diff --unified /dev/stdin "$inventory" <<'EOF'
+          usr/bin/plazmic-legends
+          usr/share/applications/plazmic-legends.desktop
+          usr/share/doc/plazmic-legends/README.md
+          usr/share/doc/plazmic-legends/THIRD-PARTY-NOTICES.md
+          usr/share/doc/plazmic-legends/package-operations.md
+          usr/share/doc/plazmic-legends/phase5-product-boundary.md
+          usr/share/icons/hicolor/512x512/apps/plazmic-legends.png
+          usr/share/metainfo/io.github.ChristitusTech.PlazmicLegends.metainfo.xml
+          EOF

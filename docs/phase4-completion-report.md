@@ -20,19 +20,21 @@ Daybreak asset was added.
 ## Resolver and reader
 
 Profile `legends-2026-07-29` uses the already validated local-player global as
-the spawn-list root. Local disassembly and repeated exact-profile live reads
-independently established forward and reverse links, common record identity,
-stable ID, approved type, bounded name, position, and level fields. The
-detailed provenance, offsets, invariants, and privacy boundary are recorded in
-`docs/research/phase4-spawn-checkpoint.md`.
+a stable spawn-list anchor. Local disassembly and repeated exact-profile live
+reads independently established forward and reverse links, common record
+identity, stable ID, approved type, bounded name, position, and level fields.
+A later live run showed that the anchor can have a valid predecessor, so the
+reader now resolves the root through bounded reciprocal previous links before
+forward traversal. The detailed provenance, offsets, invariants, and privacy
+boundary are recorded in `docs/research/phase4-spawn-checkpoint.md`.
 
 The profile permits at most 2,048 entries and 63 display-name characters plus
 the required terminator. The reader stages links and records, rejects cycles,
-bad reverse links, changed traversal, excessive counts, unreadable ranges,
-duplicate or zero IDs, malformed names, unapproved types, zero levels, and
-non-finite or out-of-range coordinates. It repeats the traversal and rechecks
-the player and zone before publishing one complete snapshot. Any failure
-publishes no partial or previous collection as current.
+bad reciprocal links, a missing anchor, changed traversal, excessive counts,
+unreadable ranges, duplicate or zero IDs, malformed names, unapproved types,
+zero levels, and non-finite or out-of-range coordinates. It repeats the
+traversal and rechecks the player and zone before publishing one complete
+snapshot. Any failure publishes no partial or previous collection as current.
 
 ## Presentation and lifecycle
 

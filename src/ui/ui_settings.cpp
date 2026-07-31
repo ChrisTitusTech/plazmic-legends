@@ -281,9 +281,22 @@ bool UiSettings::save(const UiState& state) const {
     if (!QDir().mkpath(info.absolutePath())) {
         return false;
     }
+    constexpr QFileDevice::Permissions kDirectoryPermissions =
+        QFileDevice::ReadOwner | QFileDevice::WriteOwner |
+        QFileDevice::ExeOwner;
+    if (!QFile::setPermissions(
+            info.absolutePath(), kDirectoryPermissions)) {
+        return false;
+    }
 
     QSaveFile file(path_);
     if (!file.open(QIODevice::WriteOnly)) {
+        return false;
+    }
+    constexpr QFileDevice::Permissions kFilePermissions =
+        QFileDevice::ReadOwner | QFileDevice::WriteOwner;
+    if (!file.setPermissions(kFilePermissions)) {
+        file.cancelWriting();
         return false;
     }
     QByteArray contents;

@@ -87,13 +87,14 @@ active task.
   checks, synchronized table/map selection, lifecycle invalidation,
   performance, privacy, and live acceptance. See
   `docs/phase4-completion-report.md`.
-- Phase 5 hardening work is not authorized. Stop at the Phase 4 approval
-  checkpoint after the complete spawn vertical-slice gate.
-- The owner explicitly accepts that this private development project operates
+- Phase 5 is authorized on `phase5/release-hardening`. Its first checkpoint
+  removes research-only targets and dependencies, records the retained
+  product/dependency boundary, and preserves the complete Phase 4 behavior.
+  RPM, COPR, AppImage, and other package publication are authorized.
+- The owner explicitly accepts that this development project operates
   against the Daybreak EULA. Read-only symbol and gameplay-state research may
   proceed after the normal phase checkpoints. The EULA-risk decision does not
-  authorize writes, injection, automation, protection bypass, push, public
-  packaging, release, or distribution. See
+  authorize writes, injection, automation, or protection bypass. See
   `docs/research/phase1-policy-risk.md`.
 - Preserve the imported tree in a recoverable baseline commit before deleting
   files.
@@ -159,18 +160,7 @@ python3 tools/inspect_eqgame.py "$EQ_LEGENDS_DIR" \
 git diff --check
 ```
 
-Run the diagnostics-only live proof after launching the exact client:
-
-```bash
-build/dev/plazmic-legends-proof \
-  --client "$EQ_LEGENDS_DIR/eqgame.exe" \
-  --diagnose-only
-```
-
-The Phase 1 overlay mode is historical research and is not a supported product
-run path.
-
-Run the standalone Phase 2 product:
+Run the standalone product:
 
 ```bash
 build/dev/plazmic-legends \

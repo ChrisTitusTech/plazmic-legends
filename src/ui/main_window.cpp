@@ -71,7 +71,11 @@ MainWindow::MainWindow(StatusSnapshot snapshot,
 
 void MainWindow::build_ui() {
     setObjectName("plazmic-main-window");
-    setWindowTitle("Plazmic Legends");
+    const QString version = QCoreApplication::applicationVersion();
+    setWindowTitle(
+        version.isEmpty()
+            ? QString("Plazmic Legends")
+            : QString("Plazmic Legends %1").arg(version));
     setDockOptions(QMainWindow::AnimatedDocks |
                    QMainWindow::AllowNestedDocks |
                    QMainWindow::AllowTabbedDocks);

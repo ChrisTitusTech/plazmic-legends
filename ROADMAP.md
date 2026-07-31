@@ -344,10 +344,13 @@ Review spawn accuracy, privacy, performance, and scope before hardening.
 
 ## Phase 5: Hardening and release readiness
 
+Status: In progress on `phase5/release-hardening`. Package publication is
+authorized.
+
 ### Outcome
 
-A minimal, reproducible Linux package is ready for the approved distribution
-model and fails safely after client updates.
+A minimal, reproducible Linux package is ready for release and fails safely
+after client updates.
 
 ### Included work
 
@@ -361,7 +364,6 @@ model and fails safely after client updates.
 ### Dependencies and risks
 
 - Hardening requires the Phase 4 approval checkpoint.
-- Public distribution remains prohibited without a separate explicit decision.
 - A client patch can invalidate a release candidate immediately.
 
 ### Exit criteria

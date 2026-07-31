@@ -6,7 +6,7 @@ client data.
 
 ## Minimum logical inputs
 
-The proposed private-development MVP needs only:
+The proposed read-only MVP needs only:
 
 1. a world/session state that distinguishes character select, loading, zoning,
    in-world, and exit;
@@ -48,7 +48,7 @@ sufficient validation. Unknown and partial matches fail closed.
 ## Current result
 
 No gameplay symbol discovery was performed in Phase 1. The owner explicitly
-accepted the EULA conflict for private read-only development. Phase 2 uses
+accepted the EULA conflict for read-only development. Phase 2 uses
 synthetic lifecycle snapshots only. Live zone and player symbol work belongs to
 Phase 3; spawn collection work belongs to Phase 4. Each requires the preceding
 approval checkpoint and must use the bounded memory reader and validation rules

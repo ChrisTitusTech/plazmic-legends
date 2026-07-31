@@ -31,7 +31,7 @@ struct SpawnReadResult {
 
 [[nodiscard]] SpawnReadResult read_spawn_collection(
     const ClientProcess& process,
-    std::uintptr_t root,
+    std::uintptr_t anchor,
     const SpawnSymbols& symbols,
     const PlayerSnapshot& player);
 

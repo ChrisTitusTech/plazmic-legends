@@ -37,9 +37,12 @@ independently confirmed against the Legends executable and live collection.
 
 ## Exact-profile collection
 
-The already validated local-player global at image RVA `0x00f07388` is also
-the root of the in-world spawn list. The supported profile uses this minimum
-set:
+The already validated local-player global at image RVA `0x00f07388` provides
+a stable anchor inside the in-world spawn list. An initial controlled run
+placed that anchor at the root; a later live run disproved that ordering
+assumption when another valid record preceded it. The reader now resolves the
+root by following bounded, reciprocal previous links from the anchor. The
+supported profile uses this minimum set:
 
 | Value | Exact-profile source |
 | --- | --- |
@@ -52,8 +55,9 @@ set:
 | Level | Nonzero byte at `0x6b4` |
 | Bounded record | Bytes `[0, 0x6b5)` |
 
-The root has a null previous link. Each subsequent entry must have the same
-nonzero vtable value and point back to the immediately preceding entry.
+The resolved root has a null previous link. Each subsequent entry must have the
+same nonzero vtable value and point back to the immediately preceding entry.
+The local-player anchor must appear in the resolved forward traversal.
 Traversal ends only at a null next link. Static inspection independently found
 code consuming the bounded name region, stable ID near type and position, and
 a level getter reading offset `0x6b4`. Live reads confirmed one common vtable,
@@ -74,14 +78,15 @@ entries, enlarge a record above 4,096 bytes, or move link fields outside the
 The reader:
 
 1. validates the exact profile and same-user process mapping;
-2. traverses links with a hard count, visited-address set, vtable check, and
-   reverse-link check;
-3. reads each bounded record into local storage;
-4. validates terminated printable names, approved types, unique nonzero IDs,
+2. resolves the root from the local-player anchor with a hard count,
+   visited-address set, vtable check, and reciprocal-link check;
+3. traverses forward with the same bound and requires the anchor to appear;
+4. reads each bounded record into local storage;
+5. validates terminated printable names, approved types, unique nonzero IDs,
    nonzero levels, and finite bounded coordinates;
-5. derives distance locally from the immutable player snapshot;
-6. repeats the complete traversal and requires the same ordered addresses; and
-7. rechecks local-player identity and zone before publishing the combined
+6. derives distance locally from the immutable player snapshot;
+7. repeats the complete traversal and requires the same ordered addresses; and
+8. rechecks local-player identity and zone before publishing the combined
    player and spawn snapshot.
 
 Every address addition and read is checked through the existing

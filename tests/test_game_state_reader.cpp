@@ -162,6 +162,51 @@ int main() {
                     result.spawns->spawns[1].level == 12,
                 "spawn fields were not decoded");
 
+        Fixture player_not_root;
+        store(
+            player_not_root.memory, 0x400 + 0x08,
+            std::uintptr_t{0});
+        store(
+            player_not_root.memory, 0x400 + 0x10,
+            player_not_root.base + 0xb00);
+        store(
+            player_not_root.memory, 0xb00 + 0x08,
+            player_not_root.base + 0x400);
+        store(
+            player_not_root.memory, 0xb00 + 0x10,
+            std::uintptr_t{0});
+        const auto player_not_root_result =
+            plazmic::read_game_state(
+                player_not_root.process,
+                player_not_root.symbols,
+                player_not_root.spawn_symbols);
+        require(
+            player_not_root_result &&
+                player_not_root_result.spawns->spawns.size() == 2 &&
+                player_not_root_result.spawns->spawns[0].id == 101 &&
+                player_not_root_result.spawns->spawns[1].id == 100,
+            "non-root local-player anchor did not resolve the list root");
+
+        Fixture invalid_reverse_resolution;
+        store(
+            invalid_reverse_resolution.memory, 0x400 + 0x10,
+            invalid_reverse_resolution.base + 0xb00);
+        store(
+            invalid_reverse_resolution.memory, 0xb00 + 0x08,
+            std::uintptr_t{0});
+        store(
+            invalid_reverse_resolution.memory, 0xb00 + 0x10,
+            std::uintptr_t{0});
+        const auto invalid_reverse_result =
+            plazmic::read_game_state(
+                invalid_reverse_resolution.process,
+                invalid_reverse_resolution.symbols,
+                invalid_reverse_resolution.spawn_symbols);
+        require(
+            invalid_reverse_result.error ==
+                plazmic::GameStateReadError::inconsistent_snapshot,
+            "broken reverse root resolution did not fail closed");
+
         Fixture invalid_zone;
         constexpr std::size_t kZone = 0x1c00;
         constexpr std::array<char, 10> kEscapingName{
@@ -278,6 +323,26 @@ int main() {
             cyclic_result.error ==
                 plazmic::GameStateReadError::inconsistent_snapshot,
             "cyclic spawn links did not fail closed");
+
+        Fixture cyclic_reverse_list;
+        store(
+            cyclic_reverse_list.memory, 0x400 + 0x10,
+            cyclic_reverse_list.base + 0xb00);
+        store(
+            cyclic_reverse_list.memory, 0xb00 + 0x08,
+            cyclic_reverse_list.base + 0x400);
+        store(
+            cyclic_reverse_list.memory, 0xb00 + 0x10,
+            cyclic_reverse_list.base + 0x400);
+        const auto cyclic_reverse_result =
+            plazmic::read_game_state(
+                cyclic_reverse_list.process,
+                cyclic_reverse_list.symbols,
+                cyclic_reverse_list.spawn_symbols);
+        require(
+            cyclic_reverse_result.error ==
+                plazmic::GameStateReadError::inconsistent_snapshot,
+            "cyclic reverse spawn links did not fail closed");
 
         Fixture broken_backlink;
         store(

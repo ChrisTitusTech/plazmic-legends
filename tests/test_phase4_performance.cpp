@@ -194,10 +194,13 @@ int main(int argc, char** argv) {
     try {
         constexpr std::size_t kSpawnCount = 2048U;
         SpawnReaderFixture reader_fixture(kSpawnCount);
+        const std::uintptr_t anchor =
+            reader_fixture.base +
+            (kSpawnCount / 2U) * SpawnReaderFixture::record_bytes;
         const auto reader_start = Clock::now();
         for (int iteration = 0; iteration < 5; ++iteration) {
             const auto result = plazmic::read_spawn_collection(
-                reader_fixture.process, reader_fixture.base,
+                reader_fixture.process, anchor,
                 reader_fixture.symbols, reader_fixture.player);
             require(
                 result &&

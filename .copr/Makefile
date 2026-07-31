@@ -24,10 +24,21 @@ srpm:
 	mkdir -p "$(outdir)" "$$temp_dir/sources"
 	name="$$(rpmspec -q --srpm --qf '%{NAME}' "$$spec_path")"
 	version="$$(rpmspec -q --srpm --qf '%{VERSION}' "$$spec_path")"
-	git -C "$(REPO_ROOT)" archive \
-		--format=tar \
-		--prefix="$$name-$$version/" \
-		HEAD \
+	if command -v git >/dev/null 2>&1; then
+		git -C "$(REPO_ROOT)" ls-files \
+			| diff --unified "$(REPO_ROOT)/.copr/source-files" -
+	fi
+	tar \
+		--create \
+		--file=- \
+		--directory="$(REPO_ROOT)" \
+		--sort=name \
+		--mtime='@0' \
+		--owner=0 \
+		--group=0 \
+		--numeric-owner \
+		--transform="s|^|$$name-$$version/|" \
+		--files-from="$(REPO_ROOT)/.copr/source-files" \
 		| gzip -n >"$$temp_dir/sources/$$name-$$version.tar.gz"
 	rpmbuild -bs "$$spec_path" \
 		--define "_sourcedir $$temp_dir/sources" \

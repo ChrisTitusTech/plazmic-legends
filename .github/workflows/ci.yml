@@ -67,20 +67,27 @@ jobs:
         run: |
           set -euo pipefail
           stage="$(mktemp -d)"
-          trap 'rm -rf -- "$stage"' EXIT
+          inventory="$(mktemp)"
+          trap 'rm -rf -- "$stage"; rm -f -- "$inventory"' EXIT
           DESTDIR="$stage" cmake --install build/dev --prefix /usr
           find "$stage" -type f -printf '%P\n' | LC_ALL=C sort \
-            | tee staged-install.txt
-          diff --unified /dev/stdin staged-install.txt <<'EOF'
+            | tee "$inventory"
+          diff --unified /dev/stdin "$inventory" <<'EOF'
           usr/bin/plazmic-legends
           usr/share/applications/plazmic-legends.desktop
           usr/share/doc/plazmic-legends/README.md
           usr/share/doc/plazmic-legends/THIRD-PARTY-NOTICES.md
           usr/share/doc/plazmic-legends/package-operations.md
           usr/share/doc/plazmic-legends/phase5-product-boundary.md
-          usr/share/icons/hicolor/scalable/apps/plazmic-legends.svg
+          usr/share/icons/hicolor/512x512/apps/plazmic-legends.png
           usr/share/metainfo/io.github.ChristitusTech.PlazmicLegends.metainfo.xml
           EOF
 
       - name: Verify source tree
-        run: git diff --check
+        shell: bash
+        env:
+          BASE_SHA: >-
+            ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          git -C "$GITHUB_WORKSPACE" diff --check "$BASE_SHA...HEAD"

@@ -101,7 +101,7 @@ share/doc/plazmic-legends/README.md
 share/doc/plazmic-legends/THIRD-PARTY-NOTICES.md
 share/doc/plazmic-legends/package-operations.md
 share/doc/plazmic-legends/phase5-product-boundary.md
-share/icons/hicolor/scalable/apps/plazmic-legends.svg
+share/icons/hicolor/512x512/apps/plazmic-legends.png
 share/metainfo/io.github.ChristitusTech.PlazmicLegends.metainfo.xml
 ```
 

@@ -47,7 +47,7 @@ ctest --test-dir %{__cmake_builddir} --output-on-failure
 %files
 %{_bindir}/plazmic-legends
 %{_datadir}/applications/plazmic-legends.desktop
-%{_datadir}/icons/hicolor/scalable/apps/plazmic-legends.svg
+%{_datadir}/icons/hicolor/512x512/apps/plazmic-legends.png
 %{_metainfodir}/io.github.ChristitusTech.PlazmicLegends.metainfo.xml
 %doc %{_docdir}/%{name}/README.md
 %doc %{_docdir}/%{name}/package-operations.md

@@ -19,7 +19,9 @@
 #include <QCommandLineParser>
 #include <QDir>
 #include <QFutureWatcher>
+#include <QIcon>
 #include <QProcessEnvironment>
+#include <QPixmap>
 #include <QTimer>
 #include <QtConcurrent/QtConcurrentRun>
 
@@ -54,6 +56,13 @@ int main(int argc, char** argv) {
     QApplication::setApplicationVersion(PLAZMIC_VERSION);
     QApplication::setDesktopFileName("plazmic-legends");
     QApplication application(argc, argv);
+    const QPixmap icon_source(":/icons/plazmic-legends.png");
+    QIcon application_icon;
+    application_icon.addPixmap(icon_source.scaled(
+        64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    application_icon.addPixmap(icon_source.scaled(
+        128, 128, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    application.setWindowIcon(application_icon);
     application.setQuitOnLastWindowClosed(true);
     plazmic::SystemTheme system_theme(
         application,
@@ -132,6 +141,7 @@ int main(int argc, char** argv) {
                                       : plazmic::UiSettings::default_path();
     plazmic::MainWindow window(
         initial_status, settings_path, parser.isSet("reset-layout"));
+    window.setWindowIcon(application_icon);
     window.show();
 
     QTimer status_timer;

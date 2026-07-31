@@ -243,7 +243,7 @@ container_args=(
         --desktop-file \
         "$appdir/usr/share/applications/plazmic-legends.desktop" \
         --icon-file \
-        "$appdir/usr/share/icons/hicolor/scalable/apps/plazmic-legends.svg" \
+        "$appdir/usr/share/icons/hicolor/512x512/apps/plazmic-legends.png" \
         --plugin qt
 
     export VERSION="$PLAZMIC_VERSION"

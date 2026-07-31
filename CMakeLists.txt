@@ -120,6 +120,13 @@ target_link_libraries(
         Qt6::Widgets
         X11::X11
 )
+qt_add_resources(
+    plazmic-legends
+    "plazmic_resources"
+    PREFIX "/icons"
+    BASE "packaging"
+    FILES packaging/plazmic-legends.png
+)
 
 install(
     TARGETS plazmic-legends
@@ -130,8 +137,8 @@ install(
     DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
 )
 install(
-    FILES packaging/plazmic-legends.svg
-    DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps"
+    FILES packaging/plazmic-legends.png
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps"
 )
 install(
     FILES packaging/io.github.ChristitusTech.PlazmicLegends.metainfo.xml

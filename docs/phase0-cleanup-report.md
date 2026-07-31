@@ -72,8 +72,9 @@ Results:
 
 The exact MacroQuest upstream revision remains unknown. The imported GPLv2 and
 third-party material is available only through the recovery tag; none is
-retained in the active tree. The license for future original code remains a
-Phase 1 distribution decision.
+retained in the active tree. The license for future original code remained a
+Phase 1 distribution decision at this checkpoint. The independently written
+active project is now licensed under GPL-3.0-only.
 
 ## Residual risk and pause
 

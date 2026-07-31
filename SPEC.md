@@ -180,6 +180,7 @@ approved architecture decision requires otherwise.
 - Memory access is limited to approved panel fields. Gameplay state writes and
   synthesized gameplay input are prohibited.
 - Retained MacroQuest-derived code remains subject to GPLv2 notices.
+  Original Plazmic Legends code is licensed under GPL-3.0-only.
   Third-party dependencies require a documented license and provenance audit.
 - The project does not assert that process inspection or a companion
   application is permitted by current game rules. The owner accepted that risk

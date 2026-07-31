@@ -145,8 +145,13 @@ install(
     DESTINATION "${CMAKE_INSTALL_DATADIR}/metainfo"
 )
 install(
+    FILES LICENSE
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/plazmic-legends"
+)
+install(
     FILES
         README.md
+        development.md
         docs/package-operations.md
         docs/phase5-product-boundary.md
         packaging/THIRD-PARTY-NOTICES.md

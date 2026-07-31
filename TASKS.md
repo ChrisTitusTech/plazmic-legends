@@ -6,16 +6,11 @@ work done.
 
 ## Current phase
 
-Phase 1 through Phase 3 were verified and merged into `main`. Phase 4 is
-complete on `phase4/spawn-vertical-slice`: the exact-profile bounded spawn
-reader, immutable model, synchronized table/map selection, lifecycle
-invalidation, performance, privacy, and live presentation gates passed. See
-`docs/phase4-completion-report.md`.
+Phase 0 through Phase 5 are complete and merged into `main`. The first official
+release is `v0.1.2`, with Fedora RPM and x86-64 AppImage assets. Package
+publication remains authorized.
 
-Phase 5 is now authorized on `phase5/release-hardening`. Package publication is
-authorized.
-
-## Active Phase 5
+## Completed Phase 5
 
 ### P5-01: Reduce to the supported product boundary
 
@@ -59,21 +54,21 @@ authorized.
 
 - [x] Add Linux CI for configure, warnings-as-errors build, repository checks,
   CTest/Xvfb, and clean package inspection.
-- [ ] Bind CI and local evidence to the exact release-candidate commit.
+- [x] Bind CI and local evidence to the exact release-candidate commit.
 - [x] Rebuild from a clean checkout and compare staged contents and checksums.
 - Acceptance criteria: local and CI gates produce the same approved file
   inventory from the audited commit.
 
 ### P5-05: Complete the release-candidate gate
 
-- [ ] Run clean install, upgrade, launch, unsupported-client, and uninstall
+- [x] Run clean install, upgrade, launch, unsupported-client, and uninstall
   tests on the reference Fedora/Wine/X11 tier.
-- [ ] Repeat lifecycle, accuracy, accessibility, DWM placement, privacy, and
+- [x] Repeat lifecycle, accuracy, accessibility, DWM placement, privacy, and
   performance scenarios against the exact candidate.
-- [ ] Complete security, privacy, provenance, dependency, license, retained
+- [x] Complete security, privacy, provenance, dependency, license, retained
   path, and package-content audits.
-- [ ] Obtain an independent review without using CodeRabbit.
-- [ ] Record checksums, support matrix, known risks, rollback evidence, and all
+- [x] Obtain an independent review without using CodeRabbit.
+- [x] Record checksums, support matrix, known risks, rollback evidence, and all
   skipped validation.
 - [x] Confirm package publication authorization.
 - Acceptance criteria: the release candidate satisfies `AC-01` through

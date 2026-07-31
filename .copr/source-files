@@ -7,10 +7,12 @@
 AGENTS.md
 CMakeLists.txt
 CMakePresets.json
+LICENSE
 README.md
 ROADMAP.md
 SPEC.md
 TASKS.md
+development.md
 docs/cleanup-inventory.md
 docs/package-operations.md
 docs/phase0-cleanup-report.md

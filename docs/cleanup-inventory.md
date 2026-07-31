@@ -32,7 +32,9 @@ and bundled third-party source.
 
 `LICENSE.md` governed the removed GPLv2 import. No inherited implementation
 remains in the active tree. Its license and all dependency notices remain
-recoverable from the baseline tag. The new project's license is unresolved.
+recoverable from the baseline tag. The new project's license was unresolved at
+this cleanup checkpoint; the independently written active project is now
+licensed under GPL-3.0-only in the root `LICENSE` file.
 
 ## Replaced paths
 

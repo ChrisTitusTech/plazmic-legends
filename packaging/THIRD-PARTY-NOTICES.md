@@ -4,6 +4,10 @@ Plazmic Legends uses or packages the following independently maintained
 components. This notice does not replace the license texts shipped by their
 respective Fedora packages or included in the AppImage.
 
+The original Plazmic Legends project is licensed under GPL-3.0-only. Its
+license text is installed at
+`usr/share/licenses/plazmic-legends/LICENSE` in both package formats.
+
 ## RPM runtime boundary
 
 The Fedora RPM dynamically links to Fedora-provided Qt 6, X11, OpenGL dispatch,

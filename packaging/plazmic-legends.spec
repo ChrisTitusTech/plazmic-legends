@@ -1,8 +1,8 @@
 Name:           plazmic-legends
 Version:        0.1.2
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Read-only EverQuest Legends companion for Linux
-License:        LicenseRef-Proprietary
+License:        GPL-3.0-only
 URL:            https://github.com/ChrisTitusTech/plazmic-legends
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
@@ -49,12 +49,18 @@ ctest --test-dir %{__cmake_builddir} --output-on-failure
 %{_datadir}/applications/plazmic-legends.desktop
 %{_datadir}/icons/hicolor/512x512/apps/plazmic-legends.png
 %{_metainfodir}/io.github.ChristitusTech.PlazmicLegends.metainfo.xml
+%license %{_licensedir}/%{name}/LICENSE
 %doc %{_docdir}/%{name}/README.md
+%doc %{_docdir}/%{name}/development.md
 %doc %{_docdir}/%{name}/package-operations.md
 %doc %{_docdir}/%{name}/phase5-product-boundary.md
 %doc %{_docdir}/%{name}/THIRD-PARTY-NOTICES.md
 
 %changelog
+* Thu Jul 30 2026 Chris Titus Tech <contact@christitus.com> - 0.1.2-2
+- License the original project under GPL-3.0-only
+- Ship the license and contributor documentation
+
 * Thu Jul 30 2026 Chris Titus Tech <contact@christitus.com> - 0.1.2-1
 - Build the source archive without requiring Git in the COPR source chroot
 

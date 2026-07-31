@@ -11,6 +11,9 @@ portable artifact is an x86-64 AppImage. No Daybreak file, installed map,
 Wine-prefix content, credential, local setting, or local diagnostic log is
 included.
 
+Both packages include the original project's GPL-3.0-only license and the
+separate notices for bundled or dynamically linked third-party components.
+
 ## Support matrix
 
 | Artifact | Supported host | Architecture | Display |

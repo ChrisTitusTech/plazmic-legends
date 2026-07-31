@@ -96,8 +96,10 @@ jobs:
           usr/share/applications/plazmic-legends.desktop
           usr/share/doc/plazmic-legends/README.md
           usr/share/doc/plazmic-legends/THIRD-PARTY-NOTICES.md
+          usr/share/doc/plazmic-legends/development.md
           usr/share/doc/plazmic-legends/package-operations.md
           usr/share/doc/plazmic-legends/phase5-product-boundary.md
           usr/share/icons/hicolor/512x512/apps/plazmic-legends.png
+          usr/share/licenses/plazmic-legends/LICENSE
           usr/share/metainfo/io.github.ChristitusTech.PlazmicLegends.metainfo.xml
           EOF

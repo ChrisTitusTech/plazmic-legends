@@ -1,198 +1,119 @@
-# Plazmic Legends
+<!-- markdownlint-disable-next-line MD033 -->
+# <img src="packaging/plazmic-legends.png" alt="Plazmic Legends icon" width="52"> Plazmic Legends
 
-Plazmic Legends is planned as a minimal, read-only companion application for
-the 64-bit EverQuest Legends `eqgame.exe` running under Wine on Linux. It uses
-an independent Linux window for maps, spawns, and diagnostics rather than
-drawing over the game.
+Plazmic Legends is a feature-complete, native Linux companion for the 64-bit
+EverQuest Legends client running under Wine. It provides a dedicated map and
+spawn window without drawing over the game, injecting code, or modifying the
+Wine prefix.
 
-Status: Phase 0 through Phase 4 are complete. The independent Qt 6 companion
-on DWM tag 5 renders installed maps, the live player, and a bounded
-exact-profile spawn collection. Its sortable/filterable table, map markers,
-details, and shared stable-ID selection passed synthetic, performance,
-privacy, lifecycle, and live acceptance gates. Phase 5 hardening is active on
-`phase5/release-hardening`. Fedora COPR, RPM, AppImage, and other package
-publication are authorized.
+[Download the latest release](https://github.com/ChrisTitusTech/plazmic-legends/releases/latest)
 
-## Development and EULA notice
+## Features
 
-This project knowingly operates against the Daybreak EULA
-and related published rules. The owner explicitly accepts that risk. This does
-not grant permission, prevent account action, or imply affiliation with
-Daybreak.
+- Displays locally installed zone maps with pan, zoom, geometry-aware fit, and
+  optional player follow.
+- Shows live player position, heading, and configurable elevation filtering.
+- Presents a sortable and filterable spawn list with synchronized map markers
+  and selection details.
+- Handles zoning, camping, character select, process exit, and client changes
+  without leaving stale data visible.
+- Follows the active system light or dark theme.
+- Keeps all processing local with no telemetry, updater, account service, or
+  bundled game content.
 
-Development remains read-only and external. Memory writes, injection, client
-patching, protection bypass, gameplay automation, and credentials remain
-outside the authorized scope.
+## Requirements
 
-## Project documents
+- An x86-64 Linux desktop using X11 or XWayland.
+- A user-owned 64-bit EverQuest Legends installation running through Wine.
+- The exact supported client build. Unknown or changed clients fail closed
+  instead of using unverified offsets.
+- Fedora 43 or 44 for the COPR package, or a glibc 2.35-or-newer distribution
+  for the AppImage.
 
-- [Specification](SPEC.md) defines behavior, non-goals, and acceptance criteria.
-- [Roadmap](ROADMAP.md) starts with cleanup and defines validation, rollback,
-  and approval checkpoints.
-- [Tasks](TASKS.md) identifies the current authorized work.
-- [Agent instructions](AGENTS.md) define repository boundaries and commands.
-- [Cleanup inventory](docs/cleanup-inventory.md) classifies the imported tree.
-- [Phase 0 report](docs/phase0-cleanup-report.md) records cleanup and validation
-  evidence.
-- [Legends baseline](docs/research/legends-baseline.md) records the reference
-  Linux, Wine, and executable evidence.
-- [Phase 1 runtime baseline](docs/research/phase1-runtime-baseline.md) records
-  the live Lutris, Proton, process, renderer, and X11 evidence.
-- [Phase 1 architecture proof](docs/phase1-architecture-proof.md) records the
-  implemented safety boundary and remaining manual checks.
-- [Phase 1 Codex review](docs/phase1-codex-review.md) records the independent
-  implementation review and resolved findings.
-- [Phase 2 completion report](docs/phase2-completion-report.md) records the
-  standalone UI, DWM, packaging, and game-invariance evidence.
-- [Phase 2 dependency audit](docs/phase2-dependency-audit.md) records the Qt,
-  X11, removal, and ShowEQ provenance boundaries.
-- [Phase 3 map baseline](docs/research/phase3-map-baseline.md) records the
-  installed-map inventory, parser bounds, and content-free validation evidence.
-- [Phase 3 map/player checkpoint](docs/research/phase3-player-map-checkpoint.md)
-  records the exact-profile reader, renderer, and first controlled manual
-  validation.
-- [Phase 3 completion report](docs/phase3-completion-report.md) records
-  lifecycle, performance, packaging, DWM, and live-client evidence.
-- [Package operations](docs/package-operations.md) records the support matrix,
-  install, upgrade, removal, AppImage, troubleshooting, and rollback paths.
-- [Phase 5 product boundary](docs/phase5-product-boundary.md) maps every
-  retained source, dependency, and artifact to its current requirement.
-- [EULA-risk decision](docs/research/phase1-policy-risk.md) records the
-  explicit decision to continue read-only development despite the
-  published restrictions.
-- [MacroQuest boundary review](docs/research/macroquest-boundary-review.md)
-  records the safe staged-read concept retained and the injection and
-  automation paths rejected.
-- [ShowEQ UI review](docs/research/showeq-ui-review.md) records the standalone
-  map/spawn concepts retained and the packet-capture and GPL implementation
-  rejected.
-- [Import provenance](docs/research/import-provenance.md) records the recovery
-  tag and retained-code audit.
+## Install
 
-## Validate the scaffold
-
-```bash
-cmake --preset dev
-cmake --build --preset dev
-cmake --build --preset check
-ctest --preset dev
-```
-
-## Inspect a local Legends client
-
-The repository does not contain or redistribute Daybreak binaries. Point the
-read-only inspection tool at a local installation:
-
-```bash
-export EQ_LEGENDS_DIR='/path/to/Installed Games/EverQuest Legends'
-python3 tools/inspect_eqgame.py "$EQ_LEGENDS_DIR"
-```
-
-This reports executable architecture, PE timestamp, image metadata, and
-SHA-256 without launching or modifying the game.
-
-## Run the companion
-
-With the exact supported client installed:
-
-```bash
-build/dev/plazmic-legends \
-  --client "$EQ_LEGENDS_DIR/eqgame.exe"
-```
-
-## Install a packaged build
-
-The reference Fedora package is published through the owner's COPR:
+### Fedora COPR
 
 ```bash
 sudo dnf copr enable christitustech/copr-fedora
 sudo dnf install plazmic-legends
 ```
 
-The Linux-distribution-neutral option is the x86-64 AppImage:
+### AppImage
+
+Download the AppImage and its adjacent checksum file from the
+[latest release](https://github.com/ChrisTitusTech/plazmic-legends/releases/latest),
+then run:
 
 ```bash
 sha256sum --check Plazmic-Legends-0.1.2-x86_64.AppImage.sha256
 chmod 0755 Plazmic-Legends-0.1.2-x86_64.AppImage
+```
+
+See [package operations](docs/package-operations.md) for direct RPM
+installation, upgrades, rollback, removal, and FUSE-free AppImage launch.
+
+## Run
+
+Point Plazmic Legends at the client executable in your existing installation:
+
+```bash
+export EQ_LEGENDS_DIR="/path/to/Installed Games/EverQuest Legends"
+plazmic-legends --client "$EQ_LEGENDS_DIR/eqgame.exe"
+```
+
+For the AppImage, replace `plazmic-legends` with its local filename:
+
+```bash
 ./Plazmic-Legends-0.1.2-x86_64.AppImage \
   --client "$EQ_LEGENDS_DIR/eqgame.exe"
 ```
 
-The AppImage is built on Ubuntu 22.04 for a glibc 2.35 floor and bundles Qt
-6.8.3. It targets x86-64 X11 and XWayland desktops; no one native artifact can
-guarantee musl, other CPU architectures, old kernels, or every graphics stack.
-See [Package operations](docs/package-operations.md) for exact support,
-rollback, removal, and FUSE-free launch instructions.
+The companion opens as a normal independent desktop window. Its map reads the
+zone files already present in your game installation; no maps are included in
+the package.
 
-The application stores geometry and dock layout in
-`$XDG_CONFIG_HOME/plazmic-legends/config.toml`, or the equivalent Qt user
-configuration path when `XDG_CONFIG_HOME` is unset. Use `--reset-layout` to
-ignore saved placement for one run.
+## Using the companion
 
-## Privacy-safe diagnostics
+- Drag the map to pan and use the mouse wheel to zoom.
+- Right-click the map to fit the zone geometry, toggle player follow, show all
+  elevations, or adjust the visible range above and below the player.
+- Select a spawn from either the map or table to keep both views synchronized.
+- Use the status area when the client is not running, unsupported, zoning, or
+  outside the world.
 
-The companion writes bounded lifecycle and compatibility categories to
-`$XDG_STATE_HOME/plazmic-legends/plazmic-legends.log`, or
-`$HOME/.local/state/plazmic-legends/plazmic-legends.log` when
-`XDG_STATE_HOME` is unset. The active log is limited to 1 MiB with one rotated
-file and owner-only permissions. It never records client paths, process IDs,
-runtime names, tokens, memory content, or process addresses.
+Window layout and map preferences are stored in
+`$XDG_CONFIG_HOME/plazmic-legends/config.toml`, with the standard Qt user
+configuration path used when `XDG_CONFIG_HOME` is unset. Pass
+`--reset-layout` to ignore saved placement for one launch.
 
-If the client executable changes, Plazmic drops live state and requires a new
-immutable compatibility profile. See
-[Compatibility profile refresh](docs/profile-refresh.md).
+Privacy-safe diagnostics are stored under
+`$XDG_STATE_HOME/plazmic-legends/`, or
+`$HOME/.local/state/plazmic-legends/` by default. Logs are bounded, readable
+only by the owner, and exclude client paths, process IDs, character or spawn
+names, memory contents, and process addresses.
 
-The reference DWM configuration assigns class `PlazmicLegends` to human tag 5
-on monitor 1. Other window managers may place the normal application window
-according to their own rules.
+## Important notice
 
-With the exact supported client in-world, the companion validates the live
-zone short name, loads that zone from the installation's `maps` directory, and
-displays the player position and heading. Unknown client builds and invalid
-live values fail closed. A player-relative height filter is enabled by default
-to separate vertical map floors. Right-click the map to toggle the filter,
-show all elevations, or independently adjust how far below and above the
-player's Z axis the map remains visible. The filter state and ranges persist
-with the window settings. The same menu can enable player-follow; manual
-panning or fitting the full map disables follow mode, and the choice persists
-across launches. Fit prefers base-layer line geometry so numbered-layer
-legends and attribution labels do not make normal maps unnecessarily small.
-Maps without base geometry retain bounded all-line and label fallbacks.
+Plazmic Legends is an independent project and is not affiliated with or
+endorsed by Daybreak Game Company. It performs external, read-only process
+inspection. The project owner knowingly accepts that this may conflict with
+Daybreak's EULA and published rules. Use it at your own risk.
 
-The window follows the active system dark or light preference. On the reference
-DWM session it reads `dwm-titus/themes.toml`; on other desktops it falls back
-to the standard appearance portal and Qt color-scheme hint. Changes are applied
-while the application remains open.
+The project does not write game state, inject code, automate gameplay, bypass
+client protections, or modify the game installation or Wine prefix.
 
-## Platform
+## Development
 
-- Build host: Linux only.
-- Initial runtime: Fedora Linux, X11, and Wine.
-- Native Windows and Visual Studio builds: not supported.
-- Wayland: deferred beyond the MVP.
+Build instructions, architecture, project history, validation requirements,
+and research references are in [development.md](development.md).
 
-The Phase 1 proof and Phase 2 product use native Linux code. The normal Qt 6
-Widgets companion window is placed on DWM tag 5 (HDMI-0) by its stable window
-class. Project artifacts are native Linux ELF files and do not inject a DLL or
-modify the Wine prefix.
+## License
 
-## Scope
+Plazmic Legends is licensed under the
+[GNU General Public License v3.0 only](LICENSE). Third-party components retain
+their respective licenses; see
+[third-party notices](packaging/THIRD-PARTY-NOTICES.md).
 
-The proposed MVP shows compatibility status, a zone map, player position and
-heading, a filtered spawn list, and selected-spawn details. It excludes
-scripting, plugins, automation, gameplay input, remote control, and traditional
-EverQuest clients. Phase 2 builds the standalone tag 5 shell, Phase 3 adds local
-maps and validated player state, and Phase 4 adds the bounded spawn view.
-
-Static geometry will be parsed read-only from the user's installed Legends
-`maps` directory. Dynamic zone, player, and spawn values will come from
-exact-profile bounded external reads converted into immutable snapshots.
-Plazmic does not use ShowEQ packet capture and does not package game maps.
-
-## Provenance and license
-
-The removed import was derived from MacroQuest and is preserved at
-`phase0-import-baseline`. No MacroQuest implementation or bundled dependency is
-retained in the active tree. Future code licensing is unresolved and must be
-resolved separately. EverQuest and its assets are the property of their
-respective owners and are not part of this repository.
+EverQuest and its assets are the property of their respective owners and are
+not included in this repository.

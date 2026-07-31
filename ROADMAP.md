@@ -344,8 +344,8 @@ Review spawn accuracy, privacy, performance, and scope before hardening.
 
 ## Phase 5: Hardening and release readiness
 
-Status: In progress on `phase5/release-hardening`. Package publication is
-authorized.
+Status: Complete on 2026-07-30 at the first official release, `v0.1.2`.
+Package publication is authorized.
 
 ### Outcome
 

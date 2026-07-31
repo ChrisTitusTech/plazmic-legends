@@ -2,7 +2,7 @@
 
 Date: 2026-07-30
 
-Branch: `phase5/release-hardening`
+Release: `v0.1.2`
 
 ## Decision
 
@@ -99,9 +99,11 @@ bin/plazmic-legends
 share/applications/plazmic-legends.desktop
 share/doc/plazmic-legends/README.md
 share/doc/plazmic-legends/THIRD-PARTY-NOTICES.md
+share/doc/plazmic-legends/development.md
 share/doc/plazmic-legends/package-operations.md
 share/doc/plazmic-legends/phase5-product-boundary.md
 share/icons/hicolor/512x512/apps/plazmic-legends.png
+share/licenses/plazmic-legends/LICENSE
 share/metainfo/io.github.ChristitusTech.PlazmicLegends.metainfo.xml
 ```
 

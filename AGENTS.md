@@ -41,6 +41,9 @@ implementing the conflicting behavior.
 - Phase 4 is complete. The exact-profile bounded spawn reader, immutable
   model, synchronized table/map selection, lifecycle behavior, performance,
   privacy, and live presentation gates passed.
+- Phase 5 is complete. Release hardening, privacy-safe diagnostics,
+  exact-client update detection, RPM and AppImage packaging, and the first
+  official `v0.1.2` release passed their gates.
 - No inherited implementation or third-party source is retained.
 - The local reference client is a Windows x86-64 PE executable running through
   GE-Proton11-3 in an X11 session.
@@ -62,7 +65,7 @@ review, license review, and comparison against a native replacement.
   independent Linux application window. Keep process access behind a narrow
   Linux interface.
 
-## Planned source boundaries
+## Source boundaries
 
 - `src/launcher`: executable fingerprinting, Wine client startup/monitoring,
   status, and shutdown.
@@ -76,21 +79,16 @@ review, license review, and comparison against a native replacement.
 - `tests`: profile, state-conversion, configuration, and lifecycle tests that
   do not require a live account.
 
-This layout is a roadmap target, not permission to reorganize ahead of the
-active task.
+Keep new work inside these established boundaries unless an approved
+requirement justifies a focused change.
 
 ## Working boundaries
 
-- Phase 0 through Phase 4 are complete. Phase 4 completion is on
-  `phase4/spawn-vertical-slice` and includes the independently validated
-  exact-profile spawn root, immutable bounded values, staged consistency
-  checks, synchronized table/map selection, lifecycle invalidation,
-  performance, privacy, and live acceptance. See
-  `docs/phase4-completion-report.md`.
-- Phase 5 is authorized on `phase5/release-hardening`. Its first checkpoint
-  removes research-only targets and dependencies, records the retained
-  product/dependency boundary, and preserves the complete Phase 4 behavior.
-  RPM, COPR, AppImage, and other package publication are authorized.
+- Phase 0 through Phase 5 are complete on `main`. The first official release
+  is `v0.1.2`. Preserve the validated product boundary, lifecycle behavior,
+  exact-profile failure rules, privacy guarantees, and package inventory in
+  maintenance work.
+- RPM, COPR, AppImage, and other package publication are authorized.
 - The owner explicitly accepts that this development project operates
   against the Daybreak EULA. Read-only symbol and gameplay-state research may
   proceed after the normal phase checkpoints. The EULA-risk decision does not

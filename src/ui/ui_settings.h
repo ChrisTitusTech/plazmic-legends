@@ -16,6 +16,13 @@ struct UiState {
     double height_filter_below{15.0};
     double height_filter_above{15.0};
     bool player_follow_enabled{false};
+    bool named_spawn_labels_visible{false};
+    bool player_labels_visible{false};
+    bool npc_labels_visible{false};
+    bool named_spawns_visible{true};
+    bool player_spawns_visible{true};
+    bool npc_spawns_visible{true};
+    bool other_spawns_visible{true};
     QString spawn_filter;
     int spawn_type_filter{-1};
     int spawn_sort_column{3};

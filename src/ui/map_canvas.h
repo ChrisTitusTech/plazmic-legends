@@ -4,6 +4,7 @@
 #include "map/map_view_model.h"
 #include "model/player_snapshot.h"
 #include "model/spawn_snapshot.h"
+#include "ui/spawn_presentation.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -11,17 +12,21 @@
 #include <optional>
 #include <vector>
 
-#include <QPoint>
+#include <QColor>
 #include <QPixmap>
+#include <QPoint>
 #include <QString>
 #include <QWidget>
 
 class QEvent;
+class QAction;
 class QContextMenuEvent;
 class QMouseEvent;
 class QPaintEvent;
 class QPointF;
 class QResizeEvent;
+class QMenu;
+class QToolButton;
 class QWheelEvent;
 
 namespace plazmic {
@@ -30,6 +35,9 @@ inline constexpr std::size_t kMaximumRenderableMapRecords = 50000U;
 inline constexpr double kDefaultHeightFilterBelow = 15.0;
 inline constexpr double kDefaultHeightFilterAbove = 15.0;
 inline constexpr double kMaximumHeightFilterRange = 1000.0;
+
+[[nodiscard]] QColor spawn_marker_color(
+    SpawnPresentationCategory category);
 
 class MapCanvas final : public QWidget {
   public:
@@ -46,6 +54,13 @@ class MapCanvas final : public QWidget {
     void set_height_filter_enabled(bool enabled);
     void set_height_filter_range(double below, double above);
     void set_player_follow_enabled(bool enabled);
+    void set_named_spawn_labels_visible(bool visible);
+    void set_player_labels_visible(bool visible);
+    void set_npc_labels_visible(bool visible);
+    void set_named_spawns_visible(bool visible);
+    void set_player_spawns_visible(bool visible);
+    void set_npc_spawns_visible(bool visible);
+    void set_other_spawns_visible(bool visible);
     void reset_view();
 
     [[nodiscard]] const std::optional<ZoneMap>& zone_map() const {
@@ -65,6 +80,27 @@ class MapCanvas final : public QWidget {
     }
     [[nodiscard]] bool player_follow_enabled() const {
         return player_follow_enabled_;
+    }
+    [[nodiscard]] bool named_spawn_labels_visible() const {
+        return named_spawn_labels_visible_;
+    }
+    [[nodiscard]] bool player_labels_visible() const {
+        return player_labels_visible_;
+    }
+    [[nodiscard]] bool npc_labels_visible() const {
+        return npc_labels_visible_;
+    }
+    [[nodiscard]] bool named_spawns_visible() const {
+        return named_spawns_visible_;
+    }
+    [[nodiscard]] bool player_spawns_visible() const {
+        return player_spawns_visible_;
+    }
+    [[nodiscard]] bool npc_spawns_visible() const {
+        return npc_spawns_visible_;
+    }
+    [[nodiscard]] bool other_spawns_visible() const {
+        return other_spawns_visible_;
     }
     [[nodiscard]] const SpawnCollectionSnapshot& spawn_snapshot() const {
         return spawns_;
@@ -91,6 +127,10 @@ class MapCanvas final : public QWidget {
     void adjust_height_filter_range();
     [[nodiscard]] bool layer_visible(unsigned int layer) const;
     [[nodiscard]] bool spawn_visible(const SpawnSnapshot& spawn) const;
+    [[nodiscard]] bool spawn_label_visible(
+        const SpawnSnapshot& spawn) const;
+    [[nodiscard]] bool spawn_category_visible(
+        SpawnPresentationCategory category) const;
     [[nodiscard]] std::optional<std::uint32_t> spawn_at_screen_point(
         const QPointF& point) const;
 
@@ -109,10 +149,26 @@ class MapCanvas final : public QWidget {
     bool map_cache_dirty_{true};
     bool height_filter_enabled_{true};
     bool player_follow_enabled_{false};
+    bool named_spawn_labels_visible_{false};
+    bool player_labels_visible_{false};
+    bool npc_labels_visible_{false};
+    bool named_spawns_visible_{true};
+    bool player_spawns_visible_{true};
+    bool npc_spawns_visible_{true};
+    bool other_spawns_visible_{true};
     double height_filter_below_{kDefaultHeightFilterBelow};
     double height_filter_above_{kDefaultHeightFilterAbove};
     std::optional<double> height_filter_center_;
     QPixmap map_cache_;
+    QToolButton* filter_button_{nullptr};
+    QMenu* filter_menu_{nullptr};
+    QAction* named_spawns_action_{nullptr};
+    QAction* player_spawns_action_{nullptr};
+    QAction* npc_spawns_action_{nullptr};
+    QAction* other_spawns_action_{nullptr};
+    QAction* named_labels_action_{nullptr};
+    QAction* player_labels_action_{nullptr};
+    QAction* npc_labels_action_{nullptr};
 };
 
 }  // namespace plazmic

@@ -278,6 +278,9 @@ int main(int argc, char** argv) {
             .detail = "Synthetic player",
         });
         canvas.set_height_filter_enabled(false);
+        canvas.set_named_spawn_labels_visible(true);
+        canvas.set_player_labels_visible(true);
+        canvas.set_npc_labels_visible(true);
         canvas.set_spawn_snapshot(spawn_fixture(kSpawnCount));
         canvas.show();
         QApplication::processEvents();

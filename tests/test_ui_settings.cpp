@@ -37,6 +37,13 @@ int main() {
             .height_filter_below = 12.5,
             .height_filter_above = 47.5,
             .player_follow_enabled = true,
+            .named_spawn_labels_visible = true,
+            .player_labels_visible = true,
+            .npc_labels_visible = false,
+            .named_spawns_visible = false,
+            .player_spawns_visible = true,
+            .npc_spawns_visible = false,
+            .other_spawns_visible = false,
             .spawn_filter = "guard",
             .spawn_type_filter = 1,
             .spawn_sort_column = 0,
@@ -65,6 +72,20 @@ int main() {
                         expected.height_filter_above &&
                     loaded->player_follow_enabled ==
                         expected.player_follow_enabled &&
+                    loaded->named_spawn_labels_visible ==
+                        expected.named_spawn_labels_visible &&
+                    loaded->player_labels_visible ==
+                        expected.player_labels_visible &&
+                    loaded->npc_labels_visible ==
+                        expected.npc_labels_visible &&
+                    loaded->named_spawns_visible ==
+                        expected.named_spawns_visible &&
+                    loaded->player_spawns_visible ==
+                        expected.player_spawns_visible &&
+                    loaded->npc_spawns_visible ==
+                        expected.npc_spawns_visible &&
+                    loaded->other_spawns_visible ==
+                        expected.other_spawns_visible &&
                     loaded->spawn_filter == expected.spawn_filter &&
                     loaded->spawn_type_filter ==
                         expected.spawn_type_filter &&

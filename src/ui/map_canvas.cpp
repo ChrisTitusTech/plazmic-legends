@@ -5,18 +5,22 @@
 #include <numbers>
 #include <ranges>
 
+#include <QAction>
 #include <QContextMenuEvent>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
 #include <QEvent>
 #include <QFormLayout>
+#include <QFontMetricsF>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPalette>
+#include <QPolygonF>
 #include <QResizeEvent>
+#include <QToolButton>
 #include <QWheelEvent>
 
 namespace plazmic {
@@ -39,13 +43,92 @@ QColor readable_map_color(const MapColor& color,
     return result;
 }
 
+QAction* add_toggle_action(QMenu* menu,
+                           const QString& text,
+                           bool checked) {
+    QAction* action = menu->addAction(text);
+    action->setCheckable(true);
+    action->setChecked(checked);
+    return action;
+}
+
 }  // namespace
+
+QColor spawn_marker_color(SpawnPresentationCategory category) {
+    switch (category) {
+        case SpawnPresentationCategory::player:
+            return {65, 160, 255};
+        case SpawnPresentationCategory::named_npc:
+            return {240, 165, 35};
+        case SpawnPresentationCategory::npc:
+            return {235, 90, 75};
+        case SpawnPresentationCategory::other:
+            return {145, 145, 145};
+    }
+    return {145, 145, 145};
+}
 
 MapCanvas::MapCanvas(QWidget* parent) : QWidget(parent) {
     setObjectName("map-canvas");
     setMinimumSize(360, 260);
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
+
+    filter_button_ = new QToolButton(this);
+    filter_button_->setObjectName("spawn-filter-menu-button");
+    filter_button_->setText("Filters / Labels");
+    filter_button_->setToolTip(
+        "Show or hide spawn categories and map labels");
+    filter_button_->setPopupMode(QToolButton::InstantPopup);
+    filter_menu_ = new QMenu("Filters / Labels", filter_button_);
+
+    QMenu* markers_menu = filter_menu_->addMenu("Show markers");
+    named_spawns_action_ = add_toggle_action(
+        markers_menu, "Named NPCs", named_spawns_visible_);
+    player_spawns_action_ = add_toggle_action(
+        markers_menu, "PCs", player_spawns_visible_);
+    npc_spawns_action_ = add_toggle_action(
+        markers_menu, "NPCs", npc_spawns_visible_);
+    other_spawns_action_ = add_toggle_action(
+        markers_menu, "Ground / Other", other_spawns_visible_);
+    connect(named_spawns_action_, &QAction::toggled, this,
+            [this](bool visible) {
+                set_named_spawns_visible(visible);
+            });
+    connect(player_spawns_action_, &QAction::toggled, this,
+            [this](bool visible) {
+                set_player_spawns_visible(visible);
+            });
+    connect(npc_spawns_action_, &QAction::toggled, this,
+            [this](bool visible) {
+                set_npc_spawns_visible(visible);
+            });
+    connect(other_spawns_action_, &QAction::toggled, this,
+            [this](bool visible) {
+                set_other_spawns_visible(visible);
+            });
+
+    QMenu* labels_menu = filter_menu_->addMenu("Show labels");
+    named_labels_action_ = add_toggle_action(
+        labels_menu, "Named NPCs", named_spawn_labels_visible_);
+    player_labels_action_ = add_toggle_action(
+        labels_menu, "PCs", player_labels_visible_);
+    npc_labels_action_ = add_toggle_action(
+        labels_menu, "NPCs", npc_labels_visible_);
+    connect(named_labels_action_, &QAction::toggled, this,
+            [this](bool visible) {
+                set_named_spawn_labels_visible(visible);
+            });
+    connect(player_labels_action_, &QAction::toggled, this,
+            [this](bool visible) {
+                set_player_labels_visible(visible);
+            });
+    connect(npc_labels_action_, &QAction::toggled, this,
+            [this](bool visible) {
+                set_npc_labels_visible(visible);
+            });
+    filter_button_->setMenu(filter_menu_);
+    filter_button_->adjustSize();
 }
 
 void MapCanvas::set_zone_map(ZoneMap map) {
@@ -184,6 +267,69 @@ void MapCanvas::set_player_follow_enabled(bool enabled) {
     update();
 }
 
+void MapCanvas::set_named_spawn_labels_visible(bool visible) {
+    if (named_spawn_labels_visible_ == visible) {
+        return;
+    }
+    named_spawn_labels_visible_ = visible;
+    named_labels_action_->setChecked(visible);
+    update();
+}
+
+void MapCanvas::set_player_labels_visible(bool visible) {
+    if (player_labels_visible_ == visible) {
+        return;
+    }
+    player_labels_visible_ = visible;
+    player_labels_action_->setChecked(visible);
+    update();
+}
+
+void MapCanvas::set_npc_labels_visible(bool visible) {
+    if (npc_labels_visible_ == visible) {
+        return;
+    }
+    npc_labels_visible_ = visible;
+    npc_labels_action_->setChecked(visible);
+    update();
+}
+
+void MapCanvas::set_named_spawns_visible(bool visible) {
+    if (named_spawns_visible_ == visible) {
+        return;
+    }
+    named_spawns_visible_ = visible;
+    named_spawns_action_->setChecked(visible);
+    update();
+}
+
+void MapCanvas::set_player_spawns_visible(bool visible) {
+    if (player_spawns_visible_ == visible) {
+        return;
+    }
+    player_spawns_visible_ = visible;
+    player_spawns_action_->setChecked(visible);
+    update();
+}
+
+void MapCanvas::set_npc_spawns_visible(bool visible) {
+    if (npc_spawns_visible_ == visible) {
+        return;
+    }
+    npc_spawns_visible_ = visible;
+    npc_spawns_action_->setChecked(visible);
+    update();
+}
+
+void MapCanvas::set_other_spawns_visible(bool visible) {
+    if (other_spawns_visible_ == visible) {
+        return;
+    }
+    other_spawns_visible_ = visible;
+    other_spawns_action_->setChecked(visible);
+    update();
+}
+
 void MapCanvas::reset_view() {
     player_follow_enabled_ = false;
     needs_fit_ = true;
@@ -198,13 +344,43 @@ bool MapCanvas::layer_visible(unsigned int layer) const {
 
 bool MapCanvas::spawn_visible(const SpawnSnapshot& spawn) const {
     if (!map_ || !spawns_.available() ||
-        spawns_.zone != map_->zone) {
+        spawns_.zone != map_->zone ||
+        !spawn_category_visible(spawn_presentation_category(spawn))) {
         return false;
     }
     return !height_filter_center_ ||
            map_height_range_visible(
                spawn.z, spawn.z, *height_filter_center_,
                height_filter_below_, height_filter_above_);
+}
+
+bool MapCanvas::spawn_category_visible(
+    SpawnPresentationCategory category) const {
+    switch (category) {
+        case SpawnPresentationCategory::player:
+            return player_spawns_visible_;
+        case SpawnPresentationCategory::named_npc:
+            return named_spawns_visible_;
+        case SpawnPresentationCategory::npc:
+            return npc_spawns_visible_;
+        case SpawnPresentationCategory::other:
+            return other_spawns_visible_;
+    }
+    return false;
+}
+
+bool MapCanvas::spawn_label_visible(const SpawnSnapshot& spawn) const {
+    switch (spawn_presentation_category(spawn)) {
+        case SpawnPresentationCategory::player:
+            return player_labels_visible_;
+        case SpawnPresentationCategory::named_npc:
+            return named_spawn_labels_visible_;
+        case SpawnPresentationCategory::npc:
+            return npc_labels_visible_;
+        case SpawnPresentationCategory::other:
+            return false;
+    }
+    return false;
 }
 
 std::optional<std::uint32_t> MapCanvas::spawn_at_screen_point(
@@ -371,18 +547,9 @@ void MapCanvas::paintEvent(QPaintEvent* event) {
             const MapPoint2D screen =
                 viewport_.map_to_screen(spawn_map_position(spawn));
             const QPointF center(screen.x, screen.y);
-            QColor color;
-            switch (spawn.type) {
-                case SpawnType::player:
-                    color = QColor(65, 160, 255);
-                    break;
-                case SpawnType::npc:
-                    color = QColor(235, 90, 75);
-                    break;
-                case SpawnType::corpse:
-                    color = QColor(155, 155, 155);
-                    break;
-            }
+            const SpawnPresentationCategory category =
+                spawn_presentation_category(spawn);
+            const QColor color = spawn_marker_color(category);
             const bool selected =
                 selected_spawn_ && *selected_spawn_ == spawn.id;
             QPen pen(
@@ -391,7 +558,47 @@ void MapCanvas::paintEvent(QPaintEvent* event) {
             painter.setPen(pen);
             painter.setBrush(color);
             const double radius = selected ? 6.0 : 3.5;
-            painter.drawEllipse(center, radius, radius);
+            if (category == SpawnPresentationCategory::named_npc) {
+                painter.drawPolygon(QPolygonF{
+                    center + QPointF(0.0, -radius - 1.5),
+                    center + QPointF(radius + 1.5, 0.0),
+                    center + QPointF(0.0, radius + 1.5),
+                    center + QPointF(-radius - 1.5, 0.0),
+                });
+            } else if (category == SpawnPresentationCategory::other) {
+                painter.drawRect(QRectF(
+                    center.x() - radius, center.y() - radius,
+                    radius * 2.0, radius * 2.0));
+            } else {
+                painter.drawEllipse(center, radius, radius);
+            }
+
+            if (spawn_label_visible(spawn)) {
+                painter.save();
+                const QString text =
+                    QString::fromStdString(spawn.name);
+                QFont label_font = painter.font();
+                label_font.setBold(
+                    category == SpawnPresentationCategory::named_npc);
+                painter.setFont(label_font);
+                const QFontMetricsF metrics(label_font);
+                QRectF label_rect(
+                    center.x() + radius + 5.0,
+                    center.y() - metrics.height() / 2.0 - 2.0,
+                    metrics.horizontalAdvance(text) + 8.0,
+                    metrics.height() + 4.0);
+                QColor background = palette().color(QPalette::Base);
+                background.setAlpha(220);
+                painter.setPen(Qt::NoPen);
+                painter.setBrush(background);
+                painter.drawRoundedRect(label_rect, 2.0, 2.0);
+                painter.setPen(palette().color(QPalette::Text));
+                painter.setBrush(Qt::NoBrush);
+                painter.drawText(
+                    label_rect.adjusted(4.0, 2.0, -4.0, -2.0),
+                    Qt::AlignLeft | Qt::AlignVCenter, text);
+                painter.restore();
+            }
         }
     }
 
@@ -456,6 +663,10 @@ void MapCanvas::resizeEvent(QResizeEvent* event) {
     if (needs_fit_) {
         fit_map();
     }
+    filter_button_->adjustSize();
+    filter_button_->move(
+        std::max(8, width() - filter_button_->width() - 12), 10);
+    filter_button_->raise();
 }
 
 void MapCanvas::mousePressEvent(QMouseEvent* event) {
@@ -553,6 +764,8 @@ void MapCanvas::contextMenuEvent(QContextMenuEvent* event) {
         menu.addAction("Adjust height range...");
     connect(adjust_height_action, &QAction::triggered, this,
             [this]() { adjust_height_filter_range(); });
+    menu.addSeparator();
+    menu.addMenu(filter_menu_);
     menu.addSeparator();
     for (const MapLayer& layer : map_->layers) {
         QAction* action = menu.addAction(

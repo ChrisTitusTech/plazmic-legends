@@ -1,5 +1,7 @@
 #include "ui/spawn_table_model.h"
 
+#include "ui/spawn_presentation.h"
+
 #include <algorithm>
 #include <utility>
 
@@ -52,7 +54,7 @@ QVariant SpawnTableModel::data(const QModelIndex& index, int role) const {
         case level_column:
             return spawn->level;
         case type_column:
-            return QString::fromLatin1(spawn_type_label(spawn->type));
+            return QString::fromLatin1(spawn_presentation_label(*spawn));
         case distance_column:
             return QString::number(spawn->distance, 'f', 1);
         case column_count:

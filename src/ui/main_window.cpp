@@ -1,6 +1,7 @@
 #include "ui/main_window.h"
 
 #include "ui/map_canvas.h"
+#include "ui/spawn_presentation.h"
 #include "ui/spawn_table_model.h"
 
 #include <algorithm>
@@ -105,7 +106,7 @@ void MainWindow::build_ui() {
     spawn_type_filter_->addItem("All types", -1);
     spawn_type_filter_->addItem("Players", 0);
     spawn_type_filter_->addItem("NPCs", 1);
-    spawn_type_filter_->addItem("Corpses", 2);
+    spawn_type_filter_->addItem("Other", 2);
     filter_row->addWidget(spawn_type_filter_);
     spawn_layout->addLayout(filter_row);
 
@@ -275,7 +276,7 @@ void MainWindow::update_spawn_detail(const SpawnSnapshot* spawn) {
                 "<p>X %4 - Y %5 - Z %6 - Distance %7</p>")
             .arg(name)
             .arg(spawn->level)
-            .arg(QString::fromLatin1(spawn_type_label(spawn->type)))
+            .arg(QString::fromLatin1(spawn_presentation_label(*spawn)))
             .arg(spawn->x, 0, 'f', 1)
             .arg(spawn->y, 0, 'f', 1)
             .arg(spawn->z, 0, 'f', 1)
@@ -304,34 +305,48 @@ void MainWindow::restore_ui_state() {
                 geometry_restored =
                     restoreGeometry(state->geometry);
             }
-            map_canvas_->set_height_filter_range(
-                state->height_filter_below,
-                state->height_filter_above);
-            map_canvas_->set_height_filter_enabled(
-                state->height_filter_enabled);
-            map_canvas_->set_player_follow_enabled(
-                state->player_follow_enabled);
-            spawn_filter_->setText(state->spawn_filter);
-            const int type_index =
-                spawn_type_filter_->findData(state->spawn_type_filter);
-            spawn_type_filter_->setCurrentIndex(
-                type_index >= 0 ? type_index : 0);
-            for (int column = 0;
-                 column < SpawnTableModel::column_count; ++column) {
-                spawn_table_->setColumnWidth(
-                    column,
-                    state->spawn_column_widths[
-                        static_cast<std::size_t>(column)]);
-            }
-            spawn_table_->sortByColumn(
-                state->spawn_sort_column,
-                state->spawn_sort_descending
-                    ? Qt::DescendingOrder
-                    : Qt::AscendingOrder);
             if (!geometry_restored || !layout_restored) {
                 resize(1200, 780);
             }
         }
+        map_canvas_->set_height_filter_range(
+            state->height_filter_below,
+            state->height_filter_above);
+        map_canvas_->set_height_filter_enabled(
+            state->height_filter_enabled);
+        map_canvas_->set_player_follow_enabled(
+            state->player_follow_enabled);
+        map_canvas_->set_named_spawn_labels_visible(
+            state->named_spawn_labels_visible);
+        map_canvas_->set_player_labels_visible(
+            state->player_labels_visible);
+        map_canvas_->set_npc_labels_visible(
+            state->npc_labels_visible);
+        map_canvas_->set_named_spawns_visible(
+            state->named_spawns_visible);
+        map_canvas_->set_player_spawns_visible(
+            state->player_spawns_visible);
+        map_canvas_->set_npc_spawns_visible(
+            state->npc_spawns_visible);
+        map_canvas_->set_other_spawns_visible(
+            state->other_spawns_visible);
+        spawn_filter_->setText(state->spawn_filter);
+        const int type_index =
+            spawn_type_filter_->findData(state->spawn_type_filter);
+        spawn_type_filter_->setCurrentIndex(
+            type_index >= 0 ? type_index : 0);
+        for (int column = 0;
+             column < SpawnTableModel::column_count; ++column) {
+            spawn_table_->setColumnWidth(
+                column,
+                state->spawn_column_widths[
+                    static_cast<std::size_t>(column)]);
+        }
+        spawn_table_->sortByColumn(
+            state->spawn_sort_column,
+            state->spawn_sort_descending
+                ? Qt::DescendingOrder
+                : Qt::AscendingOrder);
     }
     QTimer::singleShot(0, this, [this]() { ensure_on_screen(); });
 }
@@ -380,6 +395,20 @@ void MainWindow::save_ui_state() {
             map_canvas_->height_filter_above(),
         .player_follow_enabled =
             map_canvas_->player_follow_enabled(),
+        .named_spawn_labels_visible =
+            map_canvas_->named_spawn_labels_visible(),
+        .player_labels_visible =
+            map_canvas_->player_labels_visible(),
+        .npc_labels_visible =
+            map_canvas_->npc_labels_visible(),
+        .named_spawns_visible =
+            map_canvas_->named_spawns_visible(),
+        .player_spawns_visible =
+            map_canvas_->player_spawns_visible(),
+        .npc_spawns_visible =
+            map_canvas_->npc_spawns_visible(),
+        .other_spawns_visible =
+            map_canvas_->other_spawns_visible(),
         .spawn_filter = spawn_filter_->text(),
         .spawn_type_filter = type_filter,
         .spawn_sort_column = header->sortIndicatorSection(),

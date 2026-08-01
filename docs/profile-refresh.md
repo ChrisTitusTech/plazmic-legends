@@ -34,7 +34,8 @@ name, spawn name, or game asset.
 1. Add a new `ClientProfile` entry keyed by the new SHA-256 and PE identity.
 2. Leave every prior profile unchanged and selectable only by its own hash.
 3. Independently re-establish the smallest required zone, player, and spawn
-   resolvers from the exact new executable.
+   resolvers from the exact new executable by following the normative
+   [client offset discovery](offset-discovery.md) workflow.
 4. Use upstream projects only to form conceptual hypotheses. Record their
    revision and provenance; copy no implementation, offsets, generated data,
    maps, or game content.

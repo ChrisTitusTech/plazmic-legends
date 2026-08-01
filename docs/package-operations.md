@@ -65,7 +65,8 @@ game_directory = "/path/to/EverQuest Legends"
 
 An unsupported or changed executable fails closed. Refreshing a compatibility
 profile is a source-development workflow, not an RPM transaction; see
-[Compatibility profile refresh](profile-refresh.md).
+[Compatibility profile refresh](profile-refresh.md) and
+[Client offset discovery](offset-discovery.md).
 
 ## Upgrade and rollback
 

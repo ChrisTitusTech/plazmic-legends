@@ -156,6 +156,9 @@ to make a patched client appear supported.
   source, dependencies, and package contents to requirements.
 - [Compatibility profile refresh](docs/profile-refresh.md) documents the
   fail-closed client-update workflow.
+- [Client offset discovery](docs/offset-discovery.md) documents how to
+  re-establish profile RVAs, record fields, bounds, and live evidence after a
+  client patch.
 - [Package operations](docs/package-operations.md) covers installation,
   upgrades, removal, troubleshooting, and rollback.
 - [Cleanup inventory](docs/cleanup-inventory.md) and the

@@ -55,6 +55,26 @@ support tier.
   candidate processes, and unknown fingerprints produce distinct errors.
 - An unknown build is never paired with the nearest known offsets.
 
+### Client-update offset discovery
+
+- A changed `eqgame.exe` SHA-256 remains unsupported until a new immutable
+  profile completes the normative
+  [client offset discovery](docs/offset-discovery.md) and
+  [compatibility profile refresh](docs/profile-refresh.md) workflows.
+- Every old RVA, field offset, bound, and structure assumption is an untrusted
+  hypothesis for the new build. Each approved field requires new static
+  instruction/data-flow evidence and two controlled live ground-truth
+  observations.
+- A new profile records only exact PE identity, profile-local RVAs, bounded
+  record offsets, masks, and validation limits. It never replaces or edits a
+  prior profile in place.
+- Client-update research records provenance and privacy-safe validation while
+  excluding proprietary binaries and disassembly, raw live addresses, memory
+  content, runtime names, account data, and Wine-prefix paths.
+- If any required resolver cannot be independently re-established, the field
+  is omitted or the new client remains unsupported. Compatibility checks are
+  never weakened to restore apparent functionality.
+
 ### Runtime lifecycle
 
 - Startup initializes logging, compatibility state, process integration, the

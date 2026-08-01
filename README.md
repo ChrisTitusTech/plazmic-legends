@@ -8,6 +8,9 @@ Wine prefix.
 
 [Download the latest release](https://github.com/ChrisTitusTech/plazmic-legends/releases/latest)
 
+<img width="1912" height="1054" alt="image" src="https://github.com/user-attachments/assets/2409ad54-0612-40ec-944e-7c0f158f29c8" />
+
+
 ## Features
 
 - Displays locally installed zone maps with pan, zoom, geometry-aware fit, and

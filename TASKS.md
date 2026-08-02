@@ -24,6 +24,28 @@ publication remains authorized.
   selection precedence, ambiguity, and UI-close persistence have synthetic
   tests.
 
+### M-02: Add spawn map presentation controls
+
+- [x] Classify `#`-prefixed NPC names as named spawns for presentation without
+  changing the immutable spawn snapshot or exact-profile reader.
+- [x] Draw named spawns with a distinct color and shape, and draw non-player,
+  non-NPC snapshots as neutral gray Other markers.
+- [x] Add independent named-NPC, player-character, and ordinary-NPC label
+  controls plus an Other-marker visibility control.
+- [x] Persist all new map controls and expose Other in the spawn-table type
+  filter.
+- [x] Add a visible Filters / Labels dropdown with independent Named NPC, PC,
+  NPC, and Ground / Other marker toggles that also govern map hit-testing.
+- [x] Cover classification, rendering controls, filtering, persistence, and
+  selection behavior with synthetic tests and the complete local gate.
+- Acceptance criteria: named, player, ordinary NPC, and Other markers are
+  distinguishable; labels are independently optional; hidden Other markers
+  and every independently filtered marker category cannot be selected from the
+  map; and no reader/profile behavior changes.
+- Validation: repository checks, all 14 CTest cases, the 2,000-spawn label-on
+  performance fixture, a synthetic X11 visual inspection, and exact-client
+  fingerprint verification passed.
+
 ## Completed Phase 5
 
 ### P5-01: Reduce to the supported product boundary

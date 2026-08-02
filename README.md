@@ -17,7 +17,7 @@ Wine prefix.
   optional player follow.
 - Shows live player position, heading, and configurable elevation filtering.
 - Presents a sortable and filterable spawn list with synchronized map markers
-  and selection details.
+  and selection details, including distinct named-spawn and Other markers.
 - Handles zoning, camping, character select, process exit, and client changes
   without leaving stale data visible.
 - Follows the active system light or dark theme.
@@ -100,6 +100,9 @@ the package.
 ## Using the companion
 
 - Drag the map to pan and use the mouse wheel to zoom.
+- Use the map's Filters / Labels dropdown to independently show or hide named
+  NPC, player, ordinary-NPC, and Ground / Other markers and to toggle labels
+  for named NPCs, players, and ordinary NPCs.
 - Right-click the map to fit the zone geometry, toggle player follow, show all
   elevations, or adjust the visible range above and below the player.
 - Select a spawn from either the map or table to keep both views synchronized.

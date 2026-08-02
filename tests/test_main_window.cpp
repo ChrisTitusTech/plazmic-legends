@@ -14,15 +14,18 @@
 #include <string>
 
 #include <QApplication>
+#include <QAction>
 #include <QDockWidget>
 #include <QComboBox>
 #include <QLabel>
 #include <QLineEdit>
 #include <QHeaderView>
 #include <QMouseEvent>
+#include <QMenu>
 #include <QTableView>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <QToolButton>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -65,6 +68,23 @@ void require_window_class(Display* display,
             label + " X11 instance mismatch");
     require(window_class == plazmic::kX11Class,
             label + " X11 class mismatch");
+}
+
+QAction* find_menu_action(QMenu* root,
+                          const QString& submenu,
+                          const QString& text) {
+    for (QAction* action : root->actions()) {
+        QMenu* menu = action->menu();
+        if (menu == nullptr || menu->title() != submenu) {
+            continue;
+        }
+        for (QAction* child : menu->actions()) {
+            if (child->text() == text) {
+                return child;
+            }
+        }
+    }
+    return nullptr;
 }
 
 }  // namespace
@@ -179,6 +199,16 @@ int main(int argc, char** argv) {
                         .z = 3.0,
                         .distance = 13.6,
                     },
+                    {
+                        .id = 13,
+                        .type = plazmic::SpawnType::npc,
+                        .name = "#synthetic_named",
+                        .level = 20,
+                        .x = 18.0,
+                        .y = -4.0,
+                        .z = 3.0,
+                        .distance = 7.2,
+                    },
                 },
             .detail = "Synthetic spawn snapshot",
         };
@@ -190,19 +220,84 @@ int main(int argc, char** argv) {
                 "map canvas loaded the wrong zone");
         require(window.map_canvas()->player_snapshot().zone == "synthetic",
                 "map canvas did not retain the player snapshot");
-        require(window.map_canvas()->spawn_snapshot().spawns.size() == 3,
+        require(window.map_canvas()->spawn_snapshot().spawns.size() == 4,
                 "map canvas did not retain the spawn snapshot");
+        require(
+            plazmic::spawn_presentation_category(spawns.spawns[0]) ==
+                    plazmic::SpawnPresentationCategory::player &&
+                plazmic::spawn_presentation_category(spawns.spawns[1]) ==
+                    plazmic::SpawnPresentationCategory::npc &&
+                plazmic::spawn_presentation_category(spawns.spawns[2]) ==
+                    plazmic::SpawnPresentationCategory::other &&
+                plazmic::spawn_presentation_category(spawns.spawns[3]) ==
+                    plazmic::SpawnPresentationCategory::named_npc,
+            "spawn map categories did not distinguish named and Other records");
+        const QColor named_color = plazmic::spawn_marker_color(
+            plazmic::SpawnPresentationCategory::named_npc);
+        const QColor npc_color = plazmic::spawn_marker_color(
+            plazmic::SpawnPresentationCategory::npc);
+        const QColor other_color = plazmic::spawn_marker_color(
+            plazmic::SpawnPresentationCategory::other);
+        require(named_color != npc_color &&
+                    other_color.red() == other_color.green() &&
+                    other_color.green() == other_color.blue(),
+                "named and Other marker colors were not distinct and neutral");
         auto* spawn_table =
             window.findChild<QTableView*>("spawn-table");
         auto* spawn_filter =
             window.findChild<QLineEdit*>("spawn-filter");
         auto* spawn_type =
             window.findChild<QComboBox*>("spawn-type-filter");
+        auto* map_filters =
+            window.findChild<QToolButton*>("spawn-filter-menu-button");
         require(spawn_table != nullptr && spawn_filter != nullptr &&
-                    spawn_type != nullptr,
+                    spawn_type != nullptr && map_filters != nullptr &&
+                    map_filters->menu() != nullptr,
                 "spawn table controls are incomplete");
-        require(spawn_table->model()->rowCount() == 3,
+        require(map_filters->text() == "Filters / Labels" &&
+                    find_menu_action(
+                        map_filters->menu(), "Show markers", "Named NPCs") &&
+                    find_menu_action(
+                        map_filters->menu(), "Show markers", "PCs") &&
+                    find_menu_action(
+                        map_filters->menu(), "Show markers", "NPCs") &&
+                    find_menu_action(
+                        map_filters->menu(), "Show markers", "Ground / Other") &&
+                    find_menu_action(
+                        map_filters->menu(), "Show labels", "Named NPCs") &&
+                    find_menu_action(
+                        map_filters->menu(), "Show labels", "PCs") &&
+                    find_menu_action(
+                        map_filters->menu(), "Show labels", "NPCs"),
+                "Filters / Labels dropdown is incomplete");
+        QAction* npc_marker_action = find_menu_action(
+            map_filters->menu(), "Show markers", "NPCs");
+        npc_marker_action->setChecked(false);
+        require(!window.map_canvas()->npc_spawns_visible(),
+                "NPC dropdown toggle did not update map visibility");
+        npc_marker_action->setChecked(true);
+        require(spawn_table->model()->rowCount() == 4,
                 "spawn table did not publish all rows");
+        require(spawn_type->itemText(spawn_type->findData(2)) == "Other",
+                "non-player, non-NPC type filter was not labeled Other");
+        QString named_type;
+        QString other_type;
+        for (int row = 0; row < spawn_table->model()->rowCount(); ++row) {
+            const QModelIndex name_index =
+                spawn_table->model()->index(row, 0);
+            const QModelIndex type_index =
+                spawn_table->model()->index(
+                    row, plazmic::SpawnTableModel::type_column);
+            const std::uint32_t id =
+                name_index.data(plazmic::kSpawnIdRole).toUInt();
+            if (id == 13U) {
+                named_type = type_index.data().toString();
+            } else if (id == 12U) {
+                other_type = type_index.data().toString();
+            }
+        }
+        require(named_type == "Named NPC" && other_type == "Other",
+                "spawn table did not publish presentation categories");
         spawn_filter->setText("guard");
         process_events();
         require(spawn_table->model()->rowCount() == 1,
@@ -259,6 +354,18 @@ int main(int argc, char** argv) {
             click_viewport.map_to_screen(
                 plazmic::spawn_map_position(spawns.spawns[2]));
         const QPointF corpse_point(corpse_screen.x, corpse_screen.y);
+        const auto click_map = [&window](const QPointF& point) {
+            QMouseEvent press(
+                QEvent::MouseButtonPress, point,
+                window.map_canvas()->mapToGlobal(point.toPoint()),
+                Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(window.map_canvas(), &press);
+            QMouseEvent release(
+                QEvent::MouseButtonRelease, point,
+                window.map_canvas()->mapToGlobal(point.toPoint()),
+                Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(window.map_canvas(), &release);
+        };
         QMouseEvent map_press(
             QEvent::MouseButtonPress, corpse_point,
             window.map_canvas()->mapToGlobal(corpse_point.toPoint()),
@@ -276,6 +383,40 @@ int main(int argc, char** argv) {
         process_events();
         require(spawn_table->model()->rowCount() == 1,
                 "spawn type filter did not narrow the table");
+        const plazmic::MapPoint2D npc_screen =
+            click_viewport.map_to_screen(
+                plazmic::spawn_map_position(spawns.spawns[1]));
+        const QPointF npc_point(npc_screen.x, npc_screen.y);
+        window.map_canvas()->set_selected_spawn(std::nullopt);
+        window.map_canvas()->set_npc_spawns_visible(false);
+        click_map(npc_point);
+        require(!window.map_canvas()->selected_spawn(),
+                "hidden NPC marker remained selectable from the map");
+        window.map_canvas()->set_npc_spawns_visible(true);
+
+        const plazmic::MapPoint2D named_screen =
+            click_viewport.map_to_screen(
+                plazmic::spawn_map_position(spawns.spawns[3]));
+        window.map_canvas()->set_named_spawns_visible(false);
+        click_map(QPointF(named_screen.x, named_screen.y));
+        require(!window.map_canvas()->selected_spawn(),
+                "hidden named-NPC marker remained selectable from the map");
+        window.map_canvas()->set_named_spawns_visible(true);
+
+        const plazmic::MapPoint2D player_screen =
+            click_viewport.map_to_screen(
+                plazmic::spawn_map_position(spawns.spawns[0]));
+        window.map_canvas()->set_player_spawns_visible(false);
+        click_map(QPointF(player_screen.x, player_screen.y));
+        require(!window.map_canvas()->selected_spawn(),
+                "hidden PC marker remained selectable from the map");
+        window.map_canvas()->set_player_spawns_visible(true);
+
+        window.map_canvas()->set_selected_spawn(std::nullopt);
+        window.map_canvas()->set_other_spawns_visible(false);
+        click_map(corpse_point);
+        require(!window.map_canvas()->selected_spawn(),
+                "hidden Other marker remained selectable from the map");
         spawn_type->setCurrentIndex(spawn_type->findData(1));
         spawn_filter->setText("guard");
         spawn_table->setColumnWidth(0, 260);
@@ -302,6 +443,17 @@ int main(int argc, char** argv) {
                 "height filter ranges were not bounded");
         require(!window.map_canvas()->player_follow_enabled(),
                 "player follow did not default to disabled");
+        require(!window.map_canvas()->named_spawn_labels_visible() &&
+                    !window.map_canvas()->player_labels_visible() &&
+                    !window.map_canvas()->npc_labels_visible() &&
+                    !window.map_canvas()->other_spawns_visible(),
+                "spawn presentation controls did not retain explicit state");
+        window.map_canvas()->set_named_spawn_labels_visible(true);
+        window.map_canvas()->set_player_labels_visible(true);
+        window.map_canvas()->set_npc_labels_visible(true);
+        window.map_canvas()->set_named_spawns_visible(false);
+        window.map_canvas()->set_player_spawns_visible(false);
+        window.map_canvas()->set_npc_spawns_visible(false);
         window.map_canvas()->set_player_follow_enabled(true);
         require(window.map_canvas()->player_follow_enabled(),
                 "player follow could not be enabled");
@@ -362,12 +514,55 @@ int main(int argc, char** argv) {
                 "close did not persist the map height filter state");
         require(saved_state->player_follow_enabled,
                 "close did not persist player-follow state");
+        require(saved_state->named_spawn_labels_visible &&
+                    saved_state->player_labels_visible &&
+                    saved_state->npc_labels_visible &&
+                    !saved_state->named_spawns_visible &&
+                    !saved_state->player_spawns_visible &&
+                    !saved_state->npc_spawns_visible &&
+                    !saved_state->other_spawns_visible,
+                "close did not persist spawn map presentation state");
         require(saved_state->spawn_filter == "guard" &&
                     saved_state->spawn_type_filter == 1 &&
                     saved_state->spawn_sort_column == 1 &&
                     saved_state->spawn_sort_descending &&
                     saved_state->spawn_column_widths[0] == 260,
                 "close did not persist spawn table state");
+
+        {
+            plazmic::MainWindow reset_layout(
+                snapshot, settings_path, true);
+            auto* reset_spawn_dock =
+                reset_layout.findChild<QDockWidget*>("spawn-dock");
+            require(reset_layout.width() == 1200 &&
+                        reset_layout.height() == 780 &&
+                        reset_spawn_dock != nullptr &&
+                        !reset_spawn_dock->isFloating(),
+                    "reset layout unexpectedly restored geometry or docks");
+            require(
+                reset_layout.map_canvas()->height_filter_enabled() &&
+                    reset_layout.map_canvas()->height_filter_below() == 0.0 &&
+                    reset_layout.map_canvas()->height_filter_above() ==
+                        plazmic::kMaximumHeightFilterRange &&
+                    reset_layout.map_canvas()->player_follow_enabled() &&
+                    reset_layout.map_canvas()->named_spawn_labels_visible() &&
+                    reset_layout.map_canvas()->player_labels_visible() &&
+                    reset_layout.map_canvas()->npc_labels_visible() &&
+                    !reset_layout.map_canvas()->named_spawns_visible() &&
+                    !reset_layout.map_canvas()->player_spawns_visible() &&
+                    !reset_layout.map_canvas()->npc_spawns_visible() &&
+                    !reset_layout.map_canvas()->other_spawns_visible(),
+                "reset layout discarded saved map preferences");
+            require(
+                reset_layout.findChild<QLineEdit*>("spawn-filter")->text() ==
+                        "guard" &&
+                    reset_layout.findChild<QComboBox*>("spawn-type-filter")
+                            ->currentData()
+                            .toInt() == 1 &&
+                    reset_layout.findChild<QTableView*>("spawn-table")
+                            ->columnWidth(0) == 260,
+                "reset layout discarded saved spawn preferences");
+        }
 
         QMainWindow geometry_reference;
         require(geometry_reference.restoreGeometry(expected_geometry_state),
@@ -396,6 +591,14 @@ int main(int argc, char** argv) {
                 "saved map height filter state was not restored");
         require(restored.map_canvas()->player_follow_enabled(),
                 "saved player-follow state was not restored");
+        require(restored.map_canvas()->named_spawn_labels_visible() &&
+                    restored.map_canvas()->player_labels_visible() &&
+                    restored.map_canvas()->npc_labels_visible() &&
+                    !restored.map_canvas()->named_spawns_visible() &&
+                    !restored.map_canvas()->player_spawns_visible() &&
+                    !restored.map_canvas()->npc_spawns_visible() &&
+                    !restored.map_canvas()->other_spawns_visible(),
+                "saved spawn map presentation state was not restored");
         require(
             restored.findChild<QLineEdit*>("spawn-filter")->text() ==
                     "guard" &&

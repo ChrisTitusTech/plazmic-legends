@@ -197,6 +197,13 @@ std::optional<UiState> UiSettings::load() const {
     double height_filter_below = 15.0;
     double height_filter_above = 15.0;
     bool player_follow_enabled = false;
+    bool named_spawn_labels_visible = false;
+    bool player_labels_visible = false;
+    bool npc_labels_visible = false;
+    bool named_spawns_visible = true;
+    bool player_spawns_visible = true;
+    bool npc_spawns_visible = true;
+    bool other_spawns_visible = true;
     QString spawn_filter;
     int spawn_type_filter = -1;
     int spawn_sort_column = 3;
@@ -273,6 +280,55 @@ std::optional<UiState> UiSettings::load() const {
                     return std::nullopt;
                 }
                 player_follow_enabled = *value == "true";
+            } else if (line.startsWith("named_spawn_labels_visible")) {
+                const auto value = scalar_value(
+                    line, "named_spawn_labels_visible");
+                if (!value || (*value != "true" && *value != "false")) {
+                    return std::nullopt;
+                }
+                named_spawn_labels_visible = *value == "true";
+            } else if (line.startsWith("player_labels_visible")) {
+                const auto value =
+                    scalar_value(line, "player_labels_visible");
+                if (!value || (*value != "true" && *value != "false")) {
+                    return std::nullopt;
+                }
+                player_labels_visible = *value == "true";
+            } else if (line.startsWith("npc_labels_visible")) {
+                const auto value =
+                    scalar_value(line, "npc_labels_visible");
+                if (!value || (*value != "true" && *value != "false")) {
+                    return std::nullopt;
+                }
+                npc_labels_visible = *value == "true";
+            } else if (line.startsWith("named_spawns_visible")) {
+                const auto value =
+                    scalar_value(line, "named_spawns_visible");
+                if (!value || (*value != "true" && *value != "false")) {
+                    return std::nullopt;
+                }
+                named_spawns_visible = *value == "true";
+            } else if (line.startsWith("player_spawns_visible")) {
+                const auto value =
+                    scalar_value(line, "player_spawns_visible");
+                if (!value || (*value != "true" && *value != "false")) {
+                    return std::nullopt;
+                }
+                player_spawns_visible = *value == "true";
+            } else if (line.startsWith("npc_spawns_visible")) {
+                const auto value =
+                    scalar_value(line, "npc_spawns_visible");
+                if (!value || (*value != "true" && *value != "false")) {
+                    return std::nullopt;
+                }
+                npc_spawns_visible = *value == "true";
+            } else if (line.startsWith("other_spawns_visible")) {
+                const auto value =
+                    scalar_value(line, "other_spawns_visible");
+                if (!value || (*value != "true" && *value != "false")) {
+                    return std::nullopt;
+                }
+                other_spawns_visible = *value == "true";
             }
         } else if (section == Section::spawns) {
             if (line.startsWith("filter")) {
@@ -345,6 +401,13 @@ std::optional<UiState> UiSettings::load() const {
         .height_filter_below = height_filter_below,
         .height_filter_above = height_filter_above,
         .player_follow_enabled = player_follow_enabled,
+        .named_spawn_labels_visible = named_spawn_labels_visible,
+        .player_labels_visible = player_labels_visible,
+        .npc_labels_visible = npc_labels_visible,
+        .named_spawns_visible = named_spawns_visible,
+        .player_spawns_visible = player_spawns_visible,
+        .npc_spawns_visible = npc_spawns_visible,
+        .other_spawns_visible = other_spawns_visible,
         .spawn_filter = spawn_filter,
         .spawn_type_filter = spawn_type_filter,
         .spawn_sort_column = spawn_sort_column,
@@ -428,6 +491,20 @@ bool UiSettings::save(const UiState& state) const {
                 "\n";
     contents += QByteArray("player_follow_enabled = ") +
                 (state.player_follow_enabled ? "true\n" : "false\n");
+    contents += QByteArray("named_spawn_labels_visible = ") +
+                (state.named_spawn_labels_visible ? "true\n" : "false\n");
+    contents += QByteArray("player_labels_visible = ") +
+                (state.player_labels_visible ? "true\n" : "false\n");
+    contents += QByteArray("npc_labels_visible = ") +
+                (state.npc_labels_visible ? "true\n" : "false\n");
+    contents += QByteArray("named_spawns_visible = ") +
+                (state.named_spawns_visible ? "true\n" : "false\n");
+    contents += QByteArray("player_spawns_visible = ") +
+                (state.player_spawns_visible ? "true\n" : "false\n");
+    contents += QByteArray("npc_spawns_visible = ") +
+                (state.npc_spawns_visible ? "true\n" : "false\n");
+    contents += QByteArray("other_spawns_visible = ") +
+                (state.other_spawns_visible ? "true\n" : "false\n");
     contents += "\n[spawns]\n";
     contents += "filter = \"" +
                 state.spawn_filter.toUtf8().toBase64() + "\"\n";

@@ -121,6 +121,14 @@ cannot be isolated and validated safely is omitted rather than guessed.
   `{ class="PlazmicLegends", tags=5, monitor=1, noswallow=1 }`.
 - The map supports pan, zoom, player-follow, layer visibility, selection, and
   readable labels.
+- NPC names beginning with `#` are presented as named spawns with a distinct
+  map color and marker shape. Named NPC, player-character, and ordinary-NPC
+  labels can be enabled independently.
+- Non-player, non-NPC spawn snapshots are presented as Other with neutral gray
+  map markers, including any exact-profile ground records published by the
+  reader. A visible Filters / Labels dropdown independently hides named NPC,
+  player-character, ordinary-NPC, and Ground / Other markers from rendering
+  and map selection, and the spawn table provides an Other type filter.
 - Selecting a spawn in either the map or list highlights the same stable ID in
   both views without affecting the game target.
 - Window geometry, dock state, columns, filters, map view, and visual settings

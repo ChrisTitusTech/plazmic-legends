@@ -1,6 +1,6 @@
 Name:           plazmic-legends
-Version:        0.1.2
-Release:        2%{?dist}
+Version:        0.1.3
+Release:        1%{?dist}
 Summary:        Read-only EverQuest Legends companion for Linux
 License:        GPL-3.0-only
 URL:            https://github.com/ChrisTitusTech/plazmic-legends
@@ -57,6 +57,10 @@ ctest --test-dir %{__cmake_builddir} --output-on-failure
 %doc %{_docdir}/%{name}/THIRD-PARTY-NOTICES.md
 
 %changelog
+* Sat Aug 01 2026 Chris Titus Tech <contact@christitus.com> - 0.1.3-1
+- Add spawn category filters and independent map label controls
+- Highlight named NPC spawns and distinguish ground or other markers
+
 * Thu Jul 30 2026 Chris Titus Tech <contact@christitus.com> - 0.1.2-2
 - License the original project under GPL-3.0-only
 - Ship the license and contributor documentation

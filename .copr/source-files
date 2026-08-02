@@ -23,6 +23,7 @@ SPEC.md
 TASKS.md
 development.md
 docs/cleanup-inventory.md
+docs/offset-discovery.md
 docs/package-operations.md
 docs/phase0-cleanup-report.md
 docs/phase1-architecture-proof.md
@@ -85,6 +86,7 @@ src/ui/main_window.cpp
 src/ui/main_window.h
 src/ui/map_canvas.cpp
 src/ui/map_canvas.h
+src/ui/spawn_presentation.h
 src/ui/spawn_table_model.cpp
 src/ui/spawn_table_model.h
 src/ui/system_theme.cpp

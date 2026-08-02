@@ -6,8 +6,8 @@ work done.
 
 ## Current phase
 
-Phase 0 through Phase 5 are complete and merged into `main`. The first official
-release is `v0.1.2`, with Fedora RPM and x86-64 AppImage assets. Package
+Phase 0 through Phase 5 are complete and merged into `main`. The current
+release is `v0.1.3`, with Fedora RPM and x86-64 AppImage assets. Package
 publication remains authorized.
 
 ## Post-release maintenance

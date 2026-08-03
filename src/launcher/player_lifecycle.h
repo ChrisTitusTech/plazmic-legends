@@ -2,6 +2,7 @@
 
 #include "game/game_state_reader.h"
 #include "map/map_parser.h"
+#include "model/character_snapshot.h"
 #include "model/player_snapshot.h"
 #include "model/spawn_snapshot.h"
 
@@ -18,8 +19,10 @@ struct PlayerRefresh {
 struct PlayerLifecycleUpdate {
     PlayerSnapshot player;
     SpawnCollectionSnapshot spawns;
+    CharacterSnapshot character;
     std::optional<ZoneMap> map;
     bool clear_map{false};
+    bool reset_combat{false};
 };
 
 class PlayerLifecycle {
@@ -31,8 +34,15 @@ class PlayerLifecycle {
     [[nodiscard]] PlayerLifecycleUpdate apply(PlayerRefresh refresh);
 
   private:
+    [[nodiscard]] bool combat_context_changed(
+        const PlayerSnapshot& player,
+        const CharacterSnapshot& character);
+
     std::string handled_zone_;
     std::string map_detail_;
+    std::string combat_zone_;
+    std::string combat_character_;
+    bool combat_context_initialized_{false};
 };
 
 }  // namespace plazmic

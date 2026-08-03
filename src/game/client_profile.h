@@ -37,6 +37,39 @@ struct SpawnSymbols {
     std::size_t maximum_count;
 };
 
+struct CharacterSymbols {
+    std::uintptr_t local_character_pointer_rva;
+    std::size_t player_name_offset;
+    std::size_t player_name_bytes;
+    std::size_t character_zone_offset;
+    std::size_t character_type_descriptor_offset;
+    std::size_t type_descriptor_displacement_offset;
+    std::size_t stats_lookup_offset;
+    std::size_t stats_lookup_key_offset;
+    std::size_t stats_record_key_offset;
+    std::size_t stats_record_value_offset;
+    std::size_t stats_record_next_offset;
+    std::size_t stats_maximum_records;
+    std::size_t stats_current_mana_offset;
+    std::size_t stats_current_health_offset;
+    std::size_t health_adjustment_offset;
+    std::size_t player_maximum_mana_offset;
+    std::size_t character_base_bias;
+    std::size_t profile_manager_offset;
+    std::size_t profile_manager_current_type_offset;
+    std::size_t profile_list_type_offset;
+    std::size_t profile_list_first_profile_offset;
+    std::size_t profile_list_next_offset;
+    std::size_t profile_list_maximum_count;
+    std::size_t inventory_container_offset;
+    std::size_t inventory_size_offset;
+    std::size_t inventory_data_offset;
+    std::size_t inventory_entry_bytes;
+    std::size_t inventory_maximum_slots;
+    std::size_t item_name_pointer_offset;
+    std::size_t item_name_bytes;
+};
+
 struct ClientProfile {
     std::string_view id;
     std::string_view sha256;
@@ -46,6 +79,7 @@ struct ClientProfile {
     std::uint32_t image_size;
     GameStateSymbols game_state;
     SpawnSymbols spawns;
+    CharacterSymbols character;
 };
 
 [[nodiscard]] const ClientProfile& legends_reference_profile();

@@ -43,6 +43,7 @@ docs/research/phase1-symbol-plan.md
 docs/research/phase3-map-baseline.md
 docs/research/phase3-player-map-checkpoint.md
 docs/research/phase4-spawn-checkpoint.md
+docs/research/phase6-character-combat-checkpoint.md
 docs/research/showeq-ui-review.md
 packaging/THIRD-PARTY-NOTICES.md
 packaging/build-appimage.sh
@@ -55,8 +56,12 @@ src/common/client_file_monitor.cpp
 src/common/client_file_monitor.h
 src/common/sha256.cpp
 src/common/sha256.h
+src/game/character_reader.cpp
+src/game/character_reader.h
 src/game/client_profile.cpp
 src/game/client_profile.h
+src/game/combat_log_parser.cpp
+src/game/combat_log_parser.h
 src/game/game_state_reader.cpp
 src/game/game_state_reader.h
 src/game/spawn_reader.cpp
@@ -77,6 +82,8 @@ src/map/map_parser.cpp
 src/map/map_parser.h
 src/map/map_view_model.cpp
 src/map/map_view_model.h
+src/model/character_snapshot.h
+src/model/combat_snapshot.h
 src/model/player_snapshot.h
 src/model/spawn_snapshot.h
 src/model/status_snapshot.cpp
@@ -95,8 +102,10 @@ src/ui/ui_settings.cpp
 src/ui/ui_settings.h
 src/ui/x11_window_class.cpp
 src/ui/x11_window_class.h
+tests/test_character_reader.cpp
 tests/test_client_selection.cpp
 tests/test_client_status.cpp
+tests/test_combat_log_parser.cpp
 tests/test_game_state_reader.cpp
 tests/test_inspect_eqgame.py
 tests/test_main_window.cpp

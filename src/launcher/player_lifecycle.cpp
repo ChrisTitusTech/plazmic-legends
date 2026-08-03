@@ -65,6 +65,18 @@ SpawnCollectionSnapshot invalid_spawns(
     };
 }
 
+CharacterSnapshot invalid_character(const GameStateReadResult& result) {
+    const PlayerSnapshot player = invalid_snapshot(result);
+    return {
+        .state = player.state,
+        .name = {},
+        .health = {},
+        .mana = {},
+        .equipment = {},
+        .detail = player.detail,
+    };
+}
+
 std::string map_failure_detail(const MapLoadResult& result) {
     switch (result.error) {
         case MapLoadError::missing_base_map:
@@ -87,21 +99,48 @@ std::string map_failure_detail(const MapLoadResult& result) {
 
 }  // namespace
 
+bool PlayerLifecycle::combat_context_changed(
+    const PlayerSnapshot& player,
+    const CharacterSnapshot& character) {
+    const std::string next_zone =
+        player.available() ? player.zone : std::string{};
+    const std::string next_character =
+        character.available() ? character.name : std::string{};
+    const bool changed = !combat_context_initialized_ ||
+                         combat_zone_ != next_zone ||
+                         combat_character_ != next_character;
+    combat_context_initialized_ = true;
+    combat_zone_ = next_zone;
+    combat_character_ = next_character;
+    return changed;
+}
+
 PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
     if (!refresh.state) {
         handled_zone_.clear();
         map_detail_.clear();
+        PlayerSnapshot player = invalid_snapshot(refresh.state);
+        SpawnCollectionSnapshot spawns = invalid_spawns(refresh.state);
+        CharacterSnapshot character = invalid_character(refresh.state);
+        const bool reset_combat =
+            combat_context_changed(player, character);
         return {
-            .player = invalid_snapshot(refresh.state),
-            .spawns = invalid_spawns(refresh.state),
+            .player = std::move(player),
+            .spawns = std::move(spawns),
+            .character = std::move(character),
             .map = std::nullopt,
             .clear_map = true,
+            .reset_combat = reset_combat,
         };
     }
 
     PlayerSnapshot player = std::move(*refresh.state.snapshot);
     SpawnCollectionSnapshot spawns =
         std::move(*refresh.state.spawns);
+    CharacterSnapshot character = refresh.state.character
+                                      ? std::move(*refresh.state.character)
+                                      : CharacterSnapshot{};
+    const bool reset_combat = combat_context_changed(player, character);
     if (!refresh.map_load) {
         if (!map_detail_.empty()) {
             player.detail = map_detail_;
@@ -109,8 +148,10 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
         return {
             .player = std::move(player),
             .spawns = std::move(spawns),
+            .character = std::move(character),
             .map = std::nullopt,
             .clear_map = false,
+            .reset_combat = reset_combat,
         };
     }
 
@@ -121,8 +162,10 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
         return {
             .player = std::move(player),
             .spawns = std::move(spawns),
+            .character = std::move(character),
             .map = std::nullopt,
             .clear_map = true,
+            .reset_combat = reset_combat,
         };
     }
 
@@ -130,8 +173,10 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
     return {
         .player = std::move(player),
         .spawns = std::move(spawns),
+        .character = std::move(character),
         .map = std::move(refresh.map_load->map),
         .clear_map = false,
+        .reset_combat = reset_combat,
     };
 }
 

@@ -1,4 +1,5 @@
 #include "game/game_state_reader.h"
+#include "game/combat_log_parser.h"
 #include "launcher/client_selection.h"
 #include "launcher/client_status.h"
 #include "launcher/player_lifecycle.h"
@@ -9,6 +10,7 @@
 #include "ui/x11_window_class.h"
 
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <optional>
@@ -36,6 +38,12 @@ std::filesystem::path selected_maps(
     }
     return client.parent_path() / "maps";
 }
+
+struct CombatRefreshEnvelope {
+    std::string character;
+    std::uint64_t generation{};
+    plazmic::CombatLogRefresh refresh;
+};
 
 }  // namespace
 
@@ -199,12 +207,15 @@ int main(int argc, char** argv) {
     status_timer.start(std::chrono::seconds(1));
 
     plazmic::PlayerLifecycle player_lifecycle;
+    std::string active_character;
+    std::uint64_t combat_generation = 0U;
     QFutureWatcher<plazmic::PlayerRefresh> player_watcher;
     QObject::connect(
         &player_watcher,
         &QFutureWatcher<plazmic::PlayerRefresh>::finished,
         &window,
-        [&window, &player_watcher, &player_lifecycle, &privacy_log]() {
+        [&window, &player_watcher, &player_lifecycle, &privacy_log,
+         &active_character, &combat_generation]() {
             plazmic::PlayerRefresh refresh =
                 player_watcher.result();
             privacy_log.record_game_state(refresh.state.error);
@@ -223,6 +234,16 @@ int main(int argc, char** argv) {
             }
             window.update_player_snapshot(update.player);
             window.update_spawn_snapshot(std::move(update.spawns));
+            const std::string next_character =
+                update.character.available()
+                    ? update.character.name
+                    : std::string{};
+            active_character = next_character;
+            if (update.reset_combat) {
+                ++combat_generation;
+                window.update_combat_snapshot({});
+            }
+            window.update_character_snapshot(update.character);
         });
 
     QTimer player_timer;
@@ -262,6 +283,7 @@ int main(int argc, char** argv) {
                                         zoning,
                                 .detail =
                                     "zone changed while loading its map",
+                                .character = std::nullopt,
                             };
                             refresh.map_load.reset();
                             return refresh;
@@ -277,14 +299,63 @@ int main(int argc, char** argv) {
     player_timer.start(std::chrono::milliseconds(250));
     start_player_refresh();
 
+    auto combat_tailer = std::make_shared<plazmic::CombatLogTailer>();
+    std::uint64_t tailer_generation = combat_generation;
+    QFutureWatcher<CombatRefreshEnvelope> combat_watcher;
+    QObject::connect(
+        &combat_watcher,
+        &QFutureWatcher<CombatRefreshEnvelope>::finished,
+        &window,
+        [&window, &combat_watcher, &active_character,
+         &combat_generation]() {
+            const CombatRefreshEnvelope result = combat_watcher.result();
+            if (result.character == active_character &&
+                result.generation == combat_generation) {
+                window.update_combat_snapshot(result.refresh.snapshot);
+            }
+        });
+    QTimer combat_timer;
+    const auto start_combat_refresh =
+        [&combat_watcher, &combat_tailer, &active_character,
+         &combat_generation, &tailer_generation,
+         game_directory = selection.game_directory]() {
+            if (combat_watcher.isRunning()) {
+                return;
+            }
+            const std::string character = active_character;
+            const std::uint64_t generation = combat_generation;
+            const bool reset_tailer = tailer_generation != generation;
+            tailer_generation = generation;
+            combat_watcher.setFuture(QtConcurrent::run(
+                [combat_tailer, game_directory, character, generation,
+                 reset_tailer]() {
+                    if (reset_tailer) {
+                        combat_tailer->clear();
+                    }
+                    return CombatRefreshEnvelope{
+                        .character = character,
+                        .generation = generation,
+                        .refresh = combat_tailer->refresh(
+                            game_directory, character),
+                    };
+                }));
+        };
+    QObject::connect(
+        &combat_timer, &QTimer::timeout, &window, start_combat_refresh);
+    combat_timer.start(std::chrono::milliseconds(250));
+
     if (duration_seconds > 0) {
         QTimer::singleShot(std::chrono::seconds(duration_seconds),
                            &window, &QWidget::close);
     }
     const int result = application.exec();
     player_timer.stop();
+    combat_timer.stop();
     if (player_watcher.isRunning()) {
         player_watcher.waitForFinished();
+    }
+    if (combat_watcher.isRunning()) {
+        combat_watcher.waitForFinished();
     }
     privacy_log.record_shutdown();
     return result;

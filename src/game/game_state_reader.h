@@ -3,6 +3,7 @@
 #include "common/client_file_monitor.h"
 #include "game/client_profile.h"
 #include "integration/process_discovery.h"
+#include "model/character_snapshot.h"
 #include "model/player_snapshot.h"
 #include "model/spawn_snapshot.h"
 
@@ -32,6 +33,7 @@ struct GameStateReadResult {
     std::optional<SpawnCollectionSnapshot> spawns;
     GameStateReadError error{GameStateReadError::process_unavailable};
     std::string detail;
+    std::optional<CharacterSnapshot> character;
 
     [[nodiscard]] explicit operator bool() const {
         return snapshot.has_value() && spawns.has_value() &&

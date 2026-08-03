@@ -48,6 +48,14 @@ plazmic::GameStateReadResult live_state(std::string zone) {
             },
         .error = plazmic::GameStateReadError::none,
         .detail = {},
+        .character = plazmic::CharacterSnapshot{
+            .state = plazmic::PlayerSnapshotState::in_world,
+            .name = "synthetic_character",
+            .health = {.current = 90, .maximum = 100},
+            .mana = {.current = 40, .maximum = 50},
+            .equipment = {},
+            .detail = "Live synthetic character",
+        },
     };
 }
 
@@ -70,6 +78,7 @@ plazmic::GameStateReadResult failed_state(
         .spawns = std::nullopt,
         .error = error,
         .detail = "synthetic transition",
+        .character = std::nullopt,
     };
 }
 
@@ -91,6 +100,8 @@ int main() {
                 "initial zone map was not published");
         require(!first.clear_map,
                 "initial map publication requested invalidation");
+        require(first.reset_combat,
+                "initial player context did not reset combat state");
         require(lifecycle.handled_zone() == "zone_a",
                 "initial handled zone was not retained");
 
@@ -102,6 +113,8 @@ int main() {
                 "unchanged player became unavailable");
         require(!unchanged.map && !unchanged.clear_map,
                 "unchanged zone altered the map");
+        require(!unchanged.reset_combat,
+                "unchanged player context reset combat state");
 
         auto second = lifecycle.apply({
             .state = live_state("zone_b"),
@@ -114,6 +127,22 @@ int main() {
                 "second-zone map was not published");
         require(lifecycle.handled_zone() == "zone_b",
                 "second zone did not replace the handled zone");
+        require(second.reset_combat,
+                "same-character zone change did not reset combat state");
+
+        plazmic::GameStateReadResult character_unavailable =
+            live_state("zone_b");
+        character_unavailable.character.reset();
+        const auto optional_character = lifecycle.apply({
+            .state = std::move(character_unavailable),
+            .map_load = std::nullopt,
+        });
+        require(optional_character.player.available() &&
+                    optional_character.spawns.available() &&
+                    !optional_character.character.available() &&
+                    !optional_character.clear_map &&
+                    optional_character.reset_combat,
+                "optional character failure cleared valid player state");
 
         const std::array transitions{
             std::pair{
@@ -162,6 +191,8 @@ int main() {
                     "lifecycle transition retained a stale zone");
             require(invalidated.clear_map && !invalidated.map,
                     "lifecycle transition retained stale map geometry");
+            require(invalidated.reset_combat,
+                    "lifecycle transition retained stale combat state");
             require(transition_lifecycle.handled_zone().empty(),
                     "lifecycle transition retained the handled zone");
             require(!invalidated.player.detail.empty(),

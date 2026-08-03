@@ -9,6 +9,7 @@
 #include "ui/x11_window_class.h"
 
 #include <cstdlib>
+#include <chrono>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -21,7 +22,9 @@
 #include <QLineEdit>
 #include <QHeaderView>
 #include <QMouseEvent>
+#include <QProgressBar>
 #include <QMenu>
+#include <QTableWidget>
 #include <QTableView>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -127,12 +130,132 @@ int main(int argc, char** argv) {
                 "map canvas is missing");
         require(window.findChild<QWidget*>("spawn-table") != nullptr,
                 "spawn table placeholder is missing");
+        auto* character_dock =
+            window.findChild<QDockWidget*>("character-dock");
+        auto* parse_dock = window.findChild<QDockWidget*>("parse-dock");
+        require(character_dock != nullptr && parse_dock != nullptr &&
+                    window.dockWidgetArea(character_dock) ==
+                        Qt::LeftDockWidgetArea &&
+                    window.dockWidgetArea(parse_dock) ==
+                        Qt::LeftDockWidgetArea &&
+                    character_dock->geometry().top() <
+                        parse_dock->geometry().top(),
+                "character and parse docks are not stacked on the left");
         require(window.findChild<QLabel*>("compatibility-status")->text() ==
                     "Supported",
                 "compatibility status did not render");
         require(window.findChild<QLabel*>("profile-status")->text() ==
                     "synthetic-profile",
                 "profile status did not render");
+
+        const plazmic::CharacterSnapshot character{
+            .state = plazmic::PlayerSnapshotState::in_world,
+            .name = "synthetic_character",
+            .health = {.current = 90, .maximum = std::nullopt},
+            .mana = {.current = 40, .maximum = 50},
+            .equipment =
+                {
+                    {.slot = "Head", .item = "Synthetic Helm"},
+                    {.slot = "Primary", .item = "Synthetic Sword"},
+                },
+            .detail = "Synthetic character snapshot",
+        };
+        window.update_character_snapshot(character);
+        const plazmic::CombatEncounterSnapshot combat{
+            .state = plazmic::CombatEncounterState::active,
+            .target = "synthetic_target",
+            .participants =
+                {
+                    {
+                        .name = "synthetic_character",
+                        .damage = 900,
+                        .hits = 3,
+                        .dps = 300.0,
+                        .percentage = 75.0,
+                        .active_seconds = 3.0,
+                    },
+                    {
+                        .name = "synthetic_ally",
+                        .damage = 300,
+                        .hits = 2,
+                        .dps = 100.0,
+                        .percentage = 25.0,
+                        .active_seconds = 3.0,
+                    },
+                },
+            .total_damage = 1200,
+            .duration_seconds = 3.0,
+            .active_character_dps = 300.0,
+            .detail = "Current encounter",
+        };
+        window.update_combat_snapshot(combat);
+        process_events();
+        require(window.findChild<QLabel*>("character-name")->text() ==
+                    "synthetic_character" &&
+                    window.findChild<QProgressBar*>("character-health")
+                        ->text() == "HP 90" &&
+                    window.findChild<QProgressBar*>("character-mana")
+                        ->text()
+                        .contains("40 / 50") &&
+                    window.findChild<QTableWidget*>("equipment-table")
+                        ->rowCount() == 2,
+                "character dock did not render vitals and equipment");
+        require(window.findChild<QLabel*>("character-dps")
+                        ->text()
+                        .contains("300.0") &&
+                    window.findChild<QTableWidget*>("parse-table")
+                        ->rowCount() == 2 &&
+                    window.findChild<QLabel*>("parse-state")
+                        ->text()
+                        .contains("synthetic_target"),
+                "parse dock did not render the encounter summary");
+        plazmic::CombatEncounterSnapshot completed = combat;
+        completed.state = plazmic::CombatEncounterState::complete;
+        completed.detail = "Most recent encounter";
+        window.update_combat_snapshot(completed);
+        require(window.findChild<QLabel*>("character-dps")->text() ==
+                    "Current DPS: 0.0" &&
+                    window.findChild<QTableWidget*>("parse-table")
+                            ->rowCount() == 2,
+                "completed encounter did not clear current DPS or retain parse");
+        window.update_character_snapshot({});
+        require(window.findChild<QProgressBar*>("character-health")->text() ==
+                    "HP unavailable" &&
+                    window.findChild<QProgressBar*>("character-mana")->text() ==
+                        "Mana unavailable",
+                "unavailable character vitals were rendered as zero");
+
+        plazmic::CombatEncounterSnapshot large_combat{
+            .state = plazmic::CombatEncounterState::active,
+            .target = "synthetic_target",
+            .participants = {},
+            .total_damage = 256,
+            .duration_seconds = 10.0,
+            .active_character_dps = 1.0,
+            .detail = "Current encounter",
+        };
+        for (std::size_t index = 0U; index < 256U; ++index) {
+            large_combat.participants.push_back({
+                .name = "synthetic_" + std::to_string(index),
+                .damage = 1,
+                .hits = 1,
+                .dps = 1.0,
+                .percentage = 100.0 / 256.0,
+                .active_seconds = 1.0,
+            });
+        }
+        const auto ui_start = std::chrono::steady_clock::now();
+        for (std::size_t update = 0U; update < 10U; ++update) {
+            window.update_combat_snapshot(large_combat);
+        }
+        const double average_ui_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - ui_start)
+                .count() /
+            10.0;
+        require(average_ui_ms < 250.0,
+                "bounded parse UI exceeded the update budget: " +
+                    std::to_string(average_ui_ms) + " ms");
 
         const plazmic::ZoneMap map{
             .zone = "synthetic",

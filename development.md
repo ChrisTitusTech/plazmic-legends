@@ -1,6 +1,6 @@
 # Plazmic Legends development
 
-Plazmic Legends is feature complete as of version 0.1.2. This document is the
+Plazmic Legends completed its first release at version 0.1.2. This document is
 entrypoint for contributors and anyone interested in the project's design,
 history, validation, and research evidence.
 
@@ -19,8 +19,9 @@ The product is intentionally narrow:
 
 - one exact compatibility profile at a time;
 - locally installed maps only;
-- immutable player, zone, and spawn snapshots;
-- an independent map, spawn table, and details view;
+- immutable player, zone, spawn, character, and encounter snapshots;
+- an independent map, spawn table, details view, character panel, and compact
+  local combat-log parser;
 - Linux, Wine, and X11/XWayland only; and
 - no scripting, plugins, remote control, telemetry, or updater.
 
@@ -90,7 +91,7 @@ cycle. It never authorizes changing old offsets in place.
 | `src/common` | Fingerprinting, logging, and narrow shared utilities |
 | `src/integration` | Linux process discovery, mappings, and read-only access |
 | `src/game` | Compatibility profiles and bounded game-state readers |
-| `src/model` | Immutable status, player, and spawn snapshots |
+| `src/model` | Immutable status, player, spawn, character, and encounter snapshots |
 | `src/launcher` | Compatibility and lifecycle coordination |
 | `src/map` | Map parsing, transforms, and renderer-independent state |
 | `src/ui` | Qt window, map canvas, spawn table, theme, and settings |
@@ -176,6 +177,8 @@ to make a patched client appear supported.
   [player/map checkpoint](docs/research/phase3-player-map-checkpoint.md), and
   [Phase 4 spawn checkpoint](docs/research/phase4-spawn-checkpoint.md) record
   renderer and live-state evidence.
+- [Phase 6 character/combat checkpoint](docs/research/phase6-character-combat-checkpoint.md)
+  records the bounded memory and local log-parser evidence.
 - [Policy-risk decision](docs/research/phase1-policy-risk.md),
   [MacroQuest boundary](docs/research/macroquest-boundary-review.md),
   [ShowEQ review](docs/research/showeq-ui-review.md), and

@@ -387,3 +387,90 @@ after client updates.
 
 Retain the last known-good package and immutable profile. Withdraw an
 incompatible artifact rather than weakening compatibility checks.
+
+## Phase 6: Character and combat column
+
+Status: Implemented and under review on 2026-08-03 on branch
+`feature/character-combat-panel`. Automated, privacy, performance, staged
+install, exact-fingerprint, and focused live feature checks pass. The pull
+request remains draft until the live zoning, camping, process-exit, and
+reacquisition gate is exercised.
+
+### Outcome
+
+The standalone companion gains a default left column with bounded live
+character vitals and text equipment above a compact, offline current-encounter
+damage parser.
+
+### Included work
+
+- Independently resolve and validate exact-profile character identity, current
+  HP, current and maximum mana, equipped slot pointers or IDs, and bounded
+  equipped item names. Display maximum HP and its percentage only if a
+  separate source satisfies the same evidence gate.
+- Publish immutable character snapshots and invalidate them with the existing
+  player lifecycle.
+- Implement a bounded incremental parser for the active character's local
+  EverQuest combat log, including append, inactivity, truncation, and rotation
+  behavior.
+- Derive current encounter totals, DPS, percentages, active duration, and the
+  active character's DPS without writing game state or persisting runtime
+  names.
+- Add vertically stacked Character and Parse docks in the default left area and
+  preserve saved layout, theme, X11 class, and unavailable states.
+- Keep the parser local and independent. Do not add uploads, accounts,
+  leaderboards, saved encounter history, timers, proc or resist tools, game
+  assets, or network services.
+
+### Dependencies and risks
+
+- The existing normative offset workflow does not validate character vitals or
+  inventory and must be expanded before profile values are accepted.
+- Equipment graphs may be indirect, sparse, or unstable; a field that cannot
+  be bounded and independently proven is omitted rather than guessed.
+- Combat logs contain private character and combatant names and must never
+  enter fixtures, diagnostics, screenshots, commits, or PR evidence.
+- Combat text and locale variants can produce incomplete categorization; an
+  unrecognized line is ignored within a hard line and byte bound.
+- Additional polling and UI publication must not regress game frame pacing or
+  the existing 250 ms snapshot budget.
+
+### Exit criteria
+
+- Every displayed memory field has profile-local values, bounds, static
+  evidence, two controlled live observations, and deterministic rejection
+  tests.
+- The parser passes synthetic melee, spell, damage-over-time, pet, malformed,
+  append, inactivity, truncation, rotation, count, and size tests without
+  retaining private input.
+- Character and encounter snapshots clear or transition explicitly across
+  character select, entering world, zoning, camping, log unavailability, game
+  exit, and process reacquisition.
+- The default and restored dock layouts place Character above Parse on the left
+  and retain the existing map, spawn, and details behavior.
+- Full repository, privacy, performance, package, X11 placement, and live
+  game-invariance gates pass on the exact supported client.
+
+### Validation
+
+- Run focused reader, parser, lifecycle, model, settings, and Xvfb UI tests.
+- Run the complete configure, warnings-as-errors build, repository check,
+  CTest, exact fingerprint, staged package, metadata, and privacy gates.
+- Compare HP, mana, and each displayed equipment field against two controlled
+  visible ground-truth observations without recording private values.
+- Exercise live encounter start, update, inactivity, new encounter, log
+  truncation/rotation, zoning, camping, process exit, and reacquisition.
+- Measure reader/parser/UI cost with large synthetic equipment and combat-log
+  fixtures and verify no visible game regression.
+
+### Rollback
+
+Remove the Character and Parse docks, combat-log reader, and new profile fields
+while retaining the Phase 5 package and existing player/map/spawn behavior.
+The prior immutable compatibility behavior remains available from `main`.
+
+### Pause point
+
+Do not release or merge profile values that lack the required static and two
+observation live evidence. Keep the PR in draft until automated, live,
+privacy, performance, and independent-review gates are complete.

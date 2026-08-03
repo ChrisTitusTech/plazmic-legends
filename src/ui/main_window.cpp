@@ -20,8 +20,11 @@
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QLineEdit>
+#include <QProgressBar>
 #include <QScreen>
 #include <QStatusBar>
+#include <QTableWidget>
+#include <QTableWidgetItem>
 #include <QTableView>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -53,6 +56,42 @@ QString pid_text(const StatusSnapshot& snapshot) {
     return QString("%1 (PID %2)")
         .arg(process)
         .arg(*snapshot.pid);
+}
+
+void update_vital_bar(QProgressBar* bar,
+                      const QString& label,
+                      const VitalSnapshot& vital) {
+    if (!vital.maximum) {
+        bar->setRange(0, 100);
+        bar->setValue(0);
+        bar->setFormat(
+            QString("%1 %2").arg(label).arg(vital.current));
+        return;
+    }
+    if (*vital.maximum == 0) {
+        bar->setRange(0, 100);
+        bar->setValue(0);
+        bar->setFormat(QString("%1 0 / 0").arg(label));
+        return;
+    }
+    const std::int64_t maximum = *vital.maximum;
+    const double ratio =
+        static_cast<double>(vital.current) /
+        static_cast<double>(maximum) * 100.0;
+    const int percentage = static_cast<int>(std::clamp(ratio, 0.0, 100.0));
+    bar->setRange(0, 100);
+    bar->setValue(percentage);
+    bar->setFormat(QString("%1 %2 / %3 (%4%)")
+                       .arg(label)
+                       .arg(vital.current)
+                       .arg(maximum)
+                       .arg(percentage));
+}
+
+void set_vital_unavailable(QProgressBar* bar, const QString& label) {
+    bar->setRange(0, 100);
+    bar->setValue(0);
+    bar->setFormat(QString("%1 unavailable").arg(label));
 }
 
 }  // namespace
@@ -87,6 +126,73 @@ void MainWindow::build_ui() {
     map_canvas_ = new MapCanvas;
     map_canvas_->setObjectName("map-view");
     setCentralWidget(map_canvas_);
+
+    auto* character_container = new QWidget;
+    auto* character_layout = new QVBoxLayout(character_container);
+    character_layout->setContentsMargins(6, 6, 6, 6);
+    character_name_ = new QLabel("Character unavailable");
+    character_name_->setObjectName("character-name");
+    QFont character_font = character_name_->font();
+    character_font.setBold(true);
+    character_name_->setFont(character_font);
+    character_layout->addWidget(character_name_);
+    health_bar_ = new QProgressBar;
+    health_bar_->setObjectName("character-health");
+    health_bar_->setTextVisible(true);
+    character_layout->addWidget(health_bar_);
+    mana_bar_ = new QProgressBar;
+    mana_bar_->setObjectName("character-mana");
+    mana_bar_->setTextVisible(true);
+    character_layout->addWidget(mana_bar_);
+    current_dps_ = new QLabel("Current DPS: 0.0");
+    current_dps_->setObjectName("character-dps");
+    character_layout->addWidget(current_dps_);
+    equipment_table_ = new QTableWidget;
+    equipment_table_->setObjectName("equipment-table");
+    equipment_table_->setColumnCount(2);
+    equipment_table_->setHorizontalHeaderLabels({"Slot", "Item"});
+    equipment_table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    equipment_table_->setSelectionMode(QAbstractItemView::NoSelection);
+    equipment_table_->setAlternatingRowColors(true);
+    equipment_table_->verticalHeader()->setVisible(false);
+    equipment_table_->horizontalHeader()->setSectionResizeMode(
+        0, QHeaderView::ResizeToContents);
+    equipment_table_->horizontalHeader()->setSectionResizeMode(
+        1, QHeaderView::Stretch);
+    character_layout->addWidget(equipment_table_, 1);
+    auto* character_dock = create_dock(
+        "Character", "character-dock", character_container, this);
+    character_dock->setMinimumWidth(300);
+    addDockWidget(Qt::LeftDockWidgetArea, character_dock);
+
+    auto* parse_container = new QWidget;
+    auto* parse_layout = new QVBoxLayout(parse_container);
+    parse_layout->setContentsMargins(6, 6, 6, 6);
+    parse_state_ = new QLabel("Combat logging is unavailable");
+    parse_state_->setObjectName("parse-state");
+    parse_state_->setWordWrap(true);
+    parse_layout->addWidget(parse_state_);
+    parse_table_ = new QTableWidget;
+    parse_table_->setObjectName("parse-table");
+    parse_table_->setColumnCount(5);
+    parse_table_->setHorizontalHeaderLabels(
+        {"Participant", "Damage", "DPS", "%", "Active"});
+    parse_table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    parse_table_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    parse_table_->setSelectionMode(QAbstractItemView::SingleSelection);
+    parse_table_->setAlternatingRowColors(true);
+    parse_table_->verticalHeader()->setVisible(false);
+    parse_table_->horizontalHeader()->setSectionResizeMode(
+        0, QHeaderView::Stretch);
+    for (int column = 1; column < 5; ++column) {
+        parse_table_->horizontalHeader()->setSectionResizeMode(
+            column, QHeaderView::ResizeToContents);
+    }
+    parse_layout->addWidget(parse_table_, 1);
+    auto* parse_dock = create_dock(
+        "Parse", "parse-dock", parse_container, this);
+    addDockWidget(Qt::LeftDockWidgetArea, parse_dock);
+    splitDockWidget(character_dock, parse_dock, Qt::Vertical);
 
     auto* spawn_container = new QWidget;
     auto* spawn_layout = new QVBoxLayout(spawn_container);
@@ -206,6 +312,81 @@ void MainWindow::update_player_snapshot(const PlayerSnapshot& snapshot) {
     if (!snapshot.detail.empty()) {
         detail_value_->setText(QString::fromStdString(snapshot.detail));
     }
+}
+
+void MainWindow::update_character_snapshot(
+    const CharacterSnapshot& snapshot) {
+    equipment_table_->setRowCount(0);
+    if (!snapshot.available()) {
+        character_name_->setText(
+            QString::fromStdString(snapshot.detail));
+        set_vital_unavailable(health_bar_, "HP");
+        set_vital_unavailable(mana_bar_, "Mana");
+        return;
+    }
+    character_name_->setText(QString::fromStdString(snapshot.name));
+    update_vital_bar(health_bar_, "HP", snapshot.health);
+    update_vital_bar(mana_bar_, "Mana", snapshot.mana);
+    equipment_table_->setRowCount(
+        static_cast<int>(snapshot.equipment.size()));
+    for (std::size_t row = 0U; row < snapshot.equipment.size(); ++row) {
+        const EquipmentSlotSnapshot& equipment = snapshot.equipment[row];
+        equipment_table_->setItem(
+            static_cast<int>(row), 0,
+            new QTableWidgetItem(QString::fromStdString(equipment.slot)));
+        equipment_table_->setItem(
+            static_cast<int>(row), 1,
+            new QTableWidgetItem(
+                equipment.item.empty()
+                    ? QString::fromLatin1("Empty")
+                    : QString::fromStdString(equipment.item)));
+    }
+}
+
+void MainWindow::update_combat_snapshot(
+    const CombatEncounterSnapshot& snapshot) {
+    const double current_dps =
+        snapshot.state == CombatEncounterState::active
+            ? snapshot.active_character_dps
+            : 0.0;
+    current_dps_->setText(
+        QString("Current DPS: %1")
+            .arg(current_dps, 0, 'f', 1));
+    parse_table_->setRowCount(
+        static_cast<int>(snapshot.participants.size()));
+    for (std::size_t row = 0U; row < snapshot.participants.size(); ++row) {
+        const CombatParticipantSnapshot& participant =
+            snapshot.participants[row];
+        const int table_row = static_cast<int>(row);
+        parse_table_->setItem(
+            table_row, 0,
+            new QTableWidgetItem(QString::fromStdString(participant.name)));
+        parse_table_->setItem(
+            table_row, 1,
+            new QTableWidgetItem(QString::number(participant.damage)));
+        parse_table_->setItem(
+            table_row, 2,
+            new QTableWidgetItem(
+                QString::number(participant.dps, 'f', 1)));
+        parse_table_->setItem(
+            table_row, 3,
+            new QTableWidgetItem(
+                QString::number(participant.percentage, 'f', 1)));
+        parse_table_->setItem(
+            table_row, 4,
+            new QTableWidgetItem(
+                QString::number(participant.active_seconds, 'f', 1)));
+    }
+    if (!snapshot.available()) {
+        parse_state_->setText(QString::fromStdString(snapshot.detail));
+        return;
+    }
+    parse_state_->setText(
+        QString("%1 - %2 - %3 damage - %4 s")
+            .arg(QString::fromStdString(snapshot.detail))
+            .arg(QString::fromStdString(snapshot.target))
+            .arg(snapshot.total_damage)
+            .arg(snapshot.duration_seconds, 0, 'f', 1));
 }
 
 void MainWindow::update_spawn_snapshot(

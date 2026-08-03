@@ -1,6 +1,7 @@
 #include "game/game_state_reader.h"
 
 #include "common/sha256.h"
+#include "game/character_reader.h"
 #include "game/spawn_reader.h"
 #include "integration/process_reader.h"
 #include "map/map_parser.h"
@@ -64,6 +65,7 @@ GameStateReadResult failure(GameStateReadError error, std::string detail) {
         .spawns = std::nullopt,
         .error = error,
         .detail = std::move(detail),
+        .character = std::nullopt,
     };
 }
 
@@ -117,10 +119,19 @@ bool valid_player_value(double value) {
 
 }  // namespace
 
-GameStateReadResult read_game_state(
+namespace {
+
+struct StableGameState {
+    std::uintptr_t local_player{};
+    std::uintptr_t world_data{};
+    std::uint32_t zone_id{};
+};
+
+GameStateReadResult read_game_state_impl(
     const ClientProcess& process,
     const GameStateSymbols& symbols,
-    const SpawnSymbols& spawn_symbols) {
+    const SpawnSymbols& spawn_symbols,
+    StableGameState* stable_state) {
     if (process.pid <= 0 || process.image_base == 0U ||
         symbols.local_player_pointer_rva == 0U ||
         symbols.world_data_pointer_rva == 0U ||
@@ -289,13 +300,31 @@ GameStateReadResult read_game_state(
             GameStateReadError::inconsistent_snapshot,
             "player or zone changed during the snapshot read");
     }
+    if (stable_state != nullptr) {
+        *stable_state = {
+            .local_player = *local_player,
+            .world_data = *world_data,
+            .zone_id = zone_id,
+        };
+    }
 
     return {
         .snapshot = std::move(player),
         .spawns = std::move(spawn_result.snapshot),
         .error = GameStateReadError::none,
         .detail = {},
+        .character = std::nullopt,
     };
+}
+
+}  // namespace
+
+GameStateReadResult read_game_state(
+    const ClientProcess& process,
+    const GameStateSymbols& symbols,
+    const SpawnSymbols& spawn_symbols) {
+    return read_game_state_impl(
+        process, symbols, spawn_symbols, nullptr);
 }
 
 LiveGameStateProbe::LiveGameStateProbe(
@@ -399,9 +428,58 @@ GameStateReadResult LiveGameStateProbe::refresh() {
             last_discovery_detail_);
     }
 
-    GameStateReadResult result =
-        read_game_state(
-            *process_, profile_->game_state, profile_->spawns);
+    StableGameState stable_state;
+    GameStateReadResult result = read_game_state_impl(
+        *process_, profile_->game_state, profile_->spawns,
+        &stable_state);
+    if (result) {
+        const ProcessMemoryReader reader(*process_);
+        std::uintptr_t local_pointer_address = 0U;
+        std::uintptr_t world_pointer_address = 0U;
+        std::uintptr_t zone_id_address = 0U;
+        if (!checked_add(
+                process_->image_base,
+                profile_->game_state.local_player_pointer_rva,
+                local_pointer_address) ||
+            !checked_add(
+                process_->image_base,
+                profile_->game_state.world_data_pointer_rva,
+                world_pointer_address) ||
+            !checked_add(
+                stable_state.local_player,
+                profile_->game_state.player_zone_id_offset,
+                zone_id_address)) {
+            result = failure(
+                GameStateReadError::invalid_profile,
+                "combined snapshot address overflows");
+        } else {
+            std::string detail;
+            CharacterReadResult character = read_character_snapshot(
+                *process_, stable_state.local_player, profile_->character);
+            const auto final_local = read_value<std::uintptr_t>(
+                reader, local_pointer_address, detail);
+            const auto final_world = read_value<std::uintptr_t>(
+                reader, world_pointer_address, detail);
+            const auto final_zone = read_value<std::uint32_t>(
+                reader, zone_id_address, detail);
+            if (!final_local || !final_world || !final_zone) {
+                result = failure(
+                    GameStateReadError::read_failed,
+                    std::move(detail));
+            } else if (*final_local != stable_state.local_player ||
+                       *final_world != stable_state.world_data ||
+                       (*final_zone & profile_->game_state.zone_id_mask) !=
+                           stable_state.zone_id) {
+                result = failure(
+                    GameStateReadError::inconsistent_snapshot,
+                    "player, world, or zone changed during the combined snapshot");
+            } else if (!character) {
+                result.character.reset();
+            } else {
+                result.character = std::move(character.snapshot);
+            }
+        }
+    }
     if (result.error == GameStateReadError::read_failed) {
         process_.reset();
         next_discovery_check_ = now + kDiscoveryInterval;

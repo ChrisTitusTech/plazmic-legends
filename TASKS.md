@@ -108,6 +108,20 @@ manual live lifecycle gate recorded in P6-05.
   performance fixture, a synthetic X11 visual inspection, and exact-client
   fingerprint verification passed.
 
+### M-03: Color ordinary NPC dots by consider level
+
+- [x] Publish the local-player level from the already validated spawn anchor
+  without adding a client offset or exposing process addresses to the UI.
+- [x] Derive the modern gray, green, light-blue, blue, white, yellow, and red
+  consider bands from immutable local-player and NPC levels.
+- [x] Apply consider colors to ordinary NPC dots while preserving named-NPC,
+  player-character, Ground / Other, selection, label, and filter behavior.
+- [x] Cover every color and level-band boundary with synthetic tests and run
+  the complete repository gate.
+- Acceptance criteria: every ordinary NPC dot has the correct consider color
+  for the published local-player level; named NPCs retain their distinct
+  diamond treatment; and no compatibility-profile address or field changes.
+
 ## Completed Phase 5
 
 ### P5-01: Reduce to the supported product boundary

@@ -133,6 +133,7 @@ plazmic::SpawnCollectionSnapshot spawn_fixture(
     plazmic::SpawnCollectionSnapshot snapshot{
         .state = plazmic::PlayerSnapshotState::in_world,
         .zone = "synthetic",
+        .player_level = 50,
         .spawns = {},
         .detail = "Synthetic large spawn fixture",
     };

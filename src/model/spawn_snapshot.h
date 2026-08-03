@@ -30,6 +30,7 @@ struct SpawnSnapshot {
 struct SpawnCollectionSnapshot {
     PlayerSnapshotState state{PlayerSnapshotState::unavailable};
     std::string zone;
+    unsigned int player_level{};
     std::vector<SpawnSnapshot> spawns;
     std::string detail;
 

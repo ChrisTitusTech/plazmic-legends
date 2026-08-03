@@ -8,6 +8,7 @@
 #include "ui/ui_settings.h"
 #include "ui/x11_window_class.h"
 
+#include <array>
 #include <cstdlib>
 #include <chrono>
 #include <iostream>
@@ -290,6 +291,7 @@ int main(int argc, char** argv) {
         const plazmic::SpawnCollectionSnapshot spawns{
             .state = plazmic::PlayerSnapshotState::in_world,
             .zone = "synthetic",
+            .player_level = 50,
             .spawns =
                 {
                     {
@@ -356,15 +358,104 @@ int main(int argc, char** argv) {
                     plazmic::SpawnPresentationCategory::named_npc,
             "spawn map categories did not distinguish named and Other records");
         const QColor named_color = plazmic::spawn_marker_color(
-            plazmic::SpawnPresentationCategory::named_npc);
+            plazmic::SpawnPresentationCategory::named_npc, 50, 20);
         const QColor npc_color = plazmic::spawn_marker_color(
-            plazmic::SpawnPresentationCategory::npc);
+            plazmic::SpawnPresentationCategory::npc, 50, 50);
         const QColor other_color = plazmic::spawn_marker_color(
-            plazmic::SpawnPresentationCategory::other);
-        require(named_color != npc_color &&
+            plazmic::SpawnPresentationCategory::other, 50, 8);
+        require(named_color != npc_color && named_color != other_color &&
                     other_color.red() == other_color.green() &&
                     other_color.green() == other_color.blue(),
                 "named and Other marker colors were not distinct and neutral");
+
+        struct ConsiderCase {
+            unsigned int player_level;
+            unsigned int npc_level;
+            plazmic::SpawnConsiderColor expected;
+        };
+        constexpr std::array consider_cases{
+            ConsiderCase{50, 32, plazmic::SpawnConsiderColor::gray},
+            ConsiderCase{50, 36, plazmic::SpawnConsiderColor::green},
+            ConsiderCase{50, 44, plazmic::SpawnConsiderColor::light_blue},
+            ConsiderCase{50, 45, plazmic::SpawnConsiderColor::blue},
+            ConsiderCase{50, 50, plazmic::SpawnConsiderColor::white},
+            ConsiderCase{50, 53, plazmic::SpawnConsiderColor::yellow},
+            ConsiderCase{50, 54, plazmic::SpawnConsiderColor::red},
+        };
+        for (const auto& test : consider_cases) {
+            require(
+                plazmic::spawn_consider_color(
+                    test.player_level, test.npc_level) == test.expected,
+                "ordinary NPC consider color classification was incorrect");
+        }
+
+        constexpr std::array consider_band_levels{
+            16U, 20U, 21U, 24U, 25U, 50U, 100U};
+        for (const unsigned int player_level : consider_band_levels) {
+            const unsigned int gray_level =
+                player_level - ((player_level + 5U) / 3U);
+            const unsigned int green_level =
+                player_level - ((player_level + 7U) / 4U);
+            require(
+                plazmic::spawn_consider_color(
+                    player_level, gray_level) ==
+                    plazmic::SpawnConsiderColor::gray &&
+                plazmic::spawn_consider_color(
+                    player_level, gray_level + 1U) ==
+                    plazmic::SpawnConsiderColor::green &&
+                plazmic::spawn_consider_color(
+                    player_level, green_level) ==
+                    plazmic::SpawnConsiderColor::green,
+                "gray or green consider boundary was incorrect");
+            if (player_level < 25U) {
+                require(
+                    plazmic::spawn_consider_color(
+                        player_level, green_level + 1U) ==
+                        (player_level <= 20U
+                             ? plazmic::SpawnConsiderColor::blue
+                             : plazmic::SpawnConsiderColor::green),
+                    "pre-25 blue or green consider boundary was incorrect");
+            } else {
+                require(
+                    plazmic::spawn_consider_color(
+                        player_level, green_level + 1U) ==
+                            plazmic::SpawnConsiderColor::light_blue &&
+                        plazmic::spawn_consider_color(
+                            player_level, player_level - 6U) ==
+                            plazmic::SpawnConsiderColor::light_blue &&
+                        plazmic::spawn_consider_color(
+                            player_level, player_level - 5U) ==
+                            plazmic::SpawnConsiderColor::blue,
+                    "light-blue or blue consider boundary was incorrect");
+            }
+        }
+        require(
+            plazmic::spawn_consider_color(15, 9) ==
+                    plazmic::SpawnConsiderColor::gray &&
+                plazmic::spawn_consider_color(15, 10) ==
+                    plazmic::SpawnConsiderColor::blue,
+            "low-level gray or blue consider boundary was incorrect");
+        require(
+            plazmic::spawn_consider_color(0, 50) ==
+                plazmic::SpawnConsiderColor::gray,
+            "missing player level did not use the neutral fallback");
+
+        constexpr std::array consider_levels{
+            32U, 36U, 44U, 45U, 50U, 53U, 54U};
+        std::array<QColor, consider_levels.size()> consider_colors{};
+        for (std::size_t index = 0; index < consider_levels.size(); ++index) {
+            consider_colors[index] = plazmic::spawn_marker_color(
+                plazmic::SpawnPresentationCategory::npc,
+                50, consider_levels[index]);
+        }
+        for (std::size_t left = 0; left < consider_colors.size(); ++left) {
+            for (std::size_t right = left + 1U;
+                 right < consider_colors.size(); ++right) {
+                require(
+                    consider_colors[left] != consider_colors[right],
+                    "two ordinary NPC consider colors were indistinguishable");
+            }
+        }
         auto* spawn_table =
             window.findChild<QTableView*>("spawn-table");
         auto* spawn_filter =

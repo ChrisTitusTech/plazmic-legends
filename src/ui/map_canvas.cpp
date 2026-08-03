@@ -54,14 +54,33 @@ QAction* add_toggle_action(QMenu* menu,
 
 }  // namespace
 
-QColor spawn_marker_color(SpawnPresentationCategory category) {
+QColor spawn_marker_color(SpawnPresentationCategory category,
+                          unsigned int player_level,
+                          unsigned int spawn_level) {
     switch (category) {
         case SpawnPresentationCategory::player:
             return {65, 160, 255};
         case SpawnPresentationCategory::named_npc:
             return {240, 165, 35};
-        case SpawnPresentationCategory::npc:
-            return {235, 90, 75};
+        case SpawnPresentationCategory::npc: {
+            switch (spawn_consider_color(player_level, spawn_level)) {
+                case SpawnConsiderColor::gray:
+                    return {145, 145, 145};
+                case SpawnConsiderColor::green:
+                    return {65, 190, 90};
+                case SpawnConsiderColor::light_blue:
+                    return {95, 200, 255};
+                case SpawnConsiderColor::blue:
+                    return {45, 105, 255};
+                case SpawnConsiderColor::white:
+                    return {245, 245, 245};
+                case SpawnConsiderColor::yellow:
+                    return {255, 220, 45};
+                case SpawnConsiderColor::red:
+                    return {235, 70, 60};
+            }
+            return {145, 145, 145};
+        }
         case SpawnPresentationCategory::other:
             return {145, 145, 145};
     }
@@ -549,11 +568,15 @@ void MapCanvas::paintEvent(QPaintEvent* event) {
             const QPointF center(screen.x, screen.y);
             const SpawnPresentationCategory category =
                 spawn_presentation_category(spawn);
-            const QColor color = spawn_marker_color(category);
+            const QColor color = spawn_marker_color(
+                category, spawns_.player_level, spawn.level);
             const bool selected =
                 selected_spawn_ && *selected_spawn_ == spawn.id;
-            QPen pen(
-                selected ? QColor(255, 210, 55) : color);
+            QPen pen(selected
+                         ? QColor(255, 210, 55)
+                         : (category == SpawnPresentationCategory::npc
+                                ? palette().color(QPalette::Text)
+                                : color));
             pen.setWidthF(selected ? 2.5 : 1.0);
             painter.setPen(pen);
             painter.setBrush(color);

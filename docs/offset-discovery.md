@@ -8,10 +8,12 @@ RVA, field offset, bound, and structure assumption as an untrusted hypothesis
 until it passes this workflow again.
 
 This workflow is limited to the approved read-only fields: local-player and
-world state, zone identity and short name, player position and heading, and
-the bounded spawn collection. It does not authorize memory writes, injection,
-hooks, input synthesis, protection bypass, client patching, packet capture, or
-a general-purpose memory scanner.
+world state, zone identity and short name, player position and heading, the
+bounded spawn collection, character identity, current HP, current and maximum
+mana, and bounded equipped slot and item-name values. It does not authorize
+memory writes, injection, hooks, input synthesis, protection bypass, client patching,
+packet capture, combat-log content capture, or a general-purpose memory
+scanner.
 
 ## Discovery map
 
@@ -286,10 +288,41 @@ record base:
 | Record bound | Smallest byte span containing every approved field; it is not permission to read an entire unknown structure |
 | Maximum count | Evidence-based ceiling above controlled observations and no higher than the implementation cap |
 
+## Step 7a: Re-establish character vitals and equipment
+
+Use the validated local-player identity as the lifecycle anchor, but do not
+assume that vitals or inventory live in the spawn record. Follow independent
+character-window, health-bar, mana-bar, and equipment-slot instruction paths to
+their owning object and prove every pointer hop, index, width, and bound.
+
+| Field | Required evidence |
+| --- | --- |
+| Character identity | Bounded character-name use tied to the validated local player; the value selects exactly one local combat log and is never logged or persisted |
+| Current HP | Signed or unsigned operand width and health-bar data flow; the value is nonnegative and independently confirmed at two visible values |
+| Maximum HP | A separately owned raw or stable cached value with proven width and bar/percentage data flow; omit the value and HP percentage if only a dynamic calculation is found |
+| Current and maximum mana | Independent mana-bar or spell-resource data flow with the same range and lifecycle validation |
+| Equipment container | Pointer or inline array reached from an equipment UI or gameplay accessor, with an explicit fixed slot count and readable-mapping checks |
+| Equipped item | Null for empty or a validated readable object for occupied; no whole-object dump or unbounded graph traversal |
+| Item name | Bounded terminated printable text reached from the validated item object; text is UI-only and excluded from diagnostics and evidence |
+
+Confirm HP and mana at two visibly different values and validate maximum values
+against the client UI. Confirm each supported occupied slot against two
+controlled equipment configurations; empty slots must remain explicitly empty.
+Re-read the local-player identity, vitals owner, equipment container, and slot
+pointers after staging the snapshot. Reject the entire character snapshot if a
+required identity, pointer, range, slot, string, or consistency invariant
+changes during the read.
+
 Upstream or historical projects may suggest field names and types only. Record
 the exact upstream revision consulted, then prove the Legends instruction and
 live behavior independently. Never copy an upstream offset, structure, byte
 pattern, generated table, or implementation into the profile.
+
+For the `legends-2026-07-29` profile, current HP passed this workflow, but the
+client path for maximum HP terminates in a dynamic calculation rather than a
+separately proven raw or stable cached field. The profile therefore publishes
+current HP only. This is a deliberate fail-closed omission, not permission to
+infer a maximum from UI percentages or historical structures.
 
 ## Step 8: Perform bounded live confirmation
 

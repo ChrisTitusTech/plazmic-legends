@@ -34,6 +34,8 @@ add_library(
     STATIC
     src/common/client_file_monitor.cpp
     src/common/sha256.cpp
+    src/game/character_reader.cpp
+    src/game/combat_log_parser.cpp
     src/game/client_profile.cpp
     src/game/game_state_reader.cpp
     src/game/spawn_reader.cpp
@@ -235,6 +237,22 @@ if(BUILD_TESTING)
 
     add_test(NAME process_discovery.unit COMMAND process_discovery_test)
 
+    add_executable(character_reader_test tests/test_character_reader.cpp)
+    target_compile_features(character_reader_test PRIVATE cxx_std_20)
+    target_compile_options(
+        character_reader_test
+        PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+    )
+    target_link_libraries(character_reader_test PRIVATE plazmic_core)
+    add_dependencies(check character_reader_test)
+    add_test(NAME character_reader.unit COMMAND character_reader_test)
+
     add_executable(client_selection_test tests/test_client_selection.cpp)
     target_compile_features(client_selection_test PRIVATE cxx_std_20)
     target_compile_options(
@@ -333,6 +351,25 @@ if(BUILD_TESTING)
     target_link_libraries(game_state_reader_test PRIVATE plazmic_core)
     add_dependencies(check game_state_reader_test)
     add_test(NAME game_state_reader.unit COMMAND game_state_reader_test)
+
+    add_executable(
+        combat_log_parser_test
+        tests/test_combat_log_parser.cpp
+    )
+    target_compile_features(combat_log_parser_test PRIVATE cxx_std_20)
+    target_compile_options(
+        combat_log_parser_test
+        PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+    )
+    target_link_libraries(combat_log_parser_test PRIVATE plazmic_core)
+    add_dependencies(check combat_log_parser_test)
+    add_test(NAME combat_log_parser.unit COMMAND combat_log_parser_test)
 
     add_executable(
         player_lifecycle_test

@@ -18,6 +18,10 @@ Wine prefix.
 - Shows live player position, heading, and configurable elevation filtering.
 - Presents a sortable and filterable spawn list with synchronized map markers
   and selection details, including distinct named-spawn and Other markers.
+- Shows bounded live character HP, mana, and text-only equipped items in a
+  left Character dock.
+- Condenses newly appended local combat-log damage into a current or
+  most-recent encounter Parse dock when EverQuest combat logging is enabled.
 - Handles zoning, camping, character select, process exit, and client changes
   without leaving stale data visible.
 - Follows the active system light or dark theme.
@@ -108,6 +112,9 @@ the package.
 - Select a spawn from either the map or table to keep both views synchronized.
 - Use the status area when the client is not running, unsupported, zoning, or
   outside the world.
+- Enable EverQuest combat logging to populate the Parse dock. Plazmic Legends
+  starts at the active log's current end and does not upload or save encounter
+  history.
 
 The selected client directory, window layout, and map preferences are stored in
 `$XDG_CONFIG_HOME/plazmic-legends/config.toml`, with the standard Qt user

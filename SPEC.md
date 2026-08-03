@@ -104,6 +104,36 @@ The window shows `Client not running`, `Unsupported client`, `Not in world`,
 `Zoning`, `No selection`, and `Unavailable` states explicitly. A field that
 cannot be isolated and validated safely is omitted rather than guessed.
 
+### Character and combat column
+
+The post-release character/combat feature adds two vertically stacked docks in
+the default left column:
+
+- a Character dock showing the active character name, current HP, maximum HP
+  and an HP percentage only when separately proven, current and maximum mana,
+  the mana percentage, text-only equipped slot and item names, and the
+  character's current encounter DPS; and
+- a Parse dock showing one condensed current or most-recent encounter with
+  participant, total damage, average DPS, percentage, and active duration.
+
+HP, mana, character identity, and equipped item values come only from bounded
+exact-profile, same-user process reads. Each field requires independent static
+evidence, two controlled live observations, explicit bounds, and lifecycle
+invalidation before it may be displayed. Equipment uses slot labels and text
+only; the project does not copy or package game icons, item data, or assets.
+
+DPS is derived locally from the user's EverQuest combat log, not from client
+memory. The parser follows only the active character's bounded log file,
+handles appended and rotated/truncated files, starts a new encounter after an
+inactivity boundary, and never persists combatant names or encounter content.
+Missing, disabled, ambiguous, malformed, oversized, or unavailable logs show
+an explicit unavailable state without affecting memory-backed character data.
+
+The parser is an independent implementation informed only by public product
+behavior. It does not copy Loadout Legends code or assets and does not add its
+uploads, accounts, leaderboards, saved history, timers, proc tools, resist
+tools, database, or network services.
+
 ### Window and map interaction
 
 - The application is a normal independent Linux window and does not require a
@@ -111,6 +141,9 @@ cannot be isolated and validated safely is omitted rather than guessed.
   render surface.
 - The main window contains a central map canvas and dockable spawn and detail
   views inspired conceptually by ShowEQ.
+- The default left dock area contains the Character dock above the Parse dock;
+  both retain the existing movable, closable, floatable, saved-layout, and X11
+  class behavior.
 - The main window and any detached Plazmic tool windows expose
   `WM_CLASS(STRING) = "plazmic-legends", "PlazmicLegends"` so DWM can place
   them predictably.
@@ -148,6 +181,11 @@ cannot be isolated and validated safely is omitted rather than guessed.
   is never used as an unchecked path.
 - Player and spawn observations come only from exact-profile, same-user,
   bounded external process reads.
+- Character HP, mana, identity, equipped slots, and equipped item names come
+  only from exact-profile, same-user, bounded external process reads.
+- Current encounter damage and DPS come only from bounded incremental reads of
+  the selected active character's local EverQuest combat log. Combat logs are
+  user-owned runtime inputs and are never copied into the project or package.
 - One profile-local game adapter converts validated observations into
   immutable player, zone, and spawn snapshots keyed by stable IDs.
 - The UI consumes snapshots and local map geometry only. It never receives
@@ -163,6 +201,8 @@ cannot be isolated and validated safely is omitted rather than guessed.
   names, and target names.
 - Local status distinguishes not running, unsupported build, integration
   failure, window failure, map-file failure, and data-reader failure.
+- Parser diagnostics record only state and error categories. They exclude log
+  paths, character and combatant names, encounter content, and damage values.
 
 ## Architecture and data flow
 
@@ -232,6 +272,9 @@ approved architecture decision requires otherwise.
   are allowed on a render or UI event thread.
 - The spawn model has an explicit maximum count, and unchanged snapshots do not
   force full table or map reconstruction.
+- Character reads have explicit record, slot-count, and string bounds. The
+  combat parser tails only newly appended bounded bytes and publishes immutable
+  encounter snapshots without blocking the UI thread.
 - A supported profile is immutable. A client patch creates a new profile and
   runs the compatibility gate.
 
@@ -283,6 +326,18 @@ approved architecture decision requires otherwise.
   private Wine data, unused inherited services, or unsupported plugins.
 - AC-12: Every retained source directory and dependency maps to a requirement
   in this specification.
+- AC-13: Exact-profile character snapshots publish validated current HP,
+  current and maximum mana, and text-only equipment. Maximum HP and its
+  percentage remain absent until independently proven. Every invalid,
+  inconsistent, zoning, camping, character-select, process-exit, and
+  unsupported-client path clears stale character data.
+- AC-14: The bounded local combat-log parser produces deterministic encounter
+  totals, DPS, percentages, and active durations, follows append/rotation
+  lifecycle safely, emits no private diagnostics, and performs no network or
+  game-state access.
+- AC-15: The Character and Parse docks form the default saved left column,
+  remain responsive under bounded live updates, retain the approved X11 class,
+  and do not alter game focus, fullscreen, input, or state.
 
 ## Resolved Phase 1 decisions
 

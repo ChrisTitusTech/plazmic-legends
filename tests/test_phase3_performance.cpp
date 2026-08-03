@@ -179,6 +179,7 @@ plazmic::GameStateReadResult live_state(double coordinate) {
             },
         .error = plazmic::GameStateReadError::none,
         .detail = {},
+        .character = std::nullopt,
     };
 }
 

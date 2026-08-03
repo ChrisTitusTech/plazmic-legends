@@ -10,6 +10,68 @@ Phase 0 through Phase 5 are complete and merged into `main`. The current
 release is `v0.1.3`, with Fedora RPM and x86-64 AppImage assets. Package
 publication remains authorized.
 
+Phase 6 is implemented and under review on
+`feature/character-combat-panel`. It adds a bounded memory-backed Character
+dock and an offline combat-log Parse dock without changing the read-only,
+fail-closed, privacy, or package boundary. The remaining pre-merge work is the
+manual live lifecycle gate recorded in P6-05.
+
+## Phase 6: Character and combat column
+
+### P6-01: Establish the character-field evidence boundary
+
+- [x] Expand the normative offset workflow for character identity, current HP,
+  current and maximum mana, equipped slots, and equipped item names; record
+  maximum HP as omitted until independently proven.
+- [x] Record exact-profile static resolvers, explicit bounds, two controlled
+  observations per displayed field, and rejection rules in a privacy-safe
+  Phase 6 checkpoint.
+- Acceptance criteria: no guessed, copied, partial, or UI-local address enters
+  the profile, and an unproven equipment field is omitted.
+
+### P6-02: Publish immutable bounded character snapshots
+
+- [x] Add centralized profile fields and bounded readers for approved vitals
+  and equipment.
+- [x] Add immutable character snapshots and clear them across every existing
+  lifecycle transition or inconsistent read.
+- [x] Cover valid, boundary, invalid pointer, invalid range, malformed name,
+  excessive slot count, torn read, unsupported profile, and lifecycle cases.
+- Acceptance criteria: the UI receives values only, and any invalid character
+  read publishes no partial or stale character data.
+
+### P6-03: Parse the active local combat log
+
+- [x] Select only the active character's bounded local log without persisting
+  its path or runtime name.
+- [x] Incrementally parse supported damage lines into immutable current or
+  most-recent encounter totals, DPS, percentage, and active duration.
+- [x] Handle append, partial lines, inactivity, truncation, rotation,
+  unavailable logs, malformed input, and hard byte/count limits.
+- Acceptance criteria: parser fixtures are synthetic, diagnostics contain only
+  categories, and no upload, account, network, database, or history path exists.
+
+### P6-04: Add the left character and parser column
+
+- [x] Add a Character dock with HP/mana bars, text equipment, and current DPS.
+- [x] Add a compact Parse dock below it with participant, damage, DPS,
+  percentage, and active-duration columns.
+- [x] Preserve default/restored dock placement, theme behavior, unavailable
+  states, detached X11 class, and existing map/spawn/detail interactions.
+- Acceptance criteria: Character is above Parse in the default left area and
+  both consume immutable snapshots without direct file or process access.
+
+### P6-05: Complete the Phase 6 gate
+
+- [x] Run focused, full repository, privacy, performance, package, and staged
+  install validation.
+- [ ] Complete exact-client HP/mana/equipment, encounter lifecycle, DWM
+  placement, and game-invariance manual validation.
+- [x] Obtain iterative local review and a fresh independent review, resolve all
+  actionable findings, and record skipped checks and residual risks.
+- Acceptance criteria: `AC-13` through `AC-15` pass, existing `AC-01` through
+  `AC-12` remain green, and the PR is ready for review without known blockers.
+
 ## Post-release maintenance
 
 ### M-01: Persist and discover the Legends client directory

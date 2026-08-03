@@ -1,5 +1,7 @@
 #pragma once
 
+#include "model/character_snapshot.h"
+#include "model/combat_snapshot.h"
 #include "model/status_snapshot.h"
 #include "model/player_snapshot.h"
 #include "model/spawn_snapshot.h"
@@ -13,6 +15,8 @@
 class QComboBox;
 class QLabel;
 class QLineEdit;
+class QProgressBar;
+class QTableWidget;
 class QTableView;
 
 namespace plazmic {
@@ -32,6 +36,8 @@ class MainWindow final : public QMainWindow {
 
     void update_snapshot(const StatusSnapshot& snapshot);
     void update_player_snapshot(const PlayerSnapshot& snapshot);
+    void update_character_snapshot(const CharacterSnapshot& snapshot);
+    void update_combat_snapshot(const CombatEncounterSnapshot& snapshot);
     void update_spawn_snapshot(SpawnCollectionSnapshot snapshot);
     void set_zone_map(ZoneMap map);
     void clear_zone_map(const QString& detail);
@@ -62,6 +68,13 @@ class MainWindow final : public QMainWindow {
     QComboBox* spawn_type_filter_{nullptr};
     QLabel* spawn_state_{nullptr};
     QLabel* selection_detail_{nullptr};
+    QLabel* character_name_{nullptr};
+    QProgressBar* health_bar_{nullptr};
+    QProgressBar* mana_bar_{nullptr};
+    QLabel* current_dps_{nullptr};
+    QTableWidget* equipment_table_{nullptr};
+    QLabel* parse_state_{nullptr};
+    QTableWidget* parse_table_{nullptr};
     std::optional<std::uint32_t> selected_spawn_;
     QLabel* compatibility_value_{nullptr};
     QLabel* process_value_{nullptr};

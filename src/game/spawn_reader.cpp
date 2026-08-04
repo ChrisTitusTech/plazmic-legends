@@ -238,6 +238,7 @@ SpawnReadResult read_spawn_collection(
     std::vector<SpawnSnapshot> snapshots;
     snapshots.reserve(addresses->size());
     std::set<std::uint32_t> ids;
+    unsigned int player_level = 0U;
     std::vector<std::byte> record(symbols.record_bytes);
     for (const std::uintptr_t address : *addresses) {
         const ProcessReadResult read_result =
@@ -275,6 +276,9 @@ SpawnReadResult read_spawn_collection(
                 SpawnReadError::invalid_collection,
                 "spawn collection contains a duplicate stable ID");
         }
+        if (address == anchor) {
+            player_level = static_cast<unsigned int>(level);
+        }
         const double delta_x =
             static_cast<double>(x) - player.x;
         const double delta_y =
@@ -298,12 +302,18 @@ SpawnReadResult read_spawn_collection(
             SpawnReadError::inconsistent_collection,
             "spawn links changed during the staged read");
     }
+    if (player_level == 0U) {
+        return failure(
+            SpawnReadError::inconsistent_collection,
+            "spawn collection lost the local-player anchor level");
+    }
 
     return {
         .snapshot =
             SpawnCollectionSnapshot{
                 .state = PlayerSnapshotState::in_world,
                 .zone = player.zone,
+                .player_level = player_level,
                 .spawns = std::move(snapshots),
                 .detail = "Live read-only spawn snapshot",
             },

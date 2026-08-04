@@ -37,7 +37,9 @@ inline constexpr double kDefaultHeightFilterAbove = 15.0;
 inline constexpr double kMaximumHeightFilterRange = 1000.0;
 
 [[nodiscard]] QColor spawn_marker_color(
-    SpawnPresentationCategory category);
+    SpawnPresentationCategory category,
+    unsigned int player_level,
+    unsigned int spawn_level);
 
 class MapCanvas final : public QWidget {
   public:

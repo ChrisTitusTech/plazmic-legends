@@ -31,6 +31,7 @@ plazmic::GameStateReadResult live_state(std::string zone) {
             plazmic::SpawnCollectionSnapshot{
                 .state = plazmic::PlayerSnapshotState::in_world,
                 .zone = zone,
+                .player_level = 10,
                 .spawns =
                     {
                         {

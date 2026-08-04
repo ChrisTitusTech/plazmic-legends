@@ -157,6 +157,10 @@ tools, database, or network services.
 - NPC names beginning with `#` are presented as named spawns with a distinct
   map color and marker shape. Named NPC, player-character, and ordinary-NPC
   labels can be enabled independently.
+- Ordinary NPC dots use the consider color derived from the validated
+  local-player and NPC levels: gray, green, light blue, blue, white, yellow,
+  or red.
+  Named NPCs retain their distinct marker color and shape.
 - Non-player, non-NPC spawn snapshots are presented as Other with neutral gray
   map markers, including any exact-profile ground records published by the
   reader. A visible Filters / Labels dropdown independently hides named NPC,

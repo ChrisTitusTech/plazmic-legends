@@ -144,6 +144,9 @@ tools, database, or network services.
 - The default left dock area contains the Character dock above the Parse dock;
   both retain the existing movable, closable, floatable, saved-layout, and X11
   class behavior.
+- An embedded top menu bar exposes checkable Views actions for Character,
+  Parse, Spawns, and Details, plus minimize, maximize/restore, and close
+  controls aligned at the top right.
 - The main window and any detached Plazmic tool windows expose
   `WM_CLASS(STRING) = "plazmic-legends", "PlazmicLegends"` so DWM can place
   them predictably.

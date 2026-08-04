@@ -22,9 +22,10 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QHeaderView>
+#include <QMenu>
+#include <QMenuBar>
 #include <QMouseEvent>
 #include <QProgressBar>
-#include <QMenu>
 #include <QTableWidget>
 #include <QTableView>
 #include <QTemporaryDir>
@@ -127,6 +128,37 @@ int main(int argc, char** argv) {
         require(window.windowTitle() ==
                     "Plazmic Legends test-version",
                 "main window did not expose the project version");
+        auto* menu_bar = window.findChild<QMenuBar*>("main-menu-bar");
+        auto* views_menu = window.findChild<QMenu*>("views-menu");
+        require(menu_bar != nullptr && views_menu != nullptr &&
+                    !menu_bar->isNativeMenuBar(),
+                "embedded top menu bar or Views menu is missing");
+        require(menu_bar->actions().contains(views_menu->menuAction()),
+                "Views menu is not contained in the top menu bar");
+        QWidget* window_controls =
+            menu_bar->cornerWidget(Qt::TopRightCorner);
+        require(window_controls != nullptr &&
+                    window_controls->objectName() == "window-controls",
+                "top-right window controls are missing");
+        auto* minimize_button =
+            window_controls->findChild<QToolButton*>(
+                "window-minimize-button");
+        auto* maximize_button =
+            window_controls->findChild<QToolButton*>(
+                "window-maximize-button");
+        auto* close_button =
+            window_controls->findChild<QToolButton*>(
+                "window-close-button");
+        require(minimize_button != nullptr &&
+                    maximize_button != nullptr &&
+                    close_button != nullptr &&
+                    minimize_button->focusPolicy() == Qt::StrongFocus &&
+                    maximize_button->focusPolicy() == Qt::StrongFocus &&
+                    close_button->focusPolicy() == Qt::StrongFocus &&
+                    minimize_button->toolTip() == "Minimize" &&
+                    maximize_button->toolTip() == "Maximize" &&
+                    close_button->toolTip() == "Close",
+                "window control buttons are incomplete");
         require(window.findChild<QWidget*>("map-view") != nullptr,
                 "map canvas is missing");
         require(window.findChild<QWidget*>("spawn-table") != nullptr,
@@ -142,6 +174,70 @@ int main(int argc, char** argv) {
                     character_dock->geometry().top() <
                         parse_dock->geometry().top(),
                 "character and parse docks are not stacked on the left");
+        const std::array<std::pair<const char*, QDockWidget*>, 4>
+            view_actions{
+                std::pair{"view-character-action", character_dock},
+                std::pair{"view-parse-action", parse_dock},
+                std::pair{
+                    "view-spawns-action",
+                    window.findChild<QDockWidget*>("spawn-dock")},
+                std::pair{
+                    "view-details-action",
+                    window.findChild<QDockWidget*>("detail-dock")},
+            };
+        for (const auto& [action_name, dock] : view_actions) {
+            QAction* action =
+                window.findChild<QAction*>(action_name);
+            require(action != nullptr && dock != nullptr &&
+                        views_menu->actions().contains(action) &&
+                        action->isCheckable() && action->isChecked(),
+                    std::string(action_name) +
+                        " is missing from Views or not checked");
+            action->trigger();
+            process_events();
+            require(!dock->isVisible() && !action->isChecked(),
+                    std::string(action_name) +
+                        " did not hide its view");
+            action->trigger();
+            process_events();
+            require(dock->isVisible() && action->isChecked(),
+                    std::string(action_name) +
+                        " did not restore its view");
+            dock->close();
+            process_events();
+            require(!dock->isVisible() && !action->isChecked(),
+                    std::string(action_name) +
+                        " did not track a closed dock");
+            action->trigger();
+            process_events();
+            require(dock->isVisible() && action->isChecked(),
+                    std::string(action_name) +
+                        " did not reopen a closed dock");
+        }
+        minimize_button->click();
+        process_events();
+        require(window.isMinimized(),
+                "minimize button did not minimize the window");
+        window.showNormal();
+        process_events();
+        maximize_button->click();
+        process_events();
+        require(window.isMaximized() &&
+                    maximize_button->toolTip() == "Restore",
+                "maximize button did not maximize the window");
+        maximize_button->click();
+        process_events();
+        require(!window.isMaximized() &&
+                    maximize_button->toolTip() == "Maximize",
+                "maximize button did not restore the window");
+        window.showMaximized();
+        process_events();
+        require(maximize_button->toolTip() == "Restore",
+                "external maximize did not update the window control");
+        window.showNormal();
+        process_events();
+        require(maximize_button->toolTip() == "Maximize",
+                "external restore did not update the window control");
         require(window.findChild<QLabel*>("compatibility-status")->text() ==
                     "Supported",
                 "compatibility status did not render");
@@ -712,8 +808,10 @@ int main(int argc, char** argv) {
         XCloseDisplay(display);
 
         const QByteArray expected_geometry_state = window.saveGeometry();
-        window.close();
+        close_button->click();
         process_events();
+        require(!window.isVisible(),
+                "close button did not close the main window");
         const auto saved_state = plazmic::UiSettings(settings_path).load();
         require(saved_state.has_value(),
                 "close did not persist UI state");

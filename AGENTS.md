@@ -2,8 +2,9 @@
 
 ## Purpose
 
-Plazmic Legends is a minimal, read-only companion application for the 64-bit
-EverQuest Legends `eqgame.exe` running under Wine on Linux. It uses an
+Plazmic Legends is a minimal companion application for the 64-bit EverQuest
+Legends `eqgame.exe` running under Wine on Linux. Its gameplay integration is
+read-only, and it uses an
 independent Linux window for maps, spawns, and status; it does not draw over or
 inside the game. The repository began as a MacroQuest-derived source import,
 but the intended product is not a scripting or plugin platform.
@@ -96,8 +97,11 @@ requirement justifies a focused change.
 - RPM, COPR, AppImage, and other package publication are authorized.
 - The owner explicitly accepts that this development project operates
   against the Daybreak EULA. Read-only symbol and gameplay-state research may
-  proceed after the normal phase checkpoints. The EULA-risk decision does not
-  authorize writes, injection, automation, or protection bypass. See
+  proceed after the normal phase checkpoints. The approved UI-file installer
+  may replace only validated, user-selected skin and INI files after explicit
+  confirmation, a private backup, and proof that the game is stopped. This
+  exception does not authorize process-memory or gameplay-state writes,
+  injection, automation, input synthesis, or protection bypass. See
   `docs/research/phase1-policy-risk.md`.
 - Preserve the imported tree in a recoverable baseline commit before deleting
   files.
@@ -108,6 +112,9 @@ requirement justifies a focused change.
 - Never commit Daybreak executables, game assets, account data, Wine prefix
   contents, crash dumps, logs containing player data, or offsets copied from
   an unknown source.
+- Keep private UI bundles, character/server INI names, and their archives
+  ignored and local. They are user-supplied installer input and may not enter
+  source packages, binary packages, releases, logs, fixtures, or pull requests.
 - Do not bypass anti-cheat, integrity checks, authentication, or client
   protections. If one blocks the proposed integration, stop and surface it as
   a product decision.

@@ -39,8 +39,8 @@ the bounded process reader or the independent Qt companion.
 | `src/launcher` | Typed compatibility and lifecycle state |
 | `src/map` | Bounded installed-map parsing, transforms, and renderer state |
 | `src/model` | Immutable status, player, and spawn snapshots |
-| `src/ui` | Independent Qt companion, map, table, selection, theme, and settings |
-| `tools/inspect_eqgame.py` | Offline client fingerprint and profile-refresh input |
+| `src/ui` | Independent Qt companion, map, table, selection, theme, settings, and scoped private UI installer |
+| `tools` | Offline client fingerprinting and private UI-bundle export tooling |
 | `tests` | Deterministic AC-03 through AC-09 and performance coverage |
 | `packaging` | RPM, AppImage, desktop integration, metadata, and dependency notices |
 | `.copr` | Deterministic source-RPM entrypoint for external-SCM COPR builds |
@@ -111,6 +111,11 @@ The RPM adds no files beyond this install image. The AppImage adds only its
 runtime launcher and audited shared-library/plugin closure. Neither artifact
 may add the historical proof, research executables, test fixtures, game maps,
 runtime names, local settings, logs, Wine files, or game/system data.
+
+The UI installer code is part of the product binary, but private bundles are
+never installed by CMake or embedded in a package. The ignored exporter output
+remains user-owned input and may contain Daybreak UI assets plus private INI
+filenames and settings.
 
 ## Validation
 

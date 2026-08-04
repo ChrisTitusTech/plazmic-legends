@@ -187,8 +187,7 @@ int main(int argc, char** argv) {
         initial_status,
         settings_path,
         parser.isSet("reset-layout"),
-        selection.should_persist ? selected_game_directory
-                                 : QString{});
+        selected_game_directory);
     window.setWindowIcon(application_icon);
     window.show();
 

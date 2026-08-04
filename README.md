@@ -3,8 +3,9 @@
 
 Plazmic Legends is a feature-complete, native Linux companion for the 64-bit
 EverQuest Legends client running under Wine. It provides a dedicated map and
-spawn window without drawing over the game, injecting code, or modifying the
-Wine prefix.
+spawn window without drawing over the game or injecting code. Its sole
+Wine-prefix write path is the UI-file installer, which may back up and replace
+only selected skin and INI files while EverQuest is stopped.
 
 [Download the latest release](https://github.com/ChrisTitusTech/plazmic-legends/releases/latest)
 
@@ -115,6 +116,11 @@ the package.
 - Enable EverQuest combat logging to populate the Parse dock. Plazmic Legends
   starts at the active log's current end and does not upload or save encounter
   history.
+- To move a private Plazmic UI setup to another 2560x1440 system, create the
+  ignored bundle described in [development.md](development.md), extract it on
+  the target system, exit EverQuest, and choose
+  `User > UI File Install...`. Select both the source and destination layout
+  and character INIs; installing the bundled `eqclient.ini` is optional.
 
 The selected client directory, window layout, and map preferences are stored in
 `$XDG_CONFIG_HOME/plazmic-legends/config.toml`, with the standard Qt user
@@ -141,8 +147,9 @@ endorsed by Daybreak Game Company. It performs external, read-only process
 inspection. The project owner knowingly accepts that this may conflict with
 Daybreak's EULA and published rules. Use it at your own risk.
 
-The project does not write game state, inject code, automate gameplay, bypass
-client protections, or modify the game installation or Wine prefix.
+The project does not write game state, inject code, automate gameplay, or
+bypass client protections. Its UI-file installer may back up and replace only
+explicitly selected skin and INI files while EverQuest is stopped.
 
 ## Development
 

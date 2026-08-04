@@ -10,7 +10,8 @@ this project's purpose.
 
 Plazmic Legends will be a small Linux-built companion application that shows
 selected read-only information from the Legends client in an independent
-window. It does not draw over or inside the game. Client-version knowledge
+window. It also provides a scoped installer for a user-owned UI skin and INI
+settings bundle. It does not draw over or inside the game. Client-version knowledge
 must be isolated, lifecycle transitions must be safe, and unknown builds must
 be rejected instead of risking invalid memory access.
 
@@ -25,7 +26,7 @@ support tier.
 
 ## Product principles
 
-- Read-only: observe and present; never control gameplay.
+- Read-only gameplay integration: observe and present; never control gameplay.
 - Linux-first: configure, build, test, and package on Linux.
 - Minimal: retain only code and dependencies used by the approved window and
   lifecycle.
@@ -148,6 +149,7 @@ tools, database, or network services.
 - An embedded top menu bar exposes checkable Views actions for Character,
   Parse, Spawns, and Details, plus minimize, maximize/restore, and close
   controls aligned at the top right.
+- Its User menu exposes `UI File Install...` for an extracted private bundle.
 - The main window and any detached Plazmic tool windows expose
   `WM_CLASS(STRING) = "plazmic-legends", "PlazmicLegends"` so DWM can place
   them predictably.
@@ -239,9 +241,10 @@ profile, validates every required symbol, and exposes typed readers. Readers
 publish value snapshots; the UI never traverses client objects or owns raw game
 pointers.
 
-Configuration and logs use the XDG base-directory conventions. The game
-installation and Wine prefix remain unmodified unless a later explicitly
-approved architecture decision requires otherwise.
+Configuration and logs use the XDG base-directory conventions. Runtime
+observation leaves the game installation and Wine prefix unmodified. The
+private UI-file installer is the only approved exception and is constrained by
+its allowlist, confirmation, stopped-game check, backup, and rollback contract.
 
 ## Security, privacy, and compliance
 
@@ -286,6 +289,39 @@ approved architecture decision requires otherwise.
 - A supported profile is immutable. A client patch creates a new profile and
   runs the compatibility gate.
 
+### Private UI file installation
+
+- `tools/export_private_ui_bundle.sh` copies the locally installed
+  `uifiles/plazmic-ui` skin, `eqclient.ini`, all `UI_*.ini` window layouts, and
+  character INIs containing HotButtons or additional-filter state into an
+  ignored private bundle with a resolution manifest and SHA-256 inventory.
+- The bundle and archive retain private character/server filenames and
+  proprietary game assets. They remain local user-owned inputs and are never
+  committed, packaged, logged, uploaded, or attached to a pull request.
+- `User > UI File Install...` accepts an extracted bundle only after validating
+  its format, bounded file inventory, SHA-256 hashes, required skin files, and
+  absence of symbolic links or path traversal.
+- The user selects the source and destination layout INIs and the source and
+  destination character/filter INIs. Installing bundled `eqclient.ini` global
+  filters and 1440p settings is a separate, explicit choice.
+- Source choices are allowlisted to regular, non-symlink `*.ini` files in the
+  bundle's `ini/layouts` and `ini/characters` directories. Destination choices
+  are allowlisted to regular, non-symlink `UI_*.ini` layouts and character INIs
+  with recognized UI/filter sections directly under the canonical selected
+  game directory; `eqclient.ini` is the only optional global target. Every
+  path outside these exact roots and patterns is rejected.
+- Installation is refused unless the selected Legends directory is valid and
+  process discovery proves the game is stopped. Before replacement, selected
+  INIs and any existing `uifiles/plazmic-ui` are preserved in a private,
+  timestamped rollback directory inside the selected game directory.
+- Activation is transactional: if any replacement fails, every already
+  replaced INI and `uifiles/plazmic-ui` target is restored from rollback before
+  failure is reported. A normal failure may not leave a mixed old/new state;
+  an independently failed rollback is reported as a critical recovery error.
+- This file-write exception is limited to the confirmed skin and INI targets.
+  It does not permit process-memory or gameplay-state writes, injection,
+  automation, input synthesis, Wine overrides, or protection bypass.
+
 ## Non-goals
 
 - Macro, scripting, command, or plugin platforms.
@@ -298,7 +334,8 @@ approved architecture decision requires otherwise.
   DirectX hooks.
 - Wayland support in the MVP.
 - A general-purpose memory editor or debugger.
-- Modifying or repackaging the EverQuest Legends installation.
+- General-purpose modification or repackaging of the EverQuest Legends
+  installation outside the scoped private UI-file installer.
 - Preserving source or API compatibility with MacroQuest plugins.
 - An in-app updater or crash-report upload service.
 
@@ -346,6 +383,11 @@ approved architecture decision requires otherwise.
 - AC-15: The Character and Parse docks form the default saved left column,
   remain responsive under bounded live updates, retain the approved X11 class,
   and do not alter game focus, fullscreen, input, or state.
+- AC-16: The private UI exporter produces a bounded, integrity-inventoried
+  2560x1440 bundle without tracking private data, and `User > UI File
+  Install...` asks which layout and character INIs to replace, optionally
+  replaces `eqclient.ini`, refuses while the game may be running, preserves a
+  private rollback, and never expands into gameplay-state modification.
 
 ## Resolved Phase 1 decisions
 
@@ -359,8 +401,9 @@ approved architecture decision requires otherwise.
   dependency.
 - Package publication is authorized.
 - Record that the owner knowingly accepts development contrary to the Daybreak
-  EULA. This permits read-only research but does not authorize writes,
-  injection, automation, or protection bypass.
+  EULA. This permits read-only research and the later approved, scoped UI-file
+  installer, but does not authorize gameplay-state writes, injection,
+  automation, input synthesis, or protection bypass.
 - Use plain F11 for the proof toggle.
 - Reserve `$XDG_CONFIG_HOME/plazmic-legends/config.toml` for configuration and
   `$XDG_STATE_HOME/plazmic-legends/plazmic-legends.log` for logs, with standard

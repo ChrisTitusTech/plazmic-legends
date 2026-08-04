@@ -122,6 +122,20 @@ the merged head; that skipped P6-05 check remains a documented residual risk.
   for the published local-player level; named NPCs retain their distinct
   diamond treatment; and no compatibility-profile address or field changes.
 
+### M-04: Add top-level view and window controls
+
+- [x] Add an embedded top menu bar with a Views dropdown for every docked
+  Character, Parse, Spawns, and Details element.
+- [x] Add accessible minimize, maximize/restore, and close controls on the top
+  right without changing X11 placement or application lifecycle behavior.
+- [x] Keep the Character/Parse column full height and place Details below both
+  the map and Spawns panes.
+- [x] Cover visibility toggles and all three window controls with the synthetic
+  X11 main-window test.
+- Acceptance criteria: each Views action stays synchronized with its dock, the
+  window buttons perform their advertised action, and dock visibility remains
+  part of the existing saved layout.
+
 ## Completed Phase 5
 
 ### P5-01: Reduce to the supported product boundary

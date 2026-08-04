@@ -13,11 +13,14 @@
 #include <QMainWindow>
 
 class QComboBox;
+class QDockWidget;
+class QEvent;
 class QLabel;
 class QLineEdit;
 class QProgressBar;
 class QTableWidget;
 class QTableView;
+class QToolButton;
 
 namespace plazmic {
 
@@ -45,10 +48,16 @@ class MainWindow final : public QMainWindow {
     [[nodiscard]] MapCanvas* map_canvas() const { return map_canvas_; }
 
   protected:
+    void changeEvent(QEvent* event) override;
     void closeEvent(QCloseEvent* event) override;
 
   private:
     void build_ui();
+    void build_menu_bar(QDockWidget* character_dock,
+                        QDockWidget* parse_dock,
+                        QDockWidget* spawn_dock,
+                        QDockWidget* detail_dock);
+    void update_maximize_button();
     void restore_ui_state();
     void ensure_on_screen();
     void save_ui_state();
@@ -75,6 +84,7 @@ class MainWindow final : public QMainWindow {
     QTableWidget* equipment_table_{nullptr};
     QLabel* parse_state_{nullptr};
     QTableWidget* parse_table_{nullptr};
+    QToolButton* maximize_button_{nullptr};
     std::optional<std::uint32_t> selected_spawn_;
     QLabel* compatibility_value_{nullptr};
     QLabel* process_value_{nullptr};

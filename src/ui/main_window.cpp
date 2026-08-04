@@ -10,23 +10,29 @@
 #include <utility>
 
 #include <QAbstractItemView>
+#include <QAction>
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QDockWidget>
+#include <QEvent>
 #include <QGuiApplication>
 #include <QHeaderView>
 #include <QHBoxLayout>
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMenu>
+#include <QMenuBar>
 #include <QProgressBar>
 #include <QScreen>
 #include <QStatusBar>
+#include <QStyle>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QTableView>
 #include <QTimer>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 namespace plazmic {
@@ -242,6 +248,10 @@ void MainWindow::build_ui() {
     auto* detail_dock = create_dock(
         "Details", "detail-dock", selection_detail_, this);
     addDockWidget(Qt::BottomDockWidgetArea, detail_dock);
+    setCorner(Qt::BottomLeftCorner, Qt::LeftDockWidgetArea);
+    setCorner(Qt::BottomRightCorner, Qt::BottomDockWidgetArea);
+
+    build_menu_bar(character_dock, parse_dock, spawn_dock, detail_dock);
 
     connect(
         spawn_filter_, &QLineEdit::textChanged, spawn_proxy_,
@@ -294,6 +304,88 @@ void MainWindow::build_ui() {
     statusBar()->addWidget(new QLabel("Profile:"));
     statusBar()->addWidget(profile_value_);
     statusBar()->addPermanentWidget(detail_value_, 1);
+}
+
+void MainWindow::build_menu_bar(QDockWidget* character_dock,
+                                QDockWidget* parse_dock,
+                                QDockWidget* spawn_dock,
+                                QDockWidget* detail_dock) {
+    QMenuBar* bar = menuBar();
+    bar->setObjectName("main-menu-bar");
+    bar->setNativeMenuBar(false);
+
+    QMenu* views_menu = bar->addMenu("&Views");
+    views_menu->setObjectName("views-menu");
+    const std::array<std::pair<QDockWidget*, QString>, 4> views{
+        std::pair{character_dock, QString("view-character-action")},
+        std::pair{parse_dock, QString("view-parse-action")},
+        std::pair{spawn_dock, QString("view-spawns-action")},
+        std::pair{detail_dock, QString("view-details-action")},
+    };
+    for (const auto& [dock, object_name] : views) {
+        QAction* action = dock->toggleViewAction();
+        action->setObjectName(object_name);
+        views_menu->addAction(action);
+    }
+
+    auto* window_controls = new QWidget(bar);
+    window_controls->setObjectName("window-controls");
+    auto* controls_layout = new QHBoxLayout(window_controls);
+    controls_layout->setContentsMargins(0, 0, 0, 0);
+    controls_layout->setSpacing(0);
+
+    const auto add_control = [this, controls_layout](
+                                 const QString& object_name,
+                                 const QString& tooltip,
+                                 QStyle::StandardPixmap icon) {
+        auto* button = new QToolButton;
+        button->setObjectName(object_name);
+        button->setAccessibleName(tooltip);
+        button->setToolTip(tooltip);
+        button->setAutoRaise(true);
+        button->setFocusPolicy(Qt::StrongFocus);
+        button->setIcon(style()->standardIcon(icon));
+        const int extent = style()->pixelMetric(QStyle::PM_SmallIconSize) + 8;
+        button->setFixedSize(extent, extent);
+        controls_layout->addWidget(button);
+        return button;
+    };
+
+    QToolButton* minimize_button = add_control(
+        "window-minimize-button", "Minimize",
+        QStyle::SP_TitleBarMinButton);
+    maximize_button_ = add_control(
+        "window-maximize-button", "Maximize",
+        QStyle::SP_TitleBarMaxButton);
+    QToolButton* close_button = add_control(
+        "window-close-button", "Close",
+        QStyle::SP_TitleBarCloseButton);
+
+    connect(minimize_button, &QToolButton::clicked,
+            this, &QWidget::showMinimized);
+    connect(maximize_button_, &QToolButton::clicked, this, [this]() {
+        if (isMaximized()) {
+            showNormal();
+        } else {
+            showMaximized();
+        }
+    });
+    connect(close_button, &QToolButton::clicked, this, &QWidget::close);
+    bar->setCornerWidget(window_controls, Qt::TopRightCorner);
+    update_maximize_button();
+}
+
+void MainWindow::update_maximize_button() {
+    if (maximize_button_ == nullptr) {
+        return;
+    }
+    const bool maximized = isMaximized();
+    const QString label = maximized ? "Restore" : "Maximize";
+    maximize_button_->setAccessibleName(label);
+    maximize_button_->setToolTip(label);
+    maximize_button_->setIcon(style()->standardIcon(
+        maximized ? QStyle::SP_TitleBarNormalButton
+                  : QStyle::SP_TitleBarMaxButton));
 }
 
 void MainWindow::update_snapshot(const StatusSnapshot& snapshot) {
@@ -598,6 +690,13 @@ void MainWindow::save_ui_state() {
         .spawn_column_widths = column_widths,
     };
     (void)settings_.save(state);
+}
+
+void MainWindow::changeEvent(QEvent* event) {
+    QMainWindow::changeEvent(event);
+    if (event->type() == QEvent::WindowStateChange) {
+        update_maximize_button();
+    }
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {

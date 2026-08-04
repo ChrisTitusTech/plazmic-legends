@@ -248,6 +248,8 @@ void MainWindow::build_ui() {
     auto* detail_dock = create_dock(
         "Details", "detail-dock", selection_detail_, this);
     addDockWidget(Qt::BottomDockWidgetArea, detail_dock);
+    setCorner(Qt::BottomLeftCorner, Qt::LeftDockWidgetArea);
+    setCorner(Qt::BottomRightCorner, Qt::BottomDockWidgetArea);
 
     build_menu_bar(character_dock, parse_dock, spawn_dock, detail_dock);
 
@@ -619,8 +621,6 @@ void MainWindow::restore_ui_state() {
                 ? Qt::DescendingOrder
                 : Qt::AscendingOrder);
     }
-    setCorner(Qt::BottomLeftCorner, Qt::LeftDockWidgetArea);
-    setCorner(Qt::BottomRightCorner, Qt::BottomDockWidgetArea);
     QTimer::singleShot(0, this, [this]() { ensure_on_screen(); });
 }
 

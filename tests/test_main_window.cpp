@@ -826,6 +826,11 @@ int main(int argc, char** argv) {
         require_window_class(display, spawn_dock, "detached spawn dock");
         XCloseDisplay(display);
 
+        window.setCorner(
+            Qt::BottomLeftCorner, Qt::BottomDockWidgetArea);
+        window.setCorner(
+            Qt::BottomRightCorner, Qt::RightDockWidgetArea);
+
         const QByteArray expected_geometry_state = window.saveGeometry();
         close_button->click();
         process_events();
@@ -951,6 +956,12 @@ int main(int argc, char** argv) {
                 "restored spawn dock is missing");
         require(restored_spawn_dock->isFloating(),
                 "saved floating dock state was not restored");
+        require(
+            restored.corner(Qt::BottomLeftCorner) ==
+                    Qt::BottomDockWidgetArea &&
+                restored.corner(Qt::BottomRightCorner) ==
+                    Qt::RightDockWidgetArea,
+            "saved dock-corner ownership was not restored");
         restored.close();
         process_events();
         const auto restored_saved_state =

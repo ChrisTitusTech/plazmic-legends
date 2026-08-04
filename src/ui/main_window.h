@@ -57,6 +57,7 @@ class MainWindow final : public QMainWindow {
                         QDockWidget* parse_dock,
                         QDockWidget* spawn_dock,
                         QDockWidget* detail_dock);
+    void open_ui_file_install();
     void update_maximize_button();
     void restore_ui_state();
     void ensure_on_screen();

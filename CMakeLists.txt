@@ -80,6 +80,7 @@ add_executable(
     src/ui/main_window.cpp
     src/ui/spawn_table_model.cpp
     src/ui/system_theme.cpp
+    src/ui/ui_file_installer.cpp
     src/ui/ui_settings.cpp
     src/ui/x11_window_class.cpp
 )
@@ -183,19 +184,28 @@ if(PLAZMIC_ENABLE_REPOSITORY_CHECKS)
         COMMAND
             "${RUFF_EXECUTABLE}"
             check
+            tools/create_cohesive_ui_layout.py
             tools/inspect_eqgame.py
+            tests/test_create_cohesive_ui_layout.py
+            tests/test_export_private_ui_bundle.py
             tests/test_inspect_eqgame.py
         COMMAND
             "${RUFF_EXECUTABLE}"
             format
             --check
+            tools/create_cohesive_ui_layout.py
             tools/inspect_eqgame.py
+            tests/test_create_cohesive_ui_layout.py
+            tests/test_export_private_ui_bundle.py
             tests/test_inspect_eqgame.py
         COMMAND
             "${Python3_EXECUTABLE}"
             -m
             py_compile
+            tools/create_cohesive_ui_layout.py
             tools/inspect_eqgame.py
+            tests/test_create_cohesive_ui_layout.py
+            tests/test_export_private_ui_bundle.py
             tests/test_inspect_eqgame.py
         COMMAND
             "${Python3_EXECUTABLE}"
@@ -415,6 +425,35 @@ if(BUILD_TESTING)
     add_dependencies(check ui_settings_test)
     add_test(NAME ui_settings.unit COMMAND ui_settings_test)
 
+    add_executable(
+        ui_file_installer_test
+        tests/test_ui_file_installer.cpp
+        src/ui/ui_file_installer.cpp
+    )
+    target_compile_features(ui_file_installer_test PRIVATE cxx_std_20)
+    target_compile_options(
+        ui_file_installer_test
+        PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+    )
+    target_include_directories(
+        ui_file_installer_test
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    )
+    target_link_libraries(
+        ui_file_installer_test
+        PRIVATE
+            Qt6::Core
+    )
+    add_dependencies(check ui_file_installer_test)
+    add_test(NAME ui_file_installer.unit COMMAND ui_file_installer_test)
+
     find_program(XVFB_RUN_EXECUTABLE NAMES xvfb-run)
     if(XVFB_RUN_EXECUTABLE)
         add_executable(
@@ -423,6 +462,7 @@ if(BUILD_TESTING)
             src/ui/map_canvas.cpp
             src/ui/main_window.cpp
             src/ui/spawn_table_model.cpp
+            src/ui/ui_file_installer.cpp
             src/ui/ui_settings.cpp
             src/ui/x11_window_class.cpp
         )

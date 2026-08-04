@@ -24,6 +24,7 @@ CMakeUserPresets.json
 *.trace
 /logs/
 /captures/
+/private-bundles/
 
 # Python tooling
 __pycache__/

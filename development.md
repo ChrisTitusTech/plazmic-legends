@@ -12,8 +12,9 @@ see [CONTRIBUTING.md](CONTRIBUTING.md).
 Plazmic Legends is a native Linux Qt 6 application that observes the supported
 64-bit EverQuest Legends client externally through bounded, read-only process
 access. It renders a normal independent window and does not inject a DLL, hook
-DirectX, install a Wine override, write game state, synthesize input, automate
-gameplay, or modify the game installation.
+DirectX, install a Wine override, write game state, synthesize input, or
+automate gameplay. The only installation write path is the confirmed private
+UI-file installer described below.
 
 The product is intentionally narrow:
 
@@ -95,7 +96,7 @@ cycle. It never authorizes changing old offsets in place.
 | `src/launcher` | Compatibility and lifecycle coordination |
 | `src/map` | Map parsing, transforms, and renderer-independent state |
 | `src/ui` | Qt window, map canvas, spawn table, theme, and settings |
-| `tools` | Offline client inspection |
+| `tools` | Offline client inspection and private UI-bundle export |
 | `tests` | Synthetic lifecycle, parser, UI, privacy, and performance gates |
 | `packaging` | RPM, AppImage, desktop metadata, icon, and dependency notices |
 
@@ -103,6 +104,40 @@ The removed MacroQuest import is recoverable from the
 `phase0-import-baseline` tag for provenance research only. No MacroQuest or
 ShowEQ implementation, bundled dependency, packet decoder, map, or game asset
 is retained in the active product.
+
+## Export and install a private 1440p UI bundle
+
+Export the locally installed skin and current on-disk settings:
+
+```bash
+tools/export_private_ui_bundle.sh \
+  --game-dir "$EQ_LEGENDS_DIR" \
+  --resolution 2560x1440
+```
+
+This creates ignored `private-bundles/plazmic-ui-2560x1440/` and `.tar.gz`
+outputs. They contain Daybreak assets and private character/server filenames;
+keep them private and never commit, publish, log, or attach them to a PR.
+The bundle also contains a generic `UI_plazmic_1440p.ini` derived from the
+newest local Legends layout. It preserves Legends-only sections and adjusts
+only an allowlisted geometry set; EQInterface layouts are design references,
+not compatible source files or copied assets. See the
+[EQInterface layout review](docs/research/eqinterface-layout-review.md) for the
+adopted design rules and compatibility boundary.
+
+On another system, extract the archive, start Plazmic Legends with its local
+game directory configured, and choose `User > UI File Install...`. The dialog
+asks which bundled layout and character/filter profiles to read and which
+current INIs to replace. Global `eqclient.ini` filters and 1440p settings are
+optional. The installer verifies the bundle SHA-256 inventory and saves
+replaced files in a private timestamped rollback directory before activation.
+It also writes the selected layout to the reserved
+`UI_plazmic_1440p.ini` source, preserving an older copy in the same rollback
+directory. When EverQuest is already running, open `/copylayout`, select that
+source (shown as `plazmic` on `1440p` in some clients), and copy the window
+layout. Then use `/loadskin plazmic-ui 1` to reload the skin while retaining
+the imported geometry. Reopen `/copylayout` if it was already open during the
+install so EverQuest refreshes the source list.
 
 ## Packaging
 

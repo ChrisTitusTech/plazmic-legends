@@ -74,6 +74,24 @@ the merged head; that skipped P6-05 check remains a documented residual risk.
 
 ## Post-release maintenance
 
+### M-05: Export and install private UI files
+
+- [x] Add an ignored 2560x1440 exporter for the installed `plazmic-ui` skin,
+  global settings, window layouts, and character filter/UI profiles.
+- [x] Derive a cohesive generic 1440p layout only from the current Legends INI,
+  preserving unknown sections and changing an allowlisted geometry set.
+- [x] Add `User > UI File Install...` with integrity validation, explicit
+  source and destination INI selection, optional global settings, live UI
+  reload support, private backup, and rollback behavior.
+- [x] Install the chosen layout as a reserved `UI_plazmic_1440p.ini` source so
+  a running client can import it through `/copylayout` without relying on an
+  overwritten active character INI.
+- [x] Prove synthetic export/install/tamper/selection behavior and run the full
+  repository, privacy, package-inventory, and local-install gates.
+- Acceptance criteria: `AC-16` passes; private assets and character/server
+  names stay ignored and out of packages, logs, fixtures, and the pull request;
+  and the existing gameplay read-only boundary remains unchanged.
+
 ### M-01: Persist and discover the Legends client directory
 
 - [x] Save a valid explicit or environment-provided game directory in

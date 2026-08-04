@@ -390,11 +390,11 @@ incompatible artifact rather than weakening compatibility checks.
 
 ## Phase 6: Character and combat column
 
-Status: Implemented and under review on 2026-08-03 on branch
-`feature/character-combat-panel`. Automated, privacy, performance, staged
-install, exact-fingerprint, and focused live feature checks pass. The pull
-request remains draft until the live zoning, camping, process-exit, and
-reacquisition gate is exercised.
+Status: Merged and released as `v0.2.0` on 2026-08-03. Automated, privacy,
+performance, staged install, exact-fingerprint, and focused live feature checks
+passed. The owner explicitly authorized release without repeating the final
+live zoning, camping, process-exit, and reacquisition gate on the merged head;
+that skipped check remains a documented residual risk.
 
 ### Outcome
 

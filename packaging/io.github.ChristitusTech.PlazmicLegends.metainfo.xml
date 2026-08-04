@@ -22,6 +22,7 @@
     <binary>plazmic-legends</binary>
   </provides>
   <releases>
+    <release version="0.2.0" date="2026-08-03"/>
     <release version="0.1.3" date="2026-08-01"/>
     <release version="0.1.2" date="2026-07-30"/>
     <release version="0.1.1" date="2026-07-30"/>

@@ -44,11 +44,11 @@ implementing the conflicting behavior.
 - Phase 5 is complete. Release hardening, privacy-safe diagnostics,
   exact-client update detection, RPM and AppImage packaging, and the first
   official `v0.1.2` release passed their gates.
-- Phase 6 is implemented and under review on
-  `feature/character-combat-panel`. It adds bounded exact-profile character
-  vitals and text equipment plus an offline local combat-log parser in two
-  stacked left docks. It remains unreleasable until the remaining manual live
-  lifecycle gate passes.
+- Phase 6 is merged and included in `v0.2.0`. It adds bounded exact-profile
+  character vitals and text equipment plus an offline local combat-log parser
+  in two stacked left docks. The owner explicitly authorized release without
+  repeating the final manual live lifecycle gate on the merged head; that
+  skipped check remains a documented residual risk.
 - No inherited implementation or third-party source is retained.
 - The local reference client is a Windows x86-64 PE executable running through
   GE-Proton11-3 in an X11 session.
@@ -90,7 +90,7 @@ requirement justifies a focused change.
 ## Working boundaries
 
 - Phase 0 through Phase 5 are complete on `main`. The current release is
-  `v0.1.3`. Preserve the validated product boundary, lifecycle behavior,
+  `v0.2.0`. Preserve the validated product boundary, lifecycle behavior,
   exact-profile failure rules, privacy guarantees, and package inventory in
   maintenance work.
 - RPM, COPR, AppImage, and other package publication are authorized.

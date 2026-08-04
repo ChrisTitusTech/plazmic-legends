@@ -1,5 +1,5 @@
 Name:           plazmic-legends
-Version:        0.1.3
+Version:        0.2.0
 Release:        1%{?dist}
 Summary:        Read-only EverQuest Legends companion for Linux
 License:        GPL-3.0-only
@@ -57,6 +57,10 @@ ctest --test-dir %{__cmake_builddir} --output-on-failure
 %doc %{_docdir}/%{name}/THIRD-PARTY-NOTICES.md
 
 %changelog
+* Mon Aug 03 2026 Chris Titus Tech <contact@christitus.com> - 0.2.0-1
+- Add bounded character vitals, text equipment, and offline combat parsing
+- Color ordinary NPC map markers by validated consider level
+
 * Sat Aug 01 2026 Chris Titus Tech <contact@christitus.com> - 0.1.3-1
 - Add spawn category filters and independent map label controls
 - Highlight named NPC spawns and distinguish ground or other markers

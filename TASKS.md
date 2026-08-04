@@ -74,6 +74,23 @@ the merged head; that skipped P6-05 check remains a documented residual risk.
 
 ## Post-release maintenance
 
+### M-05: Support the 2026-08-03 Legends client
+
+- [x] Add a separate immutable profile for exact SHA-256
+  `f8af4e704746118f8dd94b688e585bc5c37c3d085da620136bcacad5486145ac`
+  without modifying or weakening the prior profile.
+- [x] Re-establish the player, zone, spawn, character, vital, and equipment
+  fields from exact-client static evidence and bounded privacy-safe probes.
+- [x] Cover exact selection of both known profiles and rejection of unknown
+  digests, then run the complete synthetic repository gate.
+- [ ] Complete two controlled visible observations for position, facing,
+  zones, spawn fields, vitals, and equipment configurations, plus lifecycle,
+  DWM placement, and game-invariance checks.
+- Acceptance criteria: only exact file and live PE identity select the new
+  profile; every approved field satisfies `docs/offset-discovery.md`; all
+  unsupported, inconsistent, or changed-client states fail closed; and no
+  private research artifact enters the repository or packages.
+
 ### M-01: Persist and discover the Legends client directory
 
 - [x] Save a valid explicit or environment-provided game directory in

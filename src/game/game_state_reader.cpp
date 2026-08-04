@@ -319,6 +319,15 @@ GameStateReadResult read_game_state_impl(
 
 }  // namespace
 
+bool matches_client_profile_identity(
+    const ClientProfile& profile,
+    const RemotePeIdentity& identity) {
+    return identity.machine == profile.machine &&
+           identity.timestamp == profile.timestamp &&
+           identity.optional_magic == profile.optional_magic &&
+           identity.image_size == profile.image_size;
+}
+
 GameStateReadResult read_game_state(
     const ClientProcess& process,
     const GameStateSymbols& symbols,
@@ -405,11 +414,8 @@ GameStateReadResult LiveGameStateProbe::refresh() {
                     GameStateReadError::read_failed,
                     last_discovery_detail_);
             }
-            if (identity.machine != profile_->machine ||
-                identity.timestamp != profile_->timestamp ||
-                identity.optional_magic != profile_->optional_magic ||
-                identity.image_base != discovery.process.image_base ||
-                identity.image_size != profile_->image_size) {
+            if (!matches_client_profile_identity(
+                    *profile_, identity)) {
                 process_.reset();
                 last_discovery_detail_ =
                     "live client identity does not match the exact profile";

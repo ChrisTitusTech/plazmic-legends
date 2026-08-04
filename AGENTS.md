@@ -159,7 +159,7 @@ cmake --build --preset dev
 cmake --build --preset check
 ctest --preset dev
 python3 tools/inspect_eqgame.py "$EQ_LEGENDS_DIR" \
-  --expect-sha256 97ee793d491930ac97f91e5e26fac16d84d17ff24afcd24d5390d256e7045661
+  --expect-sha256 f8af4e704746118f8dd94b688e585bc5c37c3d085da620136bcacad5486145ac
 git diff --check
 ```
 

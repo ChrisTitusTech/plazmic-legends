@@ -76,6 +76,24 @@ int main() {
         const auto& profile = plazmic::legends_reference_profile();
         require(plazmic::select_client_profile(profile.sha256) == &profile,
                 "reference profile did not select by exact digest");
+        constexpr std::string_view kAugustDigest =
+            "f8af4e704746118f8dd94b688e585bc5c37c3d085da620136bcacad5486145ac";
+        const auto* august = plazmic::select_client_profile(kAugustDigest);
+        require(
+            august != nullptr && august != &profile &&
+                august->id == "legends-2026-08-03" &&
+                august->sha256 == kAugustDigest &&
+                august->timestamp == 0x6a711da7U &&
+                august->image_size == 0x16c0000U &&
+                august->game_state.local_player_pointer_rva == 0x00f05ff8U &&
+                august->game_state.world_data_pointer_rva == 0x00f05fe8U &&
+                august->game_state.player_zone_id_offset == 0x4a0U &&
+                august->spawns.level_offset == 0x620U &&
+                august->spawns.record_bytes == 0x621U &&
+                august->character.local_character_pointer_rva == 0x00f06140U &&
+                august->character.player_maximum_mana_offset == 0x2bcU &&
+                august->character.item_name_pointer_offset == 0xa8U,
+            "August profile did not preserve its exact identity and offsets");
         require(plazmic::select_client_profile("changed") == nullptr,
                 "unknown digest unexpectedly selected");
 

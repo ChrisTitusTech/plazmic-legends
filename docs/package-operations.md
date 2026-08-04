@@ -1,8 +1,8 @@
 # Package operations
 
-Date: 2026-08-01
+Date: 2026-08-03
 
-Version: 0.1.3
+Version: 0.2.0
 
 ## Distribution
 
@@ -120,15 +120,15 @@ installation or Wine prefix.
 Verify the adjacent checksum, make the artifact executable, and launch it:
 
 ```bash
-sha256sum --check Plazmic-Legends-0.1.3-x86_64.AppImage.sha256
-chmod 0755 Plazmic-Legends-0.1.3-x86_64.AppImage
-./Plazmic-Legends-0.1.3-x86_64.AppImage
+sha256sum --check Plazmic-Legends-0.2.0-x86_64.AppImage.sha256
+chmod 0755 Plazmic-Legends-0.2.0-x86_64.AppImage
+./Plazmic-Legends-0.2.0-x86_64.AppImage
 ```
 
 FUSE is optional. On hosts without a usable FUSE setup:
 
 ```bash
-./Plazmic-Legends-0.1.3-x86_64.AppImage \
+./Plazmic-Legends-0.2.0-x86_64.AppImage \
   --appimage-extract-and-run
 ```
 
@@ -158,14 +158,14 @@ Release-candidate checksums are generated only after clean builds. Inspect an
 RPM without installing it:
 
 ```bash
-rpm -qpl ./plazmic-legends-0.1.3-1.*.x86_64.rpm
-rpm -qp --requires ./plazmic-legends-0.1.3-1.*.x86_64.rpm
+rpm -qpl ./plazmic-legends-0.2.0-1.*.x86_64.rpm
+rpm -qp --requires ./plazmic-legends-0.2.0-1.*.x86_64.rpm
 ```
 
 Inspect an AppImage without FUSE:
 
 ```bash
-./Plazmic-Legends-0.1.3-x86_64.AppImage --appimage-extract
+./Plazmic-Legends-0.2.0-x86_64.AppImage --appimage-extract
 find squashfs-root -type f -print | sort
 ```
 

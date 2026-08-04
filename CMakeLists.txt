@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 
 project(
     PlazmicLegends
-    VERSION 0.1.3
+    VERSION 0.2.0
     DESCRIPTION "Native Linux EverQuest Legends companion application"
     LANGUAGES CXX
 )

@@ -53,8 +53,8 @@ Download the AppImage and its adjacent checksum file from the
 then run:
 
 ```bash
-sha256sum --check Plazmic-Legends-0.1.3-x86_64.AppImage.sha256
-chmod 0755 Plazmic-Legends-0.1.3-x86_64.AppImage
+sha256sum --check Plazmic-Legends-0.2.0-x86_64.AppImage.sha256
+chmod 0755 Plazmic-Legends-0.2.0-x86_64.AppImage
 ```
 
 See [package operations](docs/package-operations.md) for direct RPM
@@ -95,7 +95,7 @@ game_directory = "/path/to/EverQuest Legends"
 ```
 
 The AppImage uses the same selection and saved configuration behavior. Launch
-it with `./Plazmic-Legends-0.1.3-x86_64.AppImage`.
+it with `./Plazmic-Legends-0.2.0-x86_64.AppImage`.
 
 The companion opens as a normal independent desktop window. Its map reads the
 zone files already present in your game installation; no maps are included in

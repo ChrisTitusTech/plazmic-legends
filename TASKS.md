@@ -7,14 +7,14 @@ work done.
 ## Current phase
 
 Phase 0 through Phase 5 are complete and merged into `main`. The current
-release is `v0.1.3`, with Fedora RPM and x86-64 AppImage assets. Package
+release is `v0.2.0`, with Fedora RPM and x86-64 AppImage assets. Package
 publication remains authorized.
 
-Phase 6 is implemented and under review on
-`feature/character-combat-panel`. It adds a bounded memory-backed Character
-dock and an offline combat-log Parse dock without changing the read-only,
-fail-closed, privacy, or package boundary. The remaining pre-merge work is the
-manual live lifecycle gate recorded in P6-05.
+Phase 6 is merged and included in `v0.2.0`. It adds a bounded memory-backed
+Character dock and an offline combat-log Parse dock without changing the
+read-only, fail-closed, privacy, or package boundary. The owner explicitly
+authorized release without repeating the final manual live lifecycle gate on
+the merged head; that skipped P6-05 check remains a documented residual risk.
 
 ## Phase 6: Character and combat column
 

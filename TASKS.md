@@ -83,6 +83,9 @@ the merged head; that skipped P6-05 check remains a documented residual risk.
 - [x] Add `User > UI File Install...` with integrity validation, explicit
   source and destination INI selection, optional global settings, live UI
   reload support, private backup, and rollback behavior.
+- [x] Install the chosen layout as a reserved `UI_plazmic_1440p.ini` source so
+  a running client can import it through `/copylayout` without relying on an
+  overwritten active character INI.
 - [x] Prove synthetic export/install/tamper/selection behavior and run the full
   repository, privacy, package-inventory, and local-install gates.
 - Acceptance criteria: `AC-16` passes; private assets and character/server

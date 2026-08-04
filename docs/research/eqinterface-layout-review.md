@@ -28,12 +28,25 @@ all implemented output remains derived from the user's current Legends layout.
 These pages are design and compatibility references only. Their XML, layout
 files, images, and other assets are not copied into Plazmic Legends.
 
+A local review of extracted AYA SoR v1.2 files confirmed that its tight center
+cluster depends on custom, interlocking player and target window definitions,
+not coordinates alone. Those definitions and their assets are incompatible
+with the larger fixed Legends frames and are not copied. The Plazmic layout
+adopts only the relationship: a narrow non-overlapping seam, a shared baseline,
+and a short vertical path from status frames to stance and hotbars.
+
 ## Functional baseline
 
 The private live screenshot at `captures/eq-ui-functional-20260803.png` records
 the working 2560x1440 baseline. It remains ignored because it contains private
 runtime information. Its SHA-256 is
 `d6b60df7c2992cefee01013790641d80d350afff83b1b6c141108ee29aa03bd7`.
+
+The first working cohesive layout is recorded privately at
+`captures/eq-plazmic-cohesive-before-aya-tightening-20260803.png`, with SHA-256
+`e5f44cc406d4645646dfdd95fae24ae1f4cc50755ebc404224d30306fdd7d43f`.
+It proved the live install path but exposed overlap between the fixed Legends
+player and target frames.
 
 The baseline is functional but visually fragmented:
 
@@ -51,15 +64,17 @@ The generated `UI_plazmic_1440p.ini`:
 - changes only an allowlisted set of standard geometry keys;
 - aligns primary and combat chat windows along the lower edge;
 - places secondary chats directly above their corresponding lower chat;
-- centers the two active hotbars and aligns player, target, and stance data;
+- centers the two active hotbars, places the fixed Legends player and target
+  frames on one baseline with a narrow seam, and tightens them toward stance;
 - groups spells, group state, and extended targets into a left combat rail;
 - enlarges and aligns the active map at the top-right; and
 - retains all visibility, filter, channel, opacity, and character-specific
   values from the source.
 
 The layout stays unlocked for live adjustment. The private installer presents
-it as a source choice and still asks which current layout INI receives it. For
-live testing, `/copylayout` loads that written target, then
+it as a source choice and still asks which current layout INI receives it. It
+also installs the chosen layout as the reserved `UI_plazmic_1440p.ini` live
+source. For live testing, `/copylayout` imports that source, then
 `/loadskin plazmic-ui 1` reloads the skin while retaining the copied geometry.
 
 ## Compatibility boundary

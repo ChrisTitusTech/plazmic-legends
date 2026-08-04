@@ -119,9 +119,11 @@ the package.
   history.
 - To move a private Plazmic UI setup to another 2560x1440 system, create the
   ignored bundle described in [development.md](development.md), extract it on
-  the target system, exit EverQuest, and choose
+  the target system, and choose
   `User > UI File Install...`. Select both the source and destination layout
   and character INIs; installing the bundled `eqclient.ini` is optional.
+  EverQuest may remain open because the installer also creates a separate
+  `UI_plazmic_1440p.ini` source for the live `/copylayout` workflow.
 
 The selected client directory, window layout, and map preferences are stored in
 `$XDG_CONFIG_HOME/plazmic-legends/config.toml`, with the standard Qt user
@@ -151,7 +153,7 @@ Daybreak's EULA and published rules. Use it at your own risk.
 The project does not write game state, inject code, automate gameplay, or
 bypass client protections. Its UI-file installer may back up and replace only
 explicitly selected skin and INI files. The user can then reload the live UI
-by selecting the written target through `/copylayout`, followed by
+by selecting `UI_plazmic_1440p.ini` through `/copylayout`, followed by
 `/loadskin plazmic-ui 1`.
 
 ## Development

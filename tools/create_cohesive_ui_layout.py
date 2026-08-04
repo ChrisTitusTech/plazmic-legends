@@ -89,20 +89,20 @@ OVERRIDES: dict[str, dict[str, str]] = {
     "PlayerWindow": {
         "XRef": "center",
         "YRef": "bottom",
-        "XPos": "-11.000000%",
-        "YPos": "15.000000%",
+        "XPos": "-15.000000%",
+        "YPos": "13.250000%",
     },
     "TargetWindow": {
         "XRef": "center",
         "YRef": "bottom",
-        "XPos": "11.000000%",
-        "YPos": "15.000000%",
+        "XPos": "13.000000%",
+        "YPos": "13.250000%",
     },
     "TargetOfTargetWindow": {
         "XRef": "center",
         "YRef": "bottom",
         "XPos": "0.000000%",
-        "YPos": "19.000000%",
+        "YPos": "17.500000%",
     },
     "HotButtonWnd": {
         "XRef": "center",

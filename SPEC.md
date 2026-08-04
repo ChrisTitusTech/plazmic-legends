@@ -316,9 +316,11 @@ its allowlist, confirmation, backup, and rollback contract.
   game directory; `eqclient.ini` is the only optional global target. Every
   path outside these exact roots and patterns is rejected.
 - Installation requires a valid selected Legends directory but may run while
-  EverQuest is active. The success dialog identifies the written target layout
-  so the user can select it with `/copylayout`, then apply the skin with
-  `/loadskin plazmic-ui 1`. Before replacement, selected INIs and any existing
+  EverQuest is active. In addition to the selected destination, the installer
+  writes the chosen layout to the reserved `UI_plazmic_1440p.ini` live source.
+  The success dialog tells the user to select that source with `/copylayout`,
+  then apply the skin with `/loadskin plazmic-ui 1`. Before replacement,
+  selected INIs, an existing live source, and any existing
   `uifiles/plazmic-ui` are preserved in a private, timestamped rollback
   directory inside the selected game directory.
 - Activation is transactional: if any replacement fails, every already
@@ -393,8 +395,9 @@ its allowlist, confirmation, backup, and rollback contract.
 - AC-16: The private UI exporter produces a bounded, integrity-inventoried
   2560x1440 bundle without tracking private data, and `User > UI File
   Install...` asks which layout and character INIs to replace, optionally
-  replaces `eqclient.ini`, supports the live UI reload workflow, preserves a
-  private rollback, and never expands into gameplay-state modification.
+  replaces `eqclient.ini`, installs a dedicated `/copylayout` source for live
+  activation, preserves a private rollback, and never expands into
+  gameplay-state modification.
 
 ## Resolved Phase 1 decisions
 

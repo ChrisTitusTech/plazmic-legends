@@ -143,7 +143,8 @@ tools, database, or network services.
   views inspired conceptually by ShowEQ.
 - The default left dock area contains the Character dock above the Parse dock;
   both retain the existing movable, closable, floatable, saved-layout, and X11
-  class behavior.
+  class behavior. This left column extends to the bottom of the window, while
+  Details spans below the central map and right-side Spawns dock.
 - An embedded top menu bar exposes checkable Views actions for Character,
   Parse, Spawns, and Details, plus minimize, maximize/restore, and close
   controls aligned at the top right.

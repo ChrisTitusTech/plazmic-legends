@@ -619,6 +619,8 @@ void MainWindow::restore_ui_state() {
                 ? Qt::DescendingOrder
                 : Qt::AscendingOrder);
     }
+    setCorner(Qt::BottomLeftCorner, Qt::LeftDockWidgetArea);
+    setCorner(Qt::BottomRightCorner, Qt::BottomDockWidgetArea);
     QTimer::singleShot(0, this, [this]() { ensure_on_screen(); });
 }
 

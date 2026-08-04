@@ -166,7 +166,10 @@ int main(int argc, char** argv) {
         auto* character_dock =
             window.findChild<QDockWidget*>("character-dock");
         auto* parse_dock = window.findChild<QDockWidget*>("parse-dock");
+        auto* spawn_dock = window.findChild<QDockWidget*>("spawn-dock");
+        auto* detail_dock = window.findChild<QDockWidget*>("detail-dock");
         require(character_dock != nullptr && parse_dock != nullptr &&
+                    spawn_dock != nullptr && detail_dock != nullptr &&
                     window.dockWidgetArea(character_dock) ==
                         Qt::LeftDockWidgetArea &&
                     window.dockWidgetArea(parse_dock) ==
@@ -174,16 +177,33 @@ int main(int argc, char** argv) {
                     character_dock->geometry().top() <
                         parse_dock->geometry().top(),
                 "character and parse docks are not stacked on the left");
+        const QRect map_geometry(
+            window.map_canvas()->mapTo(&window, QPoint(0, 0)),
+            window.map_canvas()->size());
+        require(
+            window.corner(Qt::BottomLeftCorner) ==
+                    Qt::LeftDockWidgetArea &&
+                window.corner(Qt::BottomRightCorner) ==
+                    Qt::BottomDockWidgetArea &&
+                detail_dock->geometry().left() >
+                    parse_dock->geometry().right() &&
+                detail_dock->geometry().left() <= map_geometry.left() &&
+                detail_dock->geometry().right() >= map_geometry.right() &&
+                detail_dock->geometry().right() >=
+                    spawn_dock->geometry().right() &&
+                map_geometry.bottom() < detail_dock->geometry().top() &&
+                parse_dock->geometry().bottom() >
+                    detail_dock->geometry().top() &&
+                spawn_dock->geometry().bottom() <
+                    detail_dock->geometry().top(),
+            "Details is not below the map and Spawns with a full-height "
+            "Character/Parse column");
         const std::array<std::pair<const char*, QDockWidget*>, 4>
             view_actions{
                 std::pair{"view-character-action", character_dock},
                 std::pair{"view-parse-action", parse_dock},
-                std::pair{
-                    "view-spawns-action",
-                    window.findChild<QDockWidget*>("spawn-dock")},
-                std::pair{
-                    "view-details-action",
-                    window.findChild<QDockWidget*>("detail-dock")},
+                std::pair{"view-spawns-action", spawn_dock},
+                std::pair{"view-details-action", detail_dock},
             };
         for (const auto& [action_name, dock] : view_actions) {
             QAction* action =
@@ -798,7 +818,6 @@ int main(int argc, char** argv) {
 
         window.setGeometry(80, 80, 800, 600);
         process_events();
-        auto* spawn_dock = window.findChild<QDockWidget*>("spawn-dock");
         require(spawn_dock != nullptr, "spawn dock is missing");
         spawn_dock->setFloating(true);
         spawn_dock->show();

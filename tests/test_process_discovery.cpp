@@ -298,6 +298,8 @@ void test_remote_pe_identity_reader() {
     std::string error;
     require(plazmic::read_remote_pe_identity(reader, address, identity, error),
             "remote PE fixture read failed: " + error);
+    require(address != identity.image_base,
+            "relocated mapping was confused with preferred PE image base");
     require(identity.machine == 0x8664U, "remote PE machine differs");
     require(identity.timestamp == 0x6a6a2851U,
             "remote PE timestamp differs");

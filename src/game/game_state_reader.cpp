@@ -325,7 +325,8 @@ bool matches_client_profile_identity(
     return identity.machine == profile.machine &&
            identity.timestamp == profile.timestamp &&
            identity.optional_magic == profile.optional_magic &&
-           identity.image_size == profile.image_size;
+           identity.image_size == profile.image_size &&
+           identity.image_base == profile.preferred_image_base;
 }
 
 GameStateReadResult read_game_state(
@@ -399,7 +400,6 @@ GameStateReadResult LiveGameStateProbe::refresh() {
                     GameStateReadError::invalid_profile,
                     last_discovery_detail_);
             }
-
         }
 
         const ProcessMemoryReader reader(discovery.process);
@@ -459,8 +459,12 @@ GameStateReadResult LiveGameStateProbe::refresh() {
                 "combined snapshot address overflows");
         } else {
             std::string detail;
-            CharacterReadResult character = read_character_snapshot(
-                *process_, stable_state.local_player, profile_->character);
+            CharacterReadResult character;
+            if (profile_->character_snapshot_supported) {
+                character = read_character_snapshot(
+                    *process_, stable_state.local_player,
+                    profile_->character);
+            }
             const auto final_local = read_value<std::uintptr_t>(
                 reader, local_pointer_address, detail);
             const auto final_world = read_value<std::uintptr_t>(
@@ -478,7 +482,8 @@ GameStateReadResult LiveGameStateProbe::refresh() {
                 result = failure(
                     GameStateReadError::inconsistent_snapshot,
                     "player, world, or zone changed during the combined snapshot");
-            } else if (!character) {
+            } else if (!profile_->character_snapshot_supported ||
+                       !character) {
                 result.character.reset();
             } else {
                 result.character = std::move(character.snapshot);

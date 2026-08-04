@@ -11,6 +11,26 @@ ROOT = Path(__file__).resolve().parents[1]
 EXPORTER = ROOT / "tools" / "export_private_ui_bundle.sh"
 
 
+def legends_layout() -> str:
+    sections = [
+        "MainChat",
+        "Chat 1",
+        "GroupWindow",
+        "ExtendedTargetWnd",
+        "MapViewWnd_6",
+        "TargetWindow",
+        "HotButtonWnd",
+        "HotButtonWnd2",
+        "PlayerWindow",
+        "CastSpellWnd",
+    ]
+    return "".join(
+        f"[{section}]\r\nXRef=left\r\nYRef=top\r\n"
+        "XPos=1.000000%\r\nYPos=1.000000%\r\nWidth=100\r\nHeight=100\r\n"
+        for section in sections
+    )
+
+
 class ExportPrivateUiBundleTests(unittest.TestCase):
     def test_exports_skin_and_selected_ini_profiles(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -26,10 +46,10 @@ class ExportPrivateUiBundleTests(unittest.TestCase):
                 "[ChatFilters]\nFilter=1\n", encoding="ascii"
             )
             (game_dir / "UI_alpha_test.ini").write_text(
-                "[Main]\nXPos=10\n", encoding="ascii"
+                legends_layout(), encoding="ascii"
             )
             (game_dir / "alpha_test.ini").write_text(
-                "[HotButtons]\nPage=1\n[ADDITIONALFILTERS]\nFilter=1\n",
+                "[HotButtons]\r\nPage=1\r\n[ADDITIONALFILTERS]\r\nFilter=1\r\n",
                 encoding="ascii",
             )
             (game_dir / "voice_test.ini").write_text(
@@ -54,10 +74,14 @@ class ExportPrivateUiBundleTests(unittest.TestCase):
             )
 
             self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertNotIn("warning", completed.stderr.lower())
             self.assertTrue((destination / "uifiles/plazmic-ui/EQUI.xml").is_file())
             self.assertFalse((destination / "uifiles/plazmic-ui/stale.crc").exists())
             self.assertTrue((destination / "ini/eqclient.ini").is_file())
             self.assertTrue((destination / "ini/layouts/UI_alpha_test.ini").is_file())
+            self.assertTrue(
+                (destination / "ini/layouts/UI_plazmic_1440p.ini").is_file()
+            )
             self.assertTrue((destination / "ini/characters/alpha_test.ini").is_file())
             self.assertFalse((destination / "ini/characters/voice_test.ini").exists())
             self.assertIn(
@@ -105,7 +129,7 @@ class ExportPrivateUiBundleTests(unittest.TestCase):
                 "[ChatFilters]\nMode=old\n", encoding="ascii"
             )
             (game_dir / "UI_alpha_test.ini").write_text(
-                "[Main]\nXPos=10\n", encoding="ascii"
+                legends_layout(), encoding="ascii"
             )
             (game_dir / "alpha_test.ini").write_text(
                 "[HotButtons]\nPage=1\n", encoding="ascii"

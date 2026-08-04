@@ -40,7 +40,7 @@ the bounded process reader or the independent Qt companion.
 | `src/map` | Bounded installed-map parsing, transforms, and renderer state |
 | `src/model` | Immutable status, player, and spawn snapshots |
 | `src/ui` | Independent Qt companion, map, table, selection, theme, settings, and scoped private UI installer |
-| `tools` | Offline client fingerprinting and private UI-bundle export tooling |
+| `tools` | Offline client fingerprinting, private UI-bundle export, and Legends-derived 1440p layout tooling |
 | `tests` | Deterministic AC-03 through AC-09 and performance coverage |
 | `packaging` | RPM, AppImage, desktop integration, metadata, and dependency notices |
 | `.copr` | Deterministic source-RPM entrypoint for external-SCM COPR builds |

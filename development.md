@@ -107,7 +107,7 @@ is retained in the active product.
 
 ## Export and install a private 1440p UI bundle
 
-Exit EverQuest, then export the locally installed skin and current settings:
+Export the locally installed skin and current on-disk settings:
 
 ```bash
 tools/export_private_ui_bundle.sh \
@@ -118,14 +118,23 @@ tools/export_private_ui_bundle.sh \
 This creates ignored `private-bundles/plazmic-ui-2560x1440/` and `.tar.gz`
 outputs. They contain Daybreak assets and private character/server filenames;
 keep them private and never commit, publish, log, or attach them to a PR.
+The bundle also contains a generic `UI_plazmic_1440p.ini` derived from the
+newest local Legends layout. It preserves Legends-only sections and adjusts
+only an allowlisted geometry set; EQInterface layouts are design references,
+not compatible source files or copied assets. See the
+[EQInterface layout review](docs/research/eqinterface-layout-review.md) for the
+adopted design rules and compatibility boundary.
 
 On another system, extract the archive, start Plazmic Legends with its local
-game directory configured, ensure EverQuest is stopped, and choose
-`User > UI File Install...`. The dialog asks which bundled layout and
-character/filter profiles to read and which current INIs to replace. Global
-`eqclient.ini` filters and 1440p settings are optional. The installer verifies
-the bundle SHA-256 inventory and saves replaced files in a private timestamped
-rollback directory before activation.
+game directory configured, and choose `User > UI File Install...`. The dialog
+asks which bundled layout and character/filter profiles to read and which
+current INIs to replace. Global `eqclient.ini` filters and 1440p settings are
+optional. The installer verifies the bundle SHA-256 inventory and saves
+replaced files in a private timestamped rollback directory before activation.
+When EverQuest is already running, use `/loadskin plazmic-ui 1` to reload the
+installed skin without restarting the client. Because the `1` retains the
+current in-memory layout, first open `/copylayout` and select the target layout
+named by the installer to apply its new geometry live.
 
 ## Packaging
 

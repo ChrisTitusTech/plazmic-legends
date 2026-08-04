@@ -397,15 +397,6 @@ void MainWindow::open_ui_file_install() {
             "Configure a valid EverQuest Legends directory first.");
         return;
     }
-    if (snapshot_.process == ProcessState::running ||
-        snapshot_.process == ProcessState::ambiguous ||
-        snapshot_.process == ProcessState::access_error) {
-        QMessageBox::warning(
-            this, "UI File Install",
-            "Exit EverQuest Legends before installing UI or INI files.");
-        return;
-    }
-
     const QString bundle_directory = QFileDialog::getExistingDirectory(
         this, "Select extracted private Plazmic UI bundle");
     if (bundle_directory.isEmpty()) {
@@ -509,7 +500,9 @@ void MainWindow::open_ui_file_install() {
     QMessageBox::information(
         this, "UI File Install",
         result.detail + "\n\nRollback: " + result.backup_directory +
-            "\n\nStart EverQuest and use /loadskin plazmic-ui 1.");
+            "\n\nTo apply the layout live, open /copylayout and select " +
+            target_layout->currentText() +
+            ". Then use /loadskin plazmic-ui 1 to reload the skin.");
 }
 
 void MainWindow::update_maximize_button() {

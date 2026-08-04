@@ -244,7 +244,7 @@ pointers.
 Configuration and logs use the XDG base-directory conventions. Runtime
 observation leaves the game installation and Wine prefix unmodified. The
 private UI-file installer is the only approved exception and is constrained by
-its allowlist, confirmation, stopped-game check, backup, and rollback contract.
+its allowlist, confirmation, backup, and rollback contract.
 
 ## Security, privacy, and compliance
 
@@ -295,6 +295,11 @@ its allowlist, confirmation, stopped-game check, backup, and rollback contract.
   `uifiles/plazmic-ui` skin, `eqclient.ini`, all `UI_*.ini` window layouts, and
   character INIs containing HotButtons or additional-filter state into an
   ignored private bundle with a resolution manifest and SHA-256 inventory.
+- The exporter also derives `UI_plazmic_1440p.ini` from the newest installed
+  Legends layout. It preserves every unknown Legends section and value while
+  changing only allowlisted anchor, position, width, and height keys for a
+  cohesive bottom command strip, paired chat columns, left combat rail, and
+  top-right map. It does not import layouts or assets from another EQ client.
 - The bundle and archive retain private character/server filenames and
   proprietary game assets. They remain local user-owned inputs and are never
   committed, packaged, logged, uploaded, or attached to a pull request.
@@ -310,10 +315,12 @@ its allowlist, confirmation, stopped-game check, backup, and rollback contract.
   with recognized UI/filter sections directly under the canonical selected
   game directory; `eqclient.ini` is the only optional global target. Every
   path outside these exact roots and patterns is rejected.
-- Installation is refused unless the selected Legends directory is valid and
-  process discovery proves the game is stopped. Before replacement, selected
-  INIs and any existing `uifiles/plazmic-ui` are preserved in a private,
-  timestamped rollback directory inside the selected game directory.
+- Installation requires a valid selected Legends directory but may run while
+  EverQuest is active. The success dialog identifies the written target layout
+  so the user can select it with `/copylayout`, then apply the skin with
+  `/loadskin plazmic-ui 1`. Before replacement, selected INIs and any existing
+  `uifiles/plazmic-ui` are preserved in a private, timestamped rollback
+  directory inside the selected game directory.
 - Activation is transactional: if any replacement fails, every already
   replaced INI and `uifiles/plazmic-ui` target is restored from rollback before
   failure is reported. A normal failure may not leave a mixed old/new state;
@@ -386,7 +393,7 @@ its allowlist, confirmation, stopped-game check, backup, and rollback contract.
 - AC-16: The private UI exporter produces a bounded, integrity-inventoried
   2560x1440 bundle without tracking private data, and `User > UI File
   Install...` asks which layout and character INIs to replace, optionally
-  replaces `eqclient.ini`, refuses while the game may be running, preserves a
+  replaces `eqclient.ini`, supports the live UI reload workflow, preserves a
   private rollback, and never expands into gameplay-state modification.
 
 ## Resolved Phase 1 decisions

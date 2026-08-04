@@ -135,7 +135,7 @@ if [ ! -f "$game_dir/eqclient.ini" ]; then
   exit 1
 fi
 
-for required_command in cp find grep python3 realpath sha256sum sort tar; do
+for required_command in cp find grep python3 realpath sha256sum sort tar tr; do
   if ! command -v "$required_command" >/dev/null 2>&1; then
     printf 'Required command is not installed: %s\n' "$required_command" >&2
     exit 1
@@ -191,15 +191,25 @@ find "$staging_dir/uifiles/plazmic-ui" \
 cp -- "$game_dir/eqclient.ini" "$staging_dir/ini/eqclient.ini"
 
 layout_count=0
+newest_layout=
 for source_path in "$game_dir"/UI_*.ini; do
   [ -f "$source_path" ] || continue
   cp -- "$source_path" "$staging_dir/ini/layouts/"
   layout_count=$((layout_count + 1))
+  if [ -z "$newest_layout" ] || [ "$source_path" -nt "$newest_layout" ]; then
+    newest_layout=$source_path
+  fi
 done
 if [ "$layout_count" -eq 0 ]; then
   printf '%s\n' 'No UI_*.ini layout files were found.' >&2
   exit 1
 fi
+cohesive_layout="$staging_dir/ini/layouts/UI_plazmic_1440p.ini"
+if [ ! -e "$cohesive_layout" ]; then
+  layout_count=$((layout_count + 1))
+fi
+python3 "$script_dir/create_cohesive_ui_layout.py" \
+  "$newest_layout" "$cohesive_layout"
 
 character_count=0
 for source_path in "$game_dir"/*_*.ini; do
@@ -207,7 +217,8 @@ for source_path in "$game_dir"/*_*.ini; do
   case "$(basename -- "$source_path")" in
     UI_*) continue ;;
   esac
-  if ! grep -Eq '^\[(HotButtons|ADDITIONALFILTERS)\]\r?$' "$source_path"; then
+  if ! tr -d '\r' <"$source_path" |
+    grep -Eq '^\[(HotButtons|ADDITIONALFILTERS)\]$'; then
     continue
   fi
   cp -- "$source_path" "$staging_dir/ini/characters/"

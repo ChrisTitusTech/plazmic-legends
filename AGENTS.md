@@ -99,8 +99,9 @@ requirement justifies a focused change.
   against the Daybreak EULA. Read-only symbol and gameplay-state research may
   proceed after the normal phase checkpoints. The approved UI-file installer
   may replace only validated, user-selected skin and INI files after explicit
-  confirmation, a private backup, and proof that the game is stopped. This
-  exception does not authorize process-memory or gameplay-state writes,
+  confirmation and a private backup. It may run while the game is active so
+  the user can invoke its supported UI reload command. This exception does not
+  authorize process-memory or gameplay-state writes,
   injection, automation, input synthesis, or protection bypass. See
   `docs/research/phase1-policy-risk.md`.
 - Preserve the imported tree in a recoverable baseline commit before deleting

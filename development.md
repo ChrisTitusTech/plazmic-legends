@@ -131,10 +131,13 @@ asks which bundled layout and character/filter profiles to read and which
 current INIs to replace. Global `eqclient.ini` filters and 1440p settings are
 optional. The installer verifies the bundle SHA-256 inventory and saves
 replaced files in a private timestamped rollback directory before activation.
-When EverQuest is already running, use `/loadskin plazmic-ui 1` to reload the
-installed skin without restarting the client. Because the `1` retains the
-current in-memory layout, first open `/copylayout` and select the target layout
-named by the installer to apply its new geometry live.
+It also writes the selected layout to the reserved
+`UI_plazmic_1440p.ini` source, preserving an older copy in the same rollback
+directory. When EverQuest is already running, open `/copylayout`, select that
+source (shown as `plazmic` on `1440p` in some clients), and copy the window
+layout. Then use `/loadskin plazmic-ui 1` to reload the skin while retaining
+the imported geometry. Reopen `/copylayout` if it was already open during the
+install so EverQuest refreshes the source list.
 
 ## Packaging
 

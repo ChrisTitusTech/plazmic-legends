@@ -55,6 +55,16 @@ class CreateCohesiveUiLayoutTests(unittest.TestCase):
             result = destination.read_bytes()
             self.assertIn(b"[MainChat]\r\nXRef=left\r\nYRef=bottom\r\n", result)
             self.assertIn(b"Width=700\r\nHeight=300\r\n", result)
+            self.assertIn(
+                b"[PlayerWindow]\r\nXRef=center\r\nYRef=bottom\r\n"
+                b"XPos=-15.000000%\r\nYPos=13.250000%\r\n",
+                result,
+            )
+            self.assertIn(
+                b"[TargetWindow]\r\nXRef=center\r\nYRef=bottom\r\n"
+                b"XPos=13.000000%\r\nYPos=13.250000%\r\n",
+                result,
+            )
             self.assertIn(b"LegendsOnly=preserved\r\n", result)
             self.assertIn(b"[PrivateUnrelated]\r\nValue=unchanged\r\n", result)
             self.assertNotIn(b"XPos=99.000000%", result)

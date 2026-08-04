@@ -420,7 +420,8 @@ void MainWindow::open_ui_file_install() {
     auto* layout = new QFormLayout(&dialog);
     auto* description = new QLabel(
         QString("Install private %1 settings. Existing files are backed up "
-                "before replacement.")
+                "before replacement. A separate UI_plazmic_1440p.ini copy "
+                "is installed so a running client can import the layout.")
             .arg(bundle.bundle->resolution));
     description->setWordWrap(true);
     layout->addRow(description);
@@ -436,6 +437,13 @@ void MainWindow::open_ui_file_install() {
     };
     QComboBox* source_layout = add_paths(
         bundle.bundle->layout_inis, "ui-install-source-layout");
+    const int cohesive_layout =
+        source_layout->findText("UI_plazmic_1440p.ini");
+    if (cohesive_layout >= 0) {
+        source_layout->setCurrentIndex(cohesive_layout);
+        source_layout->setItemText(
+            cohesive_layout, "UI_plazmic_1440p.ini (Recommended)");
+    }
     QComboBox* target_layout = add_paths(
         target.targets->layout_inis, "ui-install-target-layout");
     QComboBox* source_character = add_paths(
@@ -467,7 +475,8 @@ void MainWindow::open_ui_file_install() {
     }
 
     const QString confirmation =
-        QString("Replace %1 and %2%3 and install the Plazmic UI skin?\n\n"
+        QString("Replace %1 and %2%3, create the live layout source, and "
+                "install the Plazmic UI skin?\n\n"
                 "A private rollback directory will be created first.")
             .arg(target_layout->currentText())
             .arg(target_character->currentText())
@@ -497,12 +506,19 @@ void MainWindow::open_ui_file_install() {
                       result.backup_directory);
         return;
     }
+    const QString live_layout_name = "UI_plazmic_1440p.ini";
     QMessageBox::information(
         this, "UI File Install",
         result.detail + "\n\nRollback: " + result.backup_directory +
-            "\n\nTo apply the layout live, open /copylayout and select " +
-            target_layout->currentText() +
-            ". Then use /loadskin plazmic-ui 1 to reload the skin.");
+            "\n\nApply it in the running game:\n"
+            "1. Enter /copylayout.\n"
+            "2. Select " + live_layout_name +
+            " (shown as plazmic on 1440p in some clients), then copy the "
+            "window layout.\n"
+            "3. After the windows move, enter /loadskin plazmic-ui 1.\n\n"
+            "If /copylayout was already open during installation, close and "
+            "reopen it so the new source appears. The UI can disappear "
+            "briefly while /loadskin finishes.");
 }
 
 void MainWindow::update_maximize_button() {

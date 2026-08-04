@@ -79,9 +79,12 @@ int main() {
         write_file(bundle + "/uifiles/plazmic-ui/asset.tga", "new-skin");
         write_file(bundle + "/ini/eqclient.ini", "[ChatFilters]\nMode=new\n");
         const QString source_layout = bundle + "/ini/layouts/UI_source.ini";
+        const QString cohesive_layout =
+            bundle + "/ini/layouts/UI_plazmic_1440p.ini";
         const QString source_character =
             bundle + "/ini/characters/source_server.ini";
         write_file(source_layout, "[Main]\nXPos=1440\n");
+        write_file(cohesive_layout, "[Main]\nXPos=cohesive\n");
         write_file(
             source_character,
             "[HotButtons]\nPage=new\n[ADDITIONALFILTERS]\nMode=new\n");
@@ -92,9 +95,11 @@ int main() {
         require(inspected.bundle.has_value(),
                 "valid bundle was rejected");
         require(inspected.bundle->resolution == "2560x1440" &&
-                    inspected.bundle->layout_inis.size() == 1 &&
+                    inspected.bundle->layout_inis.size() == 2 &&
+                    QFileInfo(inspected.bundle->layout_inis.front())
+                            .fileName() == "UI_plazmic_1440p.ini" &&
                     inspected.bundle->character_inis.size() == 1,
-                "bundle contents were not discovered");
+                "bundle contents or preferred layout were not discovered");
 
         const QString game = directory.filePath("EverQuest Legends");
         write_file(game + "/eqgame.exe", "synthetic");
@@ -102,6 +107,7 @@ int main() {
         write_file(game + "/uifiles/plazmic-ui/EQUI.xml", "<old />\n");
         write_file(game + "/uifiles/plazmic-ui/asset.tga", "old-skin");
         const QString target_layout = game + "/UI_target_server.ini";
+        const QString live_layout = game + "/UI_plazmic_1440p.ini";
         const QString target_character = game + "/target_server.ini";
         write_file(target_layout, "[Main]\nXPos=old\n");
         write_file(
@@ -144,6 +150,7 @@ int main() {
             });
         require(installed.installed, "valid bundle did not install");
         require(read_file(target_layout).contains("XPos=1440") &&
+                    read_file(live_layout).contains("XPos=1440") &&
                     read_file(target_character).contains("Page=new") &&
                     read_file(game + "/eqclient.ini").contains("Mode=new") &&
                     read_file(game + "/uifiles/plazmic-ui/asset.tga") ==
@@ -156,9 +163,52 @@ int main() {
                 read_file(installed.backup_directory +
                           "/ini/target_server.ini")
                     .contains("Page=old") &&
+                !QFileInfo::exists(installed.backup_directory +
+                                   "/ini/UI_plazmic_1440p.ini") &&
                 read_file(installed.backup_directory +
                           "/uifiles/plazmic-ui/asset.tga") == "old-skin",
             "rollback files were not preserved");
+
+        write_file(live_layout, "[Main]\nXPos=previous-live\n");
+        const plazmic::UiInstallTargetInspection repeated_targets =
+            plazmic::inspect_ui_install_targets(game);
+        require(repeated_targets.targets.has_value() &&
+                    repeated_targets.targets->layout_inis.size() == 1,
+                "reserved live layout was offered as a target");
+        const plazmic::UiFileInstallResult repeated_install =
+            plazmic::install_ui_bundle({
+                .bundle_directory = bundle,
+                .game_directory = game,
+                .source_layout_ini = source_layout,
+                .target_layout_ini = target_layout,
+                .source_character_ini = source_character,
+                .target_character_ini = target_character,
+                .install_global_ini = false,
+            });
+        require(repeated_install.installed &&
+                    read_file(repeated_install.backup_directory +
+                              "/ini/UI_plazmic_1440p.ini")
+                        .contains("XPos=previous-live") &&
+                    read_file(live_layout).contains("XPos=1440"),
+                "existing live layout was not backed up and replaced");
+
+        require(QFile::remove(live_layout) &&
+                    QFile::link(outside, live_layout),
+                "cannot create live-layout symlink fixture");
+        const plazmic::UiFileInstallResult symlinked_live_layout =
+            plazmic::install_ui_bundle({
+                .bundle_directory = bundle,
+                .game_directory = game,
+                .source_layout_ini = source_layout,
+                .target_layout_ini = target_layout,
+                .source_character_ini = source_character,
+                .target_character_ini = target_character,
+                .install_global_ini = false,
+            });
+        require(!symlinked_live_layout.installed &&
+                    symlinked_live_layout.backup_directory.isEmpty() &&
+                    read_file(outside).contains("XPos=outside"),
+                "symlinked live layout source was accepted");
 
         write_file(bundle + "/ini/eqclient.ini", "tampered\n");
         require(!plazmic::inspect_ui_bundle(bundle).bundle,

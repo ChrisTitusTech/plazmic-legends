@@ -1,4 +1,5 @@
 #include "game/game_state_reader.h"
+#include "integration/process_reader.h"
 
 #include <array>
 #include <cmath>
@@ -138,6 +139,45 @@ struct Fixture {
 
 int main() {
     try {
+        const auto& profile = plazmic::legends_reference_profile();
+        constexpr std::uintptr_t kPreferredImageBase = 0x140000000ULL;
+        const plazmic::RemotePeIdentity exact_identity{
+            .machine = profile.machine,
+            .timestamp = profile.timestamp,
+            .optional_magic = profile.optional_magic,
+            .image_base = kPreferredImageBase,
+            .image_size = profile.image_size,
+        };
+        require(
+            plazmic::matches_client_profile_identity(
+                profile, exact_identity),
+            "exact mapped PE identity did not match the profile");
+
+        auto mismatched_identity = exact_identity;
+        mismatched_identity.machine ^= 1U;
+        require(
+            !plazmic::matches_client_profile_identity(
+                profile, mismatched_identity),
+            "partial machine mismatch was accepted");
+        mismatched_identity = exact_identity;
+        mismatched_identity.timestamp ^= 1U;
+        require(
+            !plazmic::matches_client_profile_identity(
+                profile, mismatched_identity),
+            "partial timestamp mismatch was accepted");
+        mismatched_identity = exact_identity;
+        mismatched_identity.optional_magic ^= 1U;
+        require(
+            !plazmic::matches_client_profile_identity(
+                profile, mismatched_identity),
+            "partial optional-header mismatch was accepted");
+        mismatched_identity = exact_identity;
+        mismatched_identity.image_size ^= 1U;
+        require(
+            !plazmic::matches_client_profile_identity(
+                profile, mismatched_identity),
+            "partial image-size mismatch was accepted");
+
         Fixture fixture;
         const plazmic::GameStateReadResult result =
             plazmic::read_game_state(

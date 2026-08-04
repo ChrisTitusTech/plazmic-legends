@@ -32,7 +32,7 @@ Wine prefix.
 
 - An x86-64 Linux desktop using X11 or XWayland.
 - A user-owned 64-bit EverQuest Legends installation running through Wine.
-- The exact supported client build. Unknown or changed clients fail closed
+- An exact supported client build. Unknown or changed clients fail closed
   instead of using unverified offsets.
 - Fedora 43 or 44 for the COPR package, or a glibc 2.35-or-newer distribution
   for the AppImage.

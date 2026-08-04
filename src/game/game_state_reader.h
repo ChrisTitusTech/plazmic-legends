@@ -14,6 +14,8 @@
 
 namespace plazmic {
 
+struct RemotePeIdentity;
+
 enum class GameStateReadError {
     none,
     process_unavailable,
@@ -40,6 +42,10 @@ struct GameStateReadResult {
                error == GameStateReadError::none;
     }
 };
+
+[[nodiscard]] bool matches_client_profile_identity(
+    const ClientProfile& profile,
+    const RemotePeIdentity& identity);
 
 [[nodiscard]] GameStateReadResult read_game_state(
     const ClientProcess& process,

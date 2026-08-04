@@ -21,8 +21,8 @@ Requires:       qt6-qtbase%{?_isa} >= 6.8
 %description
 Plazmic Legends is an independent Qt 6 companion window for the 64-bit
 EverQuest Legends client running under Wine on Linux. It displays installed
-map geometry and a bounded read-only snapshot for one exact supported client
-profile. It does not inject into, write to, or modify the game or Wine prefix.
+map geometry and a bounded read-only snapshot for exact supported client
+profiles. It does not inject into, write to, or modify the game or Wine prefix.
 
 %prep
 %autosetup

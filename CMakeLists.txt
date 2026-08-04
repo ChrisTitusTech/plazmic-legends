@@ -184,21 +184,27 @@ if(PLAZMIC_ENABLE_REPOSITORY_CHECKS)
         COMMAND
             "${RUFF_EXECUTABLE}"
             check
+            tools/create_cohesive_ui_layout.py
             tools/inspect_eqgame.py
+            tests/test_create_cohesive_ui_layout.py
             tests/test_export_private_ui_bundle.py
             tests/test_inspect_eqgame.py
         COMMAND
             "${RUFF_EXECUTABLE}"
             format
             --check
+            tools/create_cohesive_ui_layout.py
             tools/inspect_eqgame.py
+            tests/test_create_cohesive_ui_layout.py
             tests/test_export_private_ui_bundle.py
             tests/test_inspect_eqgame.py
         COMMAND
             "${Python3_EXECUTABLE}"
             -m
             py_compile
+            tools/create_cohesive_ui_layout.py
             tools/inspect_eqgame.py
+            tests/test_create_cohesive_ui_layout.py
             tests/test_export_private_ui_bundle.py
             tests/test_inspect_eqgame.py
         COMMAND
@@ -443,7 +449,6 @@ if(BUILD_TESTING)
     target_link_libraries(
         ui_file_installer_test
         PRIVATE
-            plazmic_core
             Qt6::Core
     )
     add_dependencies(check ui_file_installer_test)

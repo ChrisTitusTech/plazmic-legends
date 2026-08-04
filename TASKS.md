@@ -78,9 +78,11 @@ the merged head; that skipped P6-05 check remains a documented residual risk.
 
 - [x] Add an ignored 2560x1440 exporter for the installed `plazmic-ui` skin,
   global settings, window layouts, and character filter/UI profiles.
+- [x] Derive a cohesive generic 1440p layout only from the current Legends INI,
+  preserving unknown sections and changing an allowlisted geometry set.
 - [x] Add `User > UI File Install...` with integrity validation, explicit
-  source and destination INI selection, optional global settings, game-stopped
-  enforcement, private backup, and rollback behavior.
+  source and destination INI selection, optional global settings, live UI
+  reload support, private backup, and rollback behavior.
 - [x] Prove synthetic export/install/tamper/selection behavior and run the full
   repository, privacy, package-inventory, and local-install gates.
 - Acceptance criteria: `AC-16` passes; private assets and character/server

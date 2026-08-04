@@ -1,10 +1,7 @@
 #include "ui/ui_file_installer.h"
 
-#include "integration/process_discovery.h"
-
 #include <algorithm>
 #include <array>
-#include <filesystem>
 #include <optional>
 #include <ranges>
 
@@ -368,19 +365,6 @@ UiFileInstallResult install_ui_bundle(const UiFileInstallRequest& request) {
     }
 
     const QString game_root = canonical_directory(request.game_directory);
-    const DiscoveryResult process = discover_client_process(
-        std::filesystem::path(game_root.toStdString()) / "eqgame.exe");
-    if (process.error != DiscoveryError::no_candidate) {
-        return {
-            .installed = false,
-            .detail = process.error == DiscoveryError::none ||
-                              process.error == DiscoveryError::ambiguous_candidates
-                          ? "Exit EverQuest Legends before installing UI files."
-                          : "Cannot prove that EverQuest Legends is stopped.",
-            .backup_directory = {},
-        };
-    }
-
     const QString backup = unique_backup_directory(game_root);
     if (backup.isEmpty() || !QDir().mkpath(backup + "/ini") ||
         !owner_only_directory(backup) ||

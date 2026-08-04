@@ -74,6 +74,19 @@ the merged head; that skipped P6-05 check remains a documented residual risk.
 
 ## Post-release maintenance
 
+### M-05: Export and install private UI files
+
+- [x] Add an ignored 2560x1440 exporter for the installed `plazmic-ui` skin,
+  global settings, window layouts, and character filter/UI profiles.
+- [x] Add `User > UI File Install...` with integrity validation, explicit
+  source and destination INI selection, optional global settings, game-stopped
+  enforcement, private backup, and rollback behavior.
+- [x] Prove synthetic export/install/tamper/selection behavior and run the full
+  repository, privacy, package-inventory, and local-install gates.
+- Acceptance criteria: `AC-16` passes; private assets and character/server
+  names stay ignored and out of packages, logs, fixtures, and the pull request;
+  and the existing gameplay read-only boundary remains unchanged.
+
 ### M-01: Persist and discover the Legends client directory
 
 - [x] Save a valid explicit or environment-provided game directory in

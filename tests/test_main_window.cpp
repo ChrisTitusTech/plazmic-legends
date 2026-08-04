@@ -129,12 +129,21 @@ int main(int argc, char** argv) {
                     "Plazmic Legends test-version",
                 "main window did not expose the project version");
         auto* menu_bar = window.findChild<QMenuBar*>("main-menu-bar");
+        auto* user_menu = window.findChild<QMenu*>("user-menu");
         auto* views_menu = window.findChild<QMenu*>("views-menu");
-        require(menu_bar != nullptr && views_menu != nullptr &&
+        require(menu_bar != nullptr && user_menu != nullptr &&
+                    views_menu != nullptr &&
                     !menu_bar->isNativeMenuBar(),
-                "embedded top menu bar or Views menu is missing");
-        require(menu_bar->actions().contains(views_menu->menuAction()),
-                "Views menu is not contained in the top menu bar");
+                "embedded top, User, or Views menu is missing");
+        QAction* ui_install_action =
+            window.findChild<QAction*>("ui-file-install-action");
+        require(
+            menu_bar->actions().contains(user_menu->menuAction()) &&
+                menu_bar->actions().contains(views_menu->menuAction()) &&
+                ui_install_action != nullptr &&
+                user_menu->actions().contains(ui_install_action) &&
+                ui_install_action->text() == "UI File Install...",
+            "User/UI File Install or Views menu hierarchy is incomplete");
         QWidget* window_controls =
             menu_bar->cornerWidget(Qt::TopRightCorner);
         require(window_controls != nullptr &&

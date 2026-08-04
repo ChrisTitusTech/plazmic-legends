@@ -3,6 +3,7 @@
 #include "ui/map_canvas.h"
 #include "ui/spawn_presentation.h"
 #include "ui/spawn_table_model.h"
+#include "ui/ui_file_installer.h"
 
 #include <algorithm>
 #include <array>
@@ -13,9 +14,15 @@
 #include <QAction>
 #include <QCloseEvent>
 #include <QComboBox>
+#include <QCheckBox>
 #include <QCoreApplication>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QDockWidget>
 #include <QEvent>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QFormLayout>
 #include <QGuiApplication>
 #include <QHeaderView>
 #include <QHBoxLayout>
@@ -24,7 +31,9 @@
 #include <QLineEdit>
 #include <QMenu>
 #include <QMenuBar>
+#include <QMessageBox>
 #include <QProgressBar>
+#include <QPushButton>
 #include <QScreen>
 #include <QStatusBar>
 #include <QStyle>
@@ -314,6 +323,14 @@ void MainWindow::build_menu_bar(QDockWidget* character_dock,
     bar->setObjectName("main-menu-bar");
     bar->setNativeMenuBar(false);
 
+    QMenu* user_menu = bar->addMenu("&User");
+    user_menu->setObjectName("user-menu");
+    QAction* ui_install_action =
+        user_menu->addAction("UI File Install...");
+    ui_install_action->setObjectName("ui-file-install-action");
+    connect(ui_install_action, &QAction::triggered,
+            this, &MainWindow::open_ui_file_install);
+
     QMenu* views_menu = bar->addMenu("&Views");
     views_menu->setObjectName("views-menu");
     const std::array<std::pair<QDockWidget*, QString>, 4> views{
@@ -373,6 +390,128 @@ void MainWindow::build_menu_bar(QDockWidget* character_dock,
     connect(close_button, &QToolButton::clicked, this, &QWidget::close);
     bar->setCornerWidget(window_controls, Qt::TopRightCorner);
     update_maximize_button();
+}
+
+void MainWindow::open_ui_file_install() {
+    if (client_directory_.isEmpty()) {
+        QMessageBox::warning(
+            this, "UI File Install",
+            "Configure a valid EverQuest Legends directory first.");
+        return;
+    }
+    if (snapshot_.process == ProcessState::running ||
+        snapshot_.process == ProcessState::ambiguous ||
+        snapshot_.process == ProcessState::access_error) {
+        QMessageBox::warning(
+            this, "UI File Install",
+            "Exit EverQuest Legends before installing UI or INI files.");
+        return;
+    }
+
+    const QString bundle_directory = QFileDialog::getExistingDirectory(
+        this, "Select extracted private Plazmic UI bundle");
+    if (bundle_directory.isEmpty()) {
+        return;
+    }
+    const UiBundleInspection bundle = inspect_ui_bundle(bundle_directory);
+    if (!bundle.bundle) {
+        QMessageBox::critical(this, "UI File Install", bundle.detail);
+        return;
+    }
+    const UiInstallTargetInspection target =
+        inspect_ui_install_targets(client_directory_);
+    if (!target.targets) {
+        QMessageBox::critical(this, "UI File Install", target.detail);
+        return;
+    }
+
+    QDialog dialog(this);
+    dialog.setWindowTitle("UI File Install");
+    dialog.setObjectName("ui-file-install-dialog");
+    auto* layout = new QFormLayout(&dialog);
+    auto* description = new QLabel(
+        QString("Install private %1 settings. Existing files are backed up "
+                "before replacement.")
+            .arg(bundle.bundle->resolution));
+    description->setWordWrap(true);
+    layout->addRow(description);
+
+    const auto add_paths = [&dialog](const QStringList& paths,
+                                     const QString& object_name) {
+        auto* combo = new QComboBox(&dialog);
+        combo->setObjectName(object_name);
+        for (const QString& path : paths) {
+            combo->addItem(QFileInfo(path).fileName(), path);
+        }
+        return combo;
+    };
+    QComboBox* source_layout = add_paths(
+        bundle.bundle->layout_inis, "ui-install-source-layout");
+    QComboBox* target_layout = add_paths(
+        target.targets->layout_inis, "ui-install-target-layout");
+    QComboBox* source_character = add_paths(
+        bundle.bundle->character_inis, "ui-install-source-character");
+    QComboBox* target_character = add_paths(
+        target.targets->character_inis, "ui-install-target-character");
+    layout->addRow("Source window layout:", source_layout);
+    layout->addRow("Write layout into:", target_layout);
+    layout->addRow("Source character filters:", source_character);
+    layout->addRow("Write character settings into:", target_character);
+
+    auto* global_settings = new QCheckBox(
+        "Install bundled eqclient.ini global filters and 1440p settings",
+        &dialog);
+    global_settings->setObjectName("ui-install-global-settings");
+    global_settings->setChecked(true);
+    layout->addRow(global_settings);
+
+    auto* buttons = new QDialogButtonBox(
+        QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    buttons->button(QDialogButtonBox::Ok)->setText("Install");
+    connect(buttons, &QDialogButtonBox::accepted,
+            &dialog, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected,
+            &dialog, &QDialog::reject);
+    layout->addRow(buttons);
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    const QString confirmation =
+        QString("Replace %1 and %2%3 and install the Plazmic UI skin?\n\n"
+                "A private rollback directory will be created first.")
+            .arg(target_layout->currentText())
+            .arg(target_character->currentText())
+            .arg(global_settings->isChecked() ? " plus eqclient.ini" : "");
+    if (QMessageBox::question(
+            this, "Confirm UI File Install", confirmation,
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::No) !=
+        QMessageBox::Yes) {
+        return;
+    }
+
+    const UiFileInstallResult result = install_ui_bundle({
+        .bundle_directory = bundle_directory,
+        .game_directory = client_directory_,
+        .source_layout_ini = source_layout->currentData().toString(),
+        .target_layout_ini = target_layout->currentData().toString(),
+        .source_character_ini = source_character->currentData().toString(),
+        .target_character_ini = target_character->currentData().toString(),
+        .install_global_ini = global_settings->isChecked(),
+    });
+    if (!result.installed) {
+        QMessageBox::critical(
+            this, "UI File Install",
+            result.backup_directory.isEmpty()
+                ? result.detail
+                : result.detail + "\n\nRollback: " +
+                      result.backup_directory);
+        return;
+    }
+    QMessageBox::information(
+        this, "UI File Install",
+        result.detail + "\n\nRollback: " + result.backup_directory +
+            "\n\nStart EverQuest and use /loadskin plazmic-ui 1.");
 }
 
 void MainWindow::update_maximize_button() {

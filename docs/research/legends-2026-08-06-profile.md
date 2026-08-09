@@ -47,6 +47,16 @@ health plus current and maximum mana passed their range checks. The maximum-HP
 cache and UI gauge validation are detailed in
 `docs/research/max-vitals-2026-08-08.md`.
 
+A same-day open-application check rejected the initially carried maximum-mana
+offset `0x2e8`: it produced a stable but semantically impossible gauge value.
+That displacement belonged to a stack/string-capacity path, not a validated
+local-player vital. A second bounded candidate at `0x2d8` was also rejected by
+the open UI because it represented a different resource. Exact label-family
+data flow, the remaining bounded candidate, and a private visible comparison
+against the game mana gauge established the signed 64-bit local-player cache
+at `0x290`. The private captures and raw values were deleted and were not
+retained in the repository.
+
 No application or probe wrote target memory, injected code, changed the Wine
 prefix, weakened host security, synthesized input, or printed a runtime name,
 address, memory value, or executable path.

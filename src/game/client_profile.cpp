@@ -210,7 +210,7 @@ constexpr ClientProfile kLegendsAugustSixthProfile{
             .stats_current_health_offset = 0x2770U,
             .health_adjustment_offset = 0x28U,
             .player_maximum_health_offset = 0x2b0U,
-            .player_maximum_mana_offset = 0x2e8U,
+            .player_maximum_mana_offset = 0x290U,
             .character_base_bias = 0x08U,
             .profile_manager_offset = 0x08U,
             .profile_manager_current_type_offset = 0x08U,

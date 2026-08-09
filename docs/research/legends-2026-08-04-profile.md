@@ -42,8 +42,16 @@ re-established against this build instead of adjusting the older profile.
 | Spawn list | Reciprocal links, bounded name, type, stable ID, and position retain their meanings. The exact byte-sized level field moved to `0x64c`, so the smallest approved record span is `0x64d`; traversal remains capped at 2,048. |
 | Character root | Character-window and stats paths resolve image RVA `0x00f05140`; the active-zone field remains `0x2810`. Stats lookup, current HP, current mana, adjustment, and profile-manager topology retain their proven widths and bounds. |
 | Maximum HP | The signed 64-bit local-player maximum-health cache is required at offset `0x2b0`; it is bounded and revalidated with current HP before publication. |
-| Maximum mana | Exact-client mana paths and a bounded aligned candidate-family check establish local-player offset `0x2e8`; the prior offset fails the complete vital bounds. |
+| Maximum mana | The original aligned candidate-family check selected `0x2e8`, but later validation exposed a flaw in that method. The exact August 4 binary is required to revalidate this field. |
 | Equipment name | The validated equipment container and fixed slot traversal remain bounded. Exact-client item-name paths distinguish the display-name pointer at `0x60` from another printable item text field; the prior offset fails closed. |
+
+Later August 6 live UI validation exposed that the same candidate-selection
+method could mistake a stack/string-capacity displacement for a player field.
+The August 4 executable is no longer locally available for a new controlled
+comparison, so its `0x2e8` maximum-mana result remains a profile-specific
+residual risk rather than evidence for the active August 6 client. It must be
+revalidated against that exact binary before another release claims complete
+August 4 maximum-mana coverage.
 
 No raw address was added outside `src/game/client_profile.cpp`. Unknown digests,
 partial identity matches, unreadable mappings, invalid lists, torn snapshots,

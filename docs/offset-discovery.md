@@ -173,6 +173,12 @@ Classify every match by its base register, operand width, surrounding control
 flow, and relationship to the validated semantic landmark. Common constants
 can appear in unrelated functions.
 
+A displacement is not a record offset until the base register is proven to be
+the validated record owner. In particular, stack-frame, string-capacity, and
+virtual-table displacements can share the same numeric value as a plausible
+field and must be rejected even when a bounded live read happens to look
+stable.
+
 For each candidate function, record privately:
 
 1. the semantic landmark used to reach it;

@@ -124,7 +124,7 @@ int main() {
                 august_sixth->character.local_character_pointer_rva ==
                     0x00f06140U &&
                 august_sixth->character.player_maximum_mana_offset ==
-                    0x2e8U &&
+                    0x290U &&
                 august_sixth->character.item_name_pointer_offset == 0x60U,
             "August 6 profile did not preserve its exact identity and offsets");
         require(plazmic::select_client_profile("changed") == nullptr,

@@ -13,8 +13,17 @@ Static analysis of the exact `legends-2026-08-06` client followed the HP,
 MAXHP, HP percentage, mana, and maximum-mana presentation families. A bounded
 aligned candidate-family check then used the production same-user discovery,
 readable-mapping, and `process_vm_readv` boundary. It established a stable
-signed 64-bit local-player maximum-health cache at profile offset `0x2b0` and
-reconfirmed the signed 64-bit maximum-mana cache at `0x2e8`.
+signed 64-bit local-player maximum-health cache at profile offset `0x2b0`.
+
+An open-application follow-up corrected the active August 6 maximum-mana
+finding. The initially selected `0x2e8` value was bounded and stable but did not
+match the visible game gauge; its apparent static references were stack and
+string-capacity displacements rather than local-player field accesses. A
+second bounded candidate at `0x2d8` was rejected in the open companion because
+it represented a different resource. Exact label-family data flow and the
+remaining bounded candidate established the signed 64-bit cache at `0x290`,
+which matched the visible current-client MAXMP and percentage. No private value
+or capture was retained.
 
 The production reader now requires both values, bounds each to 0 through
 100,000,000, requires each current value not to exceed its maximum, and rereads

@@ -83,8 +83,8 @@ before publishing another version.
 
 ### M-09: Export inventory for EQ Legends Tools
 
-- [x] Add an `Export Inventory...` button to the Character dock that is
-  enabled only for an available immutable character snapshot.
+- [x] Add `Export Inventory...` to the User dropdown and enable it only for an
+  available immutable character snapshot.
 - [x] Serialize the character name and equipped item names into the current EQ
   Legends Tools profile-backup slot and item-ID contract without adding a
   network request or bundled item database.
@@ -97,9 +97,9 @@ before publishing another version.
   empty equipment, rejection paths, button lifecycle, and file permissions
   with synthetic tests and run the complete repository and package gate.
 - [ ] Install the exact validated build with rollback, visually exercise the
-  button against a live immutable snapshot, and import its private output with
-  EQ Legends Tools. This remains a manual draft-PR gate because local
-  installation was not authorized in this task.
+  User-menu action against a live immutable snapshot, and import its private
+  output with EQ Legends Tools. This remains a manual draft-PR gate because
+  local installation was not authorized in this task.
 - Acceptance criteria: `AC-18` passes while the existing read-only,
   fail-closed, privacy, lifecycle, and package boundaries remain unchanged.
 - Validation: fresh configure and warnings-as-errors build, repository checks,

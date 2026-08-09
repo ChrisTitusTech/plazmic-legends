@@ -26,7 +26,6 @@
 #include <QMenuBar>
 #include <QMouseEvent>
 #include <QProgressBar>
-#include <QPushButton>
 #include <QTableWidget>
 #include <QTableView>
 #include <QTemporaryDir>
@@ -138,13 +137,19 @@ int main(int argc, char** argv) {
                 "embedded top, User, or Views menu is missing");
         QAction* ui_install_action =
             window.findChild<QAction*>("ui-file-install-action");
+        QAction* export_inventory_action =
+            window.findChild<QAction*>("export-inventory-action");
         require(
             menu_bar->actions().contains(user_menu->menuAction()) &&
                 menu_bar->actions().contains(views_menu->menuAction()) &&
                 ui_install_action != nullptr &&
                 user_menu->actions().contains(ui_install_action) &&
-                ui_install_action->text() == "UI File Install...",
-            "User/UI File Install or Views menu hierarchy is incomplete");
+                ui_install_action->text() == "UI File Install..." &&
+                export_inventory_action != nullptr &&
+                user_menu->actions().contains(export_inventory_action) &&
+                export_inventory_action->text() == "Export Inventory..." &&
+                !export_inventory_action->isEnabled(),
+            "User actions or Views menu hierarchy is incomplete");
         QWidget* window_controls =
             menu_bar->cornerWidget(Qt::TopRightCorner);
         require(window_controls != nullptr &&
@@ -173,14 +178,6 @@ int main(int argc, char** argv) {
                 "map canvas is missing");
         require(window.findChild<QWidget*>("spawn-table") != nullptr,
                 "spawn table placeholder is missing");
-        auto* export_inventory_button =
-            window.findChild<QPushButton*>("export-inventory-button");
-        require(export_inventory_button != nullptr &&
-                    !export_inventory_button->isEnabled() &&
-                    export_inventory_button->text() ==
-                        "Export Inventory..." &&
-                    !export_inventory_button->accessibleName().isEmpty(),
-                "inventory export button is missing or initially enabled");
         auto* character_dock =
             window.findChild<QDockWidget*>("character-dock");
         auto* parse_dock = window.findChild<QDockWidget*>("parse-dock");
@@ -296,7 +293,7 @@ int main(int argc, char** argv) {
             .detail = "Synthetic character snapshot",
         };
         window.update_character_snapshot(character);
-        require(export_inventory_button->isEnabled(),
+        require(export_inventory_action->isEnabled(),
                 "available character data did not enable inventory export");
         const plazmic::CombatEncounterSnapshot combat{
             .state = plazmic::CombatEncounterState::active,
@@ -396,7 +393,7 @@ int main(int argc, char** argv) {
                             ->rowCount() == 2,
                 "completed encounter did not clear current DPS or retain parse");
         window.update_character_snapshot({});
-        require(!export_inventory_button->isEnabled(),
+        require(!export_inventory_action->isEnabled(),
                 "unavailable character data left inventory export enabled");
         require(window.findChild<QProgressBar*>("character-health")->text() ==
                     "HP unavailable" &&

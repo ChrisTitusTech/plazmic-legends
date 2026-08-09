@@ -119,8 +119,8 @@ the package.
 - Enable EverQuest combat logging to populate the Parse dock. Plazmic Legends
   starts at the active log's current end and does not upload or save encounter
   history.
-- With live character data available, choose `Export Inventory...` in the
-  Character dock, then use `Import Profile Backup` at the
+- With live character data available, choose
+  `User > Export Inventory...`, then use `Import Profile Backup` at the
   [EQ Legends Tools character sheet](https://eqlegendstools.com/char-sheet/).
   The inventory-only backup transfers the character name and equipped items.
   Verify race, tri-class, favored stats, Alternate Advancement, upgrades, and

@@ -12,13 +12,13 @@
 
 #include <QMainWindow>
 
+class QAction;
 class QComboBox;
 class QDockWidget;
 class QEvent;
 class QLabel;
 class QLineEdit;
 class QProgressBar;
-class QPushButton;
 class QTableWidget;
 class QTableView;
 class QToolButton;
@@ -85,7 +85,7 @@ class MainWindow final : public QMainWindow {
     QProgressBar* mana_bar_{nullptr};
     QLabel* current_dps_{nullptr};
     QTableWidget* equipment_table_{nullptr};
-    QPushButton* export_inventory_button_{nullptr};
+    QAction* export_inventory_action_{nullptr};
     QLabel* parse_state_{nullptr};
     QTableWidget* parse_table_{nullptr};
     QToolButton* maximize_button_{nullptr};

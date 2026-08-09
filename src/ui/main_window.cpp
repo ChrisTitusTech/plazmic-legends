@@ -191,14 +191,6 @@ void MainWindow::build_ui() {
     equipment_table_->horizontalHeader()->setSectionResizeMode(
         1, QHeaderView::Stretch);
     character_layout->addWidget(equipment_table_, 1);
-    export_inventory_button_ = new QPushButton("Export Inventory...");
-    export_inventory_button_->setObjectName("export-inventory-button");
-    export_inventory_button_->setAccessibleName(
-        "Export inventory for EQ Legends Tools");
-    export_inventory_button_->setToolTip(
-        "Save an inventory-only EQ Legends Tools profile backup");
-    export_inventory_button_->setEnabled(false);
-    character_layout->addWidget(export_inventory_button_);
     auto* character_dock = create_dock(
         "Character", "character-dock", character_container, this);
     character_dock->setMinimumWidth(300);
@@ -285,9 +277,6 @@ void MainWindow::build_ui() {
     setCorner(Qt::BottomRightCorner, Qt::BottomDockWidgetArea);
 
     build_menu_bar(character_dock, parse_dock, spawn_dock, detail_dock);
-
-    connect(export_inventory_button_, &QPushButton::clicked,
-            this, &MainWindow::open_inventory_export);
 
     connect(
         spawn_filter_, &QLineEdit::textChanged, spawn_proxy_,
@@ -385,6 +374,11 @@ void MainWindow::build_menu_bar(QDockWidget* character_dock,
 
     QMenu* user_menu = bar->addMenu("&User");
     user_menu->setObjectName("user-menu");
+    export_inventory_action_ = user_menu->addAction("Export Inventory...");
+    export_inventory_action_->setObjectName("export-inventory-action");
+    export_inventory_action_->setEnabled(false);
+    connect(export_inventory_action_, &QAction::triggered,
+            this, &MainWindow::open_inventory_export);
     QAction* ui_install_action =
         user_menu->addAction("UI File Install...");
     ui_install_action->setObjectName("ui-file-install-action");
@@ -617,7 +611,7 @@ void MainWindow::update_player_snapshot(const PlayerSnapshot& snapshot) {
 void MainWindow::update_character_snapshot(
     const CharacterSnapshot& snapshot) {
     character_snapshot_ = snapshot;
-    export_inventory_button_->setEnabled(snapshot.available());
+    export_inventory_action_->setEnabled(snapshot.available());
     equipment_table_->setRowCount(0);
     if (!snapshot.available()) {
         character_name_->setText(

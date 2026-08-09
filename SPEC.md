@@ -167,6 +167,9 @@ tools, database, or network services.
 - Ordinary NPC dots use the consider color derived from the validated
   local-player and NPC levels: gray, green, light blue, blue, white, yellow,
   or red.
+  The exact-client level field must be semantically checked against the visible
+  game level for both the local player and an NPC; a plausible percentage or
+  other bounded byte is not an acceptable substitute.
   Named NPCs retain their distinct marker color and shape.
 - Non-player, non-NPC spawn snapshots are presented as Other with neutral gray
   map markers, including any exact-profile ground records published by the

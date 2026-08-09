@@ -60,6 +60,16 @@ signed 64-bit value at `0x678` remained the independent maximum and never fell
 below current. The private captures and raw values were deleted and were not
 retained in the repository.
 
+A subsequent open-application con-color check rejected the initially carried
+spawn level offset `0x64c`. It published a percentage byte as level 100 for an
+ordinary NPC whose visible game target panel reported level 33, and it also
+published the local player as level 100 instead of the visible level 29. A
+bounded comparison across the 238-entry reciprocal spawn list found the exact
+byte at `0x275`: it matched both visible levels and produced a plausible 2-49
+range across every record. The active profile now uses `0x275` and reads only
+the smallest required `0x276`-byte record span. The older digest-selected
+profiles remain unchanged.
+
 No application or probe wrote target memory, injected code, changed the Wine
 prefix, weakened host security, synthesized input, or printed a runtime name,
 address, memory value, or executable path.

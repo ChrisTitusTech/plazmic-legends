@@ -119,8 +119,8 @@ int main() {
                 august_sixth->game_state.world_data_pointer_rva ==
                     0x00f05fe8U &&
                 august_sixth->game_state.player_zone_id_offset == 0x5b0U &&
-                august_sixth->spawns.level_offset == 0x64cU &&
-                august_sixth->spawns.record_bytes == 0x64dU &&
+                august_sixth->spawns.level_offset == 0x275U &&
+                august_sixth->spawns.record_bytes == 0x276U &&
                 august_sixth->character.local_character_pointer_rva ==
                     0x00f06140U &&
                 august_sixth->character.player_maximum_mana_offset ==

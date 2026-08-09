@@ -185,11 +185,11 @@ constexpr ClientProfile kLegendsAugustSixthProfile{
             .name_bytes = 64U,
             .type_offset = 0x139U,
             .id_offset = 0x178U,
-            .level_offset = 0x64cU,
+            .level_offset = 0x275U,
             .y_offset = 0x78U,
             .x_offset = 0x74U,
             .z_offset = 0x7cU,
-            .record_bytes = 0x64dU,
+            .record_bytes = 0x276U,
             .maximum_count = 2048U,
         },
     .character =

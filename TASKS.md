@@ -98,6 +98,10 @@ before publishing another version.
 - [x] Keep all seven ordinary-NPC consider colors visible on map markers and
   labels and in the spawn table, while preserving named, player, and Other
   presentation.
+- [x] Correct the active August 6 spawn level field after live comparison
+  proved that `0x64c` published a percentage as level 100 while the game showed
+  local-player level 29 and NPC level 33. Use the validated level byte at
+  `0x275` and reduce the bounded record span to `0x276`.
 - [x] Run the complete repository gate, exact active-client fingerprint and
   read-only smoke, and overwrite the local installed binary with rollback and
   matching artifact/install hashes.
@@ -106,9 +110,10 @@ before publishing another version.
   invalid vitals fail closed; and the installed binary is the validated build.
 - Validation: fresh warnings-as-errors build, repository checks, 8 Python
   tests, all 17 CTest cases, exact active-client fingerprint, bounded live
-  maximum-HP/MP read, and installed X11 launch passed. Build and
+  maximum-HP/MP read, semantic live player/NPC level comparison, and installed
+  X11 launch passed. Build and
   `/usr/local/bin/plazmic-legends` both matched SHA-256
-  `c7f85eece8bad03b7a10b666775e20bc822953ea906aa373a1c2ee98b395879e`;
+  `620ca7e2f25e5cb2e42b3d70da0b47275063dc042dcc2a5fcdb52b68c6d99b39`;
   the prior installed binary is retained in the ignored rollback directory.
 
 ### M-07: Support the 2026-08-06 Legends client

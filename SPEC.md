@@ -136,6 +136,15 @@ behavior. It does not copy Loadout Legends code or assets and does not add its
 uploads, accounts, leaderboards, saved history, timers, proc tools, resist
 tools, database, or network services.
 
+The Character dock can export the current immutable character name and
+text-only equipment snapshot as an offline JSON profile backup compatible with
+the EQ Legends Tools character sheet. The export derives the site's stable
+item identifiers from bounded item names, writes only to a user-selected local
+file, and performs no upload or network request. Race, tri-class, favored
+stats, Alternate Advancement, and Exaltations are not read by Plazmic Legends
+and are therefore not invented in the export; users must verify those values
+after importing the inventory-only backup.
+
 ### Window and map interaction
 
 - The application is a normal independent Linux window and does not require a
@@ -432,6 +441,12 @@ its allowlist, confirmation, backup, and rollback contract.
   validated build and whose prior binary has a verified rollback copy. A
   build-tree-only launch or process retaining the old inode is not accepted as
   evidence for the newly built version.
+- AC-18: The Character dock exports an available immutable character snapshot
+  to a user-selected, owner-only JSON file accepted by EQ Legends Tools'
+  `Import Profile Backup` action. Every supported equipment slot maps
+  deterministically, empty slots are omitted, unavailable or malformed
+  snapshots fail closed, and the export adds no network access, game-state
+  write, private logging, or bundled item database.
 
 ## Resolved Phase 1 decisions
 

@@ -22,6 +22,8 @@ live UI reload.
   and selection details, including distinct named-spawn and Other markers.
 - Shows bounded live character HP, mana, and text-only equipped items in a
   left Character dock.
+- Exports the current character name and equipped items as an offline JSON
+  backup for EQ Legends Tools' character sheet.
 - Condenses newly appended local combat-log damage into a current or
   most-recent encounter Parse dock when EverQuest combat logging is enabled.
 - Handles zoning, camping, character select, process exit, and client changes
@@ -117,6 +119,14 @@ the package.
 - Enable EverQuest combat logging to populate the Parse dock. Plazmic Legends
   starts at the active log's current end and does not upload or save encounter
   history.
+- With live character data available, choose `Export Inventory...` in the
+  Character dock, then use `Import Profile Backup` at the
+  [EQ Legends Tools character sheet](https://eqlegendstools.com/char-sheet/).
+  The inventory-only backup transfers the character name and equipped items.
+  Verify race, tri-class, favored stats, Alternate Advancement, upgrades, and
+  Exaltations after import because Plazmic Legends does not read or invent
+  those fields. Items absent from the site's current data cannot be selected
+  by its importer.
 - To move a private Plazmic UI setup to another 2560x1440 system, create the
   ignored bundle described in [development.md](development.md), extract it on
   the target system, and choose

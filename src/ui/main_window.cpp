@@ -1,5 +1,6 @@
 #include "ui/main_window.h"
 
+#include "ui/character_profile_exporter.h"
 #include "ui/map_canvas.h"
 #include "ui/spawn_presentation.h"
 #include "ui/spawn_table_model.h"
@@ -19,6 +20,7 @@
 #include <QCoreApplication>
 #include <QDialog>
 #include <QDialogButtonBox>
+#include <QDir>
 #include <QDockWidget>
 #include <QEvent>
 #include <QFileDialog>
@@ -189,6 +191,14 @@ void MainWindow::build_ui() {
     equipment_table_->horizontalHeader()->setSectionResizeMode(
         1, QHeaderView::Stretch);
     character_layout->addWidget(equipment_table_, 1);
+    export_inventory_button_ = new QPushButton("Export Inventory...");
+    export_inventory_button_->setObjectName("export-inventory-button");
+    export_inventory_button_->setAccessibleName(
+        "Export inventory for EQ Legends Tools");
+    export_inventory_button_->setToolTip(
+        "Save an inventory-only EQ Legends Tools profile backup");
+    export_inventory_button_->setEnabled(false);
+    character_layout->addWidget(export_inventory_button_);
     auto* character_dock = create_dock(
         "Character", "character-dock", character_container, this);
     character_dock->setMinimumWidth(300);
@@ -276,6 +286,9 @@ void MainWindow::build_ui() {
 
     build_menu_bar(character_dock, parse_dock, spawn_dock, detail_dock);
 
+    connect(export_inventory_button_, &QPushButton::clicked,
+            this, &MainWindow::open_inventory_export);
+
     connect(
         spawn_filter_, &QLineEdit::textChanged, spawn_proxy_,
         &SpawnFilterProxyModel::set_name_filter);
@@ -327,6 +340,39 @@ void MainWindow::build_ui() {
     statusBar()->addWidget(new QLabel("Profile:"));
     statusBar()->addWidget(profile_value_);
     statusBar()->addPermanentWidget(detail_value_, 1);
+}
+
+void MainWindow::open_inventory_export() {
+    const CharacterSnapshot snapshot_for_export = character_snapshot_;
+    const CharacterProfileExport profile =
+        build_character_profile_export(snapshot_for_export);
+    if (!profile) {
+        QMessageBox::warning(this, "Export Inventory", profile.detail);
+        return;
+    }
+
+    const QString destination = QFileDialog::getSaveFileName(
+        this, "Export Inventory for EQ Legends Tools",
+        QDir::home().filePath(profile.suggested_file_name),
+        "JSON profile backup (*.json)");
+    if (destination.isEmpty()) {
+        return;
+    }
+    const CharacterProfileSaveResult result =
+        save_character_profile_export(destination, snapshot_for_export);
+    if (!result) {
+        QMessageBox::critical(this, "Export Inventory", result.detail);
+        return;
+    }
+    QMessageBox::information(
+        this, "Export Inventory",
+        QString(
+            "Saved %1 equipped item(s).\n\n"
+            "At eqlegendstools.com/char-sheet/, choose Import Profile "
+            "Backup and select the JSON file. Verify race, tri-class, "
+            "favored stats, Alternate Advancement, upgrades, and "
+            "Exaltations after import.")
+            .arg(result.equipped_items));
 }
 
 void MainWindow::build_menu_bar(QDockWidget* character_dock,
@@ -570,6 +616,8 @@ void MainWindow::update_player_snapshot(const PlayerSnapshot& snapshot) {
 
 void MainWindow::update_character_snapshot(
     const CharacterSnapshot& snapshot) {
+    character_snapshot_ = snapshot;
+    export_inventory_button_->setEnabled(snapshot.available());
     equipment_table_->setRowCount(0);
     if (!snapshot.available()) {
         character_name_->setText(

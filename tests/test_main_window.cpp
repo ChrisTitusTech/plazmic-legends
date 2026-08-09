@@ -26,6 +26,7 @@
 #include <QMenuBar>
 #include <QMouseEvent>
 #include <QProgressBar>
+#include <QPushButton>
 #include <QTableWidget>
 #include <QTableView>
 #include <QTemporaryDir>
@@ -172,6 +173,14 @@ int main(int argc, char** argv) {
                 "map canvas is missing");
         require(window.findChild<QWidget*>("spawn-table") != nullptr,
                 "spawn table placeholder is missing");
+        auto* export_inventory_button =
+            window.findChild<QPushButton*>("export-inventory-button");
+        require(export_inventory_button != nullptr &&
+                    !export_inventory_button->isEnabled() &&
+                    export_inventory_button->text() ==
+                        "Export Inventory..." &&
+                    !export_inventory_button->accessibleName().isEmpty(),
+                "inventory export button is missing or initially enabled");
         auto* character_dock =
             window.findChild<QDockWidget*>("character-dock");
         auto* parse_dock = window.findChild<QDockWidget*>("parse-dock");
@@ -287,6 +296,8 @@ int main(int argc, char** argv) {
             .detail = "Synthetic character snapshot",
         };
         window.update_character_snapshot(character);
+        require(export_inventory_button->isEnabled(),
+                "available character data did not enable inventory export");
         const plazmic::CombatEncounterSnapshot combat{
             .state = plazmic::CombatEncounterState::active,
             .target = "synthetic_target",
@@ -385,6 +396,8 @@ int main(int argc, char** argv) {
                             ->rowCount() == 2,
                 "completed encounter did not clear current DPS or retain parse");
         window.update_character_snapshot({});
+        require(!export_inventory_button->isEnabled(),
+                "unavailable character data left inventory export enabled");
         require(window.findChild<QProgressBar*>("character-health")->text() ==
                     "HP unavailable" &&
                     window.findChild<QProgressBar*>("character-mana")->text() ==

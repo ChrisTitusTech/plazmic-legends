@@ -18,6 +18,7 @@ class QEvent;
 class QLabel;
 class QLineEdit;
 class QProgressBar;
+class QPushButton;
 class QTableWidget;
 class QTableView;
 class QToolButton;
@@ -57,6 +58,7 @@ class MainWindow final : public QMainWindow {
                         QDockWidget* parse_dock,
                         QDockWidget* spawn_dock,
                         QDockWidget* detail_dock);
+    void open_inventory_export();
     void open_ui_file_install();
     void update_maximize_button();
     void restore_ui_state();
@@ -83,9 +85,11 @@ class MainWindow final : public QMainWindow {
     QProgressBar* mana_bar_{nullptr};
     QLabel* current_dps_{nullptr};
     QTableWidget* equipment_table_{nullptr};
+    QPushButton* export_inventory_button_{nullptr};
     QLabel* parse_state_{nullptr};
     QTableWidget* parse_table_{nullptr};
     QToolButton* maximize_button_{nullptr};
+    CharacterSnapshot character_snapshot_;
     std::optional<std::uint32_t> selected_spawn_;
     QLabel* compatibility_value_{nullptr};
     QLabel* process_value_{nullptr};

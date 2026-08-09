@@ -81,6 +81,34 @@ before publishing another version.
 
 ## Post-release maintenance
 
+### M-09: Export inventory for EQ Legends Tools
+
+- [x] Add an `Export Inventory...` button to the Character dock that is
+  enabled only for an available immutable character snapshot.
+- [x] Serialize the character name and equipped item names into the current EQ
+  Legends Tools profile-backup slot and item-ID contract without adding a
+  network request or bundled item database.
+- [x] Save the JSON atomically with owner-only permissions and reject
+  unavailable, duplicate-slot, unknown-slot, or malformed item data.
+- [x] Document that race, tri-class, favored stats, Alternate Advancement, and
+  Exaltations must be verified after `Import Profile Backup` because Plazmic
+  Legends does not read or invent those fields.
+- [x] Cover all 23 slot mappings, item-name normalization, upgrade suffixes,
+  empty equipment, rejection paths, button lifecycle, and file permissions
+  with synthetic tests and run the complete repository and package gate.
+- [ ] Install the exact validated build with rollback, visually exercise the
+  button against a live immutable snapshot, and import its private output with
+  EQ Legends Tools. This remains a manual draft-PR gate because local
+  installation was not authorized in this task.
+- Acceptance criteria: `AC-18` passes while the existing read-only,
+  fail-closed, privacy, lifecycle, and package boundaries remain unchanged.
+- Validation: fresh configure and warnings-as-errors build, repository checks,
+  8 Python tests, all 18 CTest cases, exact-client fingerprint, package
+  metadata and staged-install inventory, privacy and whitespace scans, and an
+  iterative CodeRabbit review with zero final findings passed. The deployed
+  EQ Legends Tools v1 backup parser and item-ID normalization contract were
+  inspected on 2026-08-09 without adding a runtime network dependency.
+
 ### M-08: Complete HP/MP gauges and restore consider-color visibility
 
 - [x] Add a bounded exact-profile maximum-HP field, revalidate it with the

@@ -28,6 +28,13 @@ The Character dock formats both gauges as `current / max (percent)`. HP uses a
 red percentage-driven chunk and MP uses a blue percentage-driven chunk, so
 each fill shrinks as the corresponding resource falls.
 
+A same-day presentation follow-up confirmed that the active character snapshot
+contains a positive maximum-mana value and a bounded percentage. The gauges
+now drive their fill from the exact current/maximum ratio, round only the
+displayed whole percentage, show `0 / 0 (0%)` explicitly, and reserve the font
+width needed for the complete text instead of allowing MAXMP or the percentage
+to be clipped by a narrow dock.
+
 The existing seven-band consider classifier remains driven only by immutable
 local-player and ordinary-NPC levels. The same color is now applied to map
 markers, visible NPC labels, and spawn-table text. Named NPCs retain their

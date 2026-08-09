@@ -88,6 +88,9 @@ before publishing another version.
   snapshots.
 - [x] Render HP as `current / max (percent)` with a red percentage-driven bar
   and MP as `current / max (percent)` with a blue percentage-driven bar.
+- [x] Drive each fill from the exact current/maximum ratio, round the displayed
+  percentage to the nearest whole number, show `0 / 0 (0%)` explicitly, and
+  reserve enough gauge width for the complete MAXHP/MAXMP text.
 - [x] Keep all seven ordinary-NPC consider colors visible on map markers and
   labels and in the spawn table, while preserving named, player, and Other
   presentation.

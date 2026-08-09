@@ -111,7 +111,8 @@ The post-release character/combat feature adds two vertically stacked docks in
 the default left column:
 
 - a Character dock showing the active character name, current and maximum HP,
-  HP percentage, current and maximum MP, MP percentage, text-only equipped
+  rounded whole HP percentage, current and maximum MP, rounded whole MP
+  percentage, text-only equipped
   slot and item names, and the
   character's current encounter DPS; and
 - a Parse dock showing one condensed current or most-recent encounter with

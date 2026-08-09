@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <ranges>
 #include <utility>
 
@@ -73,40 +74,47 @@ QString pid_text(const StatusSnapshot& snapshot) {
         .arg(*snapshot.pid);
 }
 
-void update_vital_bar(QProgressBar* bar,
-                      const QString& label,
-                      const VitalSnapshot& vital) {
-    if (!vital.maximum) {
-        bar->setRange(0, 100);
-        bar->setValue(0);
-        bar->setFormat(
-            QString("%1 %2").arg(label).arg(vital.current));
-        return;
-    }
-    if (*vital.maximum == 0) {
-        bar->setRange(0, 100);
-        bar->setValue(0);
-        bar->setFormat(QString("%1 0 / 0").arg(label));
-        return;
-    }
-    const std::int64_t maximum = *vital.maximum;
-    const double ratio =
-        static_cast<double>(vital.current) /
-        static_cast<double>(maximum) * 100.0;
-    const int percentage = static_cast<int>(std::clamp(ratio, 0.0, 100.0));
-    bar->setRange(0, 100);
-    bar->setValue(percentage);
-    bar->setFormat(QString("%1 %2 / %3 (%4%)")
-                       .arg(label)
-                       .arg(vital.current)
-                       .arg(maximum)
-                       .arg(percentage));
+void set_vital_format(QProgressBar* bar, const QString& format) {
+    constexpr int kTextPadding = 32;
+    bar->setFormat(format);
+    bar->setToolTip(format);
+    bar->setMinimumWidth(
+        bar->fontMetrics().horizontalAdvance(format) + kTextPadding);
 }
 
 void set_vital_unavailable(QProgressBar* bar, const QString& label) {
     bar->setRange(0, 100);
     bar->setValue(0);
-    bar->setFormat(QString("%1 unavailable").arg(label));
+    set_vital_format(bar, QString("%1 unavailable").arg(label));
+}
+
+void update_vital_bar(QProgressBar* bar,
+                      const QString& label,
+                      const VitalSnapshot& vital) {
+    if (!vital.maximum) {
+        set_vital_unavailable(bar, label);
+        return;
+    }
+    if (*vital.maximum == 0) {
+        bar->setRange(0, 100);
+        bar->setValue(0);
+        set_vital_format(bar, QString("%1 0 / 0 (0%)").arg(label));
+        return;
+    }
+    const std::int64_t maximum = *vital.maximum;
+    const double ratio = vital.percentage().value_or(0.0);
+    const int percentage = std::clamp(
+        static_cast<int>(std::lround(ratio)), 0, 100);
+    bar->setRange(0, static_cast<int>(maximum));
+    bar->setValue(static_cast<int>(
+        std::clamp(vital.current, std::int64_t{0}, maximum)));
+    set_vital_format(
+        bar,
+        QString("%1 %2 / %3 (%4%)")
+            .arg(label)
+            .arg(vital.current)
+            .arg(maximum)
+            .arg(percentage));
 }
 
 }  // namespace

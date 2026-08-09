@@ -321,18 +321,51 @@ int main(int argc, char** argv) {
                     window.findChild<QProgressBar*>("character-health")
                         ->text() == "HP 90 / 100 (90%)" &&
                     window.findChild<QProgressBar*>("character-health")
+                        ->maximum() == 100 &&
+                    window.findChild<QProgressBar*>("character-health")
                         ->value() == 90 &&
                     window.findChild<QProgressBar*>("character-health")
                         ->styleSheet().contains("#d32f2f") &&
                     window.findChild<QProgressBar*>("character-mana")
                         ->text() == "MP 40 / 50 (80%)" &&
                     window.findChild<QProgressBar*>("character-mana")
-                        ->value() == 80 &&
+                        ->maximum() == 50 &&
+                    window.findChild<QProgressBar*>("character-mana")
+                        ->value() == 40 &&
+                    window.findChild<QProgressBar*>("character-mana")
+                        ->toolTip() == "MP 40 / 50 (80%)" &&
+                    window.findChild<QProgressBar*>("character-mana")
+                        ->minimumWidth() >=
+                        window.findChild<QProgressBar*>("character-mana")
+                                ->fontMetrics()
+                                .horizontalAdvance("MP 40 / 50 (80%)") +
+                            32 &&
                     window.findChild<QProgressBar*>("character-mana")
                         ->styleSheet().contains("#1976d2") &&
                     window.findChild<QTableWidget*>("equipment-table")
                         ->rowCount() == 2,
                 "character dock did not render vitals and equipment");
+
+        plazmic::CharacterSnapshot fractional_mana = character;
+        fractional_mana.mana = {.current = 2, .maximum = 3};
+        window.update_character_snapshot(fractional_mana);
+        require(
+            window.findChild<QProgressBar*>("character-mana")->text() ==
+                    "MP 2 / 3 (67%)" &&
+                window.findChild<QProgressBar*>("character-mana")->maximum() ==
+                    3 &&
+                window.findChild<QProgressBar*>("character-mana")->value() ==
+                    2,
+            "mana gauge did not round its exact current/maximum percentage");
+
+        plazmic::CharacterSnapshot zero_mana = character;
+        zero_mana.mana = {.current = 0, .maximum = 0};
+        window.update_character_snapshot(zero_mana);
+        require(
+            window.findChild<QProgressBar*>("character-mana")->text() ==
+                "MP 0 / 0 (0%)",
+            "zero mana gauge did not display maximum and percentage");
+        window.update_character_snapshot(character);
         require(window.findChild<QLabel*>("character-dps")
                         ->text()
                         .contains("300.0") &&

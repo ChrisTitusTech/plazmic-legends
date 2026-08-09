@@ -15,6 +15,14 @@ Character dock and an offline combat-log Parse dock without changing the
 read-only, fail-closed, privacy, or package boundary. The owner explicitly
 authorized release without repeating the final manual live lifecycle gate on
 the merged head; that skipped P6-05 check remains a documented residual risk.
+That authorization applies only to the merged `v0.2.0` head and does not
+authorize merging or releasing a later compatibility profile.
+
+On 2026-08-08, the owner explicitly overrode the M-06 and M-07 merge blocks
+and authorized integrating both compatibility profiles into `main` with the
+unfinished manual checks retained as documented residual risk. This override
+does not authorize a release; the remaining profile-refresh gates must pass
+before publishing another version.
 
 ## Phase 6: Character and combat column
 
@@ -73,6 +81,47 @@ the merged head; that skipped P6-05 check remains a documented residual risk.
   `AC-12` remain green, and the PR is ready for review without known blockers.
 
 ## Post-release maintenance
+
+### M-07: Support the 2026-08-06 Legends client
+
+- [x] Capture the separate exact SHA-256
+  `bf34438c6460acde463692fa09ea28f0d12a204e3445a9da356645fc0d475561`
+  and PE identity without modifying either prior immutable profile.
+- [x] Add a local candidate profile and prove that exact file and live PE
+  identity select one same-user Wine process and publish two consecutive
+  complete bounded player, spawn, character, vital, and equipment snapshots.
+- [ ] Complete the exact-client semantic static-resolver audit, synthetic
+  repository gate, two controlled visible field observations, lifecycle,
+  DWM-placement, game-invariance, performance, package, and privacy checks.
+- Acceptance criteria: every approved RVA and field passes
+  `docs/offset-discovery.md`; unknown or inconsistent clients fail closed; and
+  no private research artifact enters the repository or package.
+- Release block: the owner authorized merging this candidate with the pending
+  checks recorded as residual risk, but it is not release-ready until the
+  complete `docs/profile-refresh.md` gate passes.
+
+### M-06: Support the 2026-08-04 Legends client
+
+- [x] Add a separate immutable profile for exact SHA-256
+  `d9784a58bb03cb70177d6a494fa71bca2b13ab3c5b8b9d6c26e45bae01597e51`
+  without modifying or weakening the prior profile.
+- [x] Re-establish the player, zone, spawn, character, vital, and equipment
+  fields from exact-client static evidence and bounded privacy-safe probes.
+- [x] Cover exact selection of both known profiles and rejection of unknown
+  digests, then run the complete synthetic repository gate.
+- [ ] Complete two controlled visible observations for position, facing,
+  zones, spawn fields, vitals, and equipment configurations, plus lifecycle,
+  DWM placement, and game-invariance checks.
+- Acceptance criteria: only exact file and live PE identity select the new
+  profile; every approved field satisfies `docs/offset-discovery.md`; all
+  unsupported, inconsistent, or changed-client states fail closed; and no
+  private research artifact enters the repository or packages.
+- Release block: the owner authorized merging this profile with the pending
+  checks recorded as residual risk. Do not release it until the manual checks
+  in `docs/profile-refresh.md` cover character selection,
+  entering the world, map selection, zoning, camping to character select,
+  game exit, and process reacquisition, in addition to the controlled field,
+  DWM-placement, and game-invariance checks above.
 
 ### M-05: Export and install private UI files
 

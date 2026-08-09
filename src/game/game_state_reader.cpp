@@ -319,6 +319,15 @@ GameStateReadResult read_game_state_impl(
 
 }  // namespace
 
+bool matches_client_profile_identity(
+    const ClientProfile& profile,
+    const RemotePeIdentity& identity) {
+    return identity.machine == profile.machine &&
+           identity.timestamp == profile.timestamp &&
+           identity.optional_magic == profile.optional_magic &&
+           identity.image_size == profile.image_size;
+}
+
 GameStateReadResult read_game_state(
     const ClientProcess& process,
     const GameStateSymbols& symbols,
@@ -391,32 +400,28 @@ GameStateReadResult LiveGameStateProbe::refresh() {
                     last_discovery_detail_);
             }
 
-            const ProcessMemoryReader reader(discovery.process);
-            RemotePeIdentity identity{};
-            std::string identity_error;
-            if (!read_remote_pe_identity(
-                    reader, discovery.process.image_base, identity,
-                    identity_error)) {
-                process_.reset();
-                last_discovery_detail_ =
-                    "cannot validate live client identity: " +
-                    identity_error;
-                return failure(
-                    GameStateReadError::read_failed,
-                    last_discovery_detail_);
-            }
-            if (identity.machine != profile_->machine ||
-                identity.timestamp != profile_->timestamp ||
-                identity.optional_magic != profile_->optional_magic ||
-                identity.image_base != discovery.process.image_base ||
-                identity.image_size != profile_->image_size) {
-                process_.reset();
-                last_discovery_detail_ =
-                    "live client identity does not match the exact profile";
-                return failure(
-                    GameStateReadError::invalid_profile,
-                    last_discovery_detail_);
-            }
+        }
+
+        const ProcessMemoryReader reader(discovery.process);
+        RemotePeIdentity identity{};
+        std::string identity_error;
+        if (!read_remote_pe_identity(
+                reader, discovery.process.image_base, identity,
+                identity_error)) {
+            process_.reset();
+            last_discovery_detail_ =
+                "cannot validate live client identity: " + identity_error;
+            return failure(
+                GameStateReadError::read_failed,
+                last_discovery_detail_);
+        }
+        if (!matches_client_profile_identity(*profile_, identity)) {
+            process_.reset();
+            last_discovery_detail_ =
+                "live client identity does not match the exact profile";
+            return failure(
+                GameStateReadError::invalid_profile,
+                last_discovery_detail_);
         }
         process_ = std::move(discovery.process);
         last_discovery_detail_.clear();

@@ -1,4 +1,5 @@
 #include "game/game_state_reader.h"
+#include "integration/process_reader.h"
 
 #include <array>
 #include <cmath>
@@ -10,6 +11,7 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 #include <unistd.h>
 
@@ -138,6 +140,49 @@ struct Fixture {
 
 int main() {
     try {
+        constexpr std::string_view kCurrentDigest =
+            "d9784a58bb03cb70177d6a494fa71bca2b13ab3c5b8b9d6c26e45bae01597e51";
+        const auto* current_profile =
+            plazmic::select_client_profile(kCurrentDigest);
+        require(current_profile != nullptr,
+                "current profile was unavailable to the identity test");
+        const plazmic::RemotePeIdentity exact_identity{
+            .machine = current_profile->machine,
+            .timestamp = current_profile->timestamp,
+            .optional_magic = current_profile->optional_magic,
+            .image_base = 0x140000000ULL,
+            .image_size = current_profile->image_size,
+        };
+        require(
+            plazmic::matches_client_profile_identity(
+                *current_profile, exact_identity),
+            "exact mapped PE identity did not match the current profile");
+
+        auto remapped_identity = exact_identity;
+        remapped_identity.timestamp ^= 1U;
+        require(
+            !plazmic::matches_client_profile_identity(
+                *current_profile, remapped_identity),
+            "same-PID remap with a changed PE timestamp was accepted");
+        remapped_identity = exact_identity;
+        remapped_identity.machine ^= 1U;
+        require(
+            !plazmic::matches_client_profile_identity(
+                *current_profile, remapped_identity),
+            "same-PID remap with a changed PE machine was accepted");
+        remapped_identity = exact_identity;
+        remapped_identity.optional_magic ^= 1U;
+        require(
+            !plazmic::matches_client_profile_identity(
+                *current_profile, remapped_identity),
+            "same-PID remap with a changed PE format was accepted");
+        remapped_identity = exact_identity;
+        remapped_identity.image_size ^= 1U;
+        require(
+            !plazmic::matches_client_profile_identity(
+                *current_profile, remapped_identity),
+            "same-PID remap with a changed PE image size was accepted");
+
         Fixture fixture;
         const plazmic::GameStateReadResult result =
             plazmic::read_game_state(

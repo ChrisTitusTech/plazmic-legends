@@ -47,7 +47,7 @@ ctest --preset dev --output-on-failure
 All configured C++ targets build with warnings as errors and common hardening
 flags. Tests use synthetic fixtures and do not require a live account.
 
-## Inspect and run a local client
+## Inspect, install, and run a local client
 
 Set the path without committing it:
 
@@ -65,13 +65,25 @@ The current supported profile can be verified explicitly:
 
 ```bash
 python3 tools/inspect_eqgame.py "$EQ_LEGENDS_DIR" \
-  --expect-sha256 97ee793d491930ac97f91e5e26fac16d84d17ff24afcd24d5390d256e7045661
+  --expect-sha256 bf34438c6460acde463692fa09ea28f0d12a204e3445a9da356645fc0d475561
 ```
 
-Run the development build:
+After the automated gate passes, manual, X11, and live-client testing must
+atomically replace the shell-resolved unmanaged local installation with the
+exact validated build. Preserve the prior installed binary under
+`build/local-install-backup/`, verify the staged and installed SHA-256 values,
+and restore `root:root` ownership with mode `0755`. On the reference host, the
+installed target is `/usr/local/bin/plazmic-legends`.
+
+Do not treat a direct `build/dev/plazmic-legends` launch as local manual-test
+evidence. If a companion is already running, inspect `/proc/<pid>/exe` and
+relaunch it before attributing behavior to the replacement; do not terminate it
+without explicit authorization.
+
+Run the installed development build:
 
 ```bash
-build/dev/plazmic-legends --client "$EQ_LEGENDS_DIR/eqgame.exe"
+plazmic-legends --client "$EQ_LEGENDS_DIR/eqgame.exe"
 ```
 
 The first valid command-line or `EQ_LEGENDS_DIR` selection is saved as

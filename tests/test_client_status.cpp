@@ -76,6 +76,57 @@ int main() {
         const auto& profile = plazmic::legends_reference_profile();
         require(plazmic::select_client_profile(profile.sha256) == &profile,
                 "reference profile did not select by exact digest");
+        constexpr std::string_view kAugustFourthDigest =
+            "d9784a58bb03cb70177d6a494fa71bca2b13ab3c5b8b9d6c26e45bae01597e51";
+        const auto* august_fourth =
+            plazmic::select_client_profile(kAugustFourthDigest);
+        require(
+            august_fourth != nullptr && august_fourth != &profile &&
+                august_fourth->id == "legends-2026-08-04" &&
+                august_fourth->sha256 == kAugustFourthDigest &&
+                august_fourth->machine == 0x8664U &&
+                august_fourth->timestamp == 0x6a725275U &&
+                august_fourth->optional_magic == 0x20bU &&
+                august_fourth->image_size == 0x16bf000U &&
+                august_fourth->game_state.local_player_pointer_rva ==
+                    0x00f04ff8U &&
+                august_fourth->game_state.world_data_pointer_rva ==
+                    0x00f04fe8U &&
+                august_fourth->game_state.player_zone_id_offset == 0x5b0U &&
+                august_fourth->spawns.level_offset == 0x64cU &&
+                august_fourth->spawns.record_bytes == 0x64dU &&
+                august_fourth->character.local_character_pointer_rva ==
+                    0x00f05140U &&
+                august_fourth->character.player_maximum_mana_offset ==
+                    0x2e8U &&
+                august_fourth->character.item_name_pointer_offset == 0x60U,
+            "August 4 profile did not preserve its exact identity and offsets");
+        constexpr std::string_view kAugustSixthDigest =
+            "bf34438c6460acde463692fa09ea28f0d12a204e3445a9da356645fc0d475561";
+        const auto* august_sixth =
+            plazmic::select_client_profile(kAugustSixthDigest);
+        require(
+            august_sixth != nullptr && august_sixth != &profile &&
+                august_sixth != august_fourth &&
+                august_sixth->id == "legends-2026-08-06" &&
+                august_sixth->sha256 == kAugustSixthDigest &&
+                august_sixth->machine == 0x8664U &&
+                august_sixth->timestamp == 0x6a74f50aU &&
+                august_sixth->optional_magic == 0x20bU &&
+                august_sixth->image_size == 0x16c0000U &&
+                august_sixth->game_state.local_player_pointer_rva ==
+                    0x00f05ff8U &&
+                august_sixth->game_state.world_data_pointer_rva ==
+                    0x00f05fe8U &&
+                august_sixth->game_state.player_zone_id_offset == 0x5b0U &&
+                august_sixth->spawns.level_offset == 0x64cU &&
+                august_sixth->spawns.record_bytes == 0x64dU &&
+                august_sixth->character.local_character_pointer_rva ==
+                    0x00f06140U &&
+                august_sixth->character.player_maximum_mana_offset ==
+                    0x2e8U &&
+                august_sixth->character.item_name_pointer_offset == 0x60U,
+            "August 6 profile did not preserve its exact identity and offsets");
         require(plazmic::select_client_profile("changed") == nullptr,
                 "unknown digest unexpectedly selected");
 

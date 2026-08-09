@@ -289,6 +289,31 @@ its allowlist, confirmation, backup, and rollback contract.
 - A supported profile is immutable. A client patch creates a new profile and
   runs the compatibility gate.
 
+### Local development installation and testing
+
+- Automated build and synthetic test commands may run artifacts directly from
+  `build/`; they do not modify the installed application.
+- Any manual, X11, or live-client test intended to validate a newly built
+  version must first overwrite the shell-resolved unmanaged local installation
+  with that exact validated artifact. On the reference host, the target is
+  `/usr/local/bin/plazmic-legends`. Running only `build/dev/plazmic-legends`
+  does not satisfy local manual-test evidence.
+- Before replacement, resolve the command with `command -v`, inspect package
+  ownership, and preserve the current installed executable under
+  `build/local-install-backup/`, identified by its SHA-256. If the resolved
+  target differs or is package-owned, stop instead of overwriting it without
+  explicit approval.
+- Stage the new executable beside the installed target, verify that its SHA-256
+  matches the validated build, and atomically replace the installed file.
+  Restore and verify `root:root` ownership and mode `0755`, then confirm the
+  installed version and SHA-256 match the build.
+- Inspect any running Plazmic process separately from the installed pathname.
+  A process retaining the prior inode must be closed and relaunched before its
+  behavior counts as evidence for the new build; do not terminate a running
+  process unless that disruption was explicitly authorized.
+- Finish with a non-disruptive smoke test through the installed command and
+  verify that no unintended process or staging file remains.
+
 ### Private UI file installation
 
 - `tools/export_private_ui_bundle.sh` copies the locally installed
@@ -398,6 +423,11 @@ its allowlist, confirmation, backup, and rollback contract.
   replaces `eqclient.ini`, installs a dedicated `/copylayout` source for live
   activation, preserves a private rollback, and never expands into
   gameplay-state modification.
+- AC-17: Local manual or live-client evidence for a changed build uses the
+  atomically replaced shell-resolved local installation, whose hash matches the
+  validated build and whose prior binary has a verified rollback copy. A
+  build-tree-only launch or process retaining the old inode is not accepted as
+  evidence for the newly built version.
 
 ## Resolved Phase 1 decisions
 

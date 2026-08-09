@@ -167,14 +167,15 @@ cmake --build --preset dev
 cmake --build --preset check
 ctest --preset dev
 python3 tools/inspect_eqgame.py "$EQ_LEGENDS_DIR" \
-  --expect-sha256 97ee793d491930ac97f91e5e26fac16d84d17ff24afcd24d5390d256e7045661
+  --expect-sha256 bf34438c6460acde463692fa09ea28f0d12a204e3445a9da356645fc0d475561
 git diff --check
 ```
 
-Run the standalone product:
+Run the installed standalone product after following the local replacement
+requirements in `SPEC.md`:
 
 ```bash
-build/dev/plazmic-legends \
+plazmic-legends \
   --client "$EQ_LEGENDS_DIR/eqgame.exe"
 ```
 
@@ -187,6 +188,13 @@ build/dev/plazmic-legends \
   an inventory comparison against the recoverable baseline.
 - Live-client validation must use the approved fingerprint and record Linux,
   Wine, display-server, renderer, and lifecycle evidence.
+- Before manual, X11, or live-client testing of a changed build, atomically
+  replace the shell-resolved unmanaged local installation with the exact
+  validated build, preserve a hash-addressed rollback, and verify the installed
+  owner, mode, version, and hash. A build-tree-only launch does not count.
+- Inspect `/proc/<pid>/exe` for any running companion and require a relaunch
+  before attributing its behavior to the replacement; do not disrupt it without
+  explicit authorization.
 - A successful process attachment is not sufficient evidence. Validate the
   independent window, snapshot rendering, zoning, return to character select,
   game exit, and unsupported build handling when the phase requires them.

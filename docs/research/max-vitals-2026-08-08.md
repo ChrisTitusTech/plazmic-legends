@@ -20,9 +20,12 @@ finding. The initially selected `0x2e8` value was bounded and stable but did not
 match the visible game gauge; its apparent static references were stack and
 string-capacity displacements rather than local-player field accesses. A
 second bounded candidate at `0x2d8` was rejected in the open companion because
-it represented a different resource. Exact label-family data flow and the
-remaining bounded candidate established the signed 64-bit cache at `0x290`,
-which matched the visible current-client MAXMP and percentage. No private value
+it represented a different resource. A third candidate at `0x290` matched the
+game only while mana was full; depleted-mana sampling proved it tracks current
+MP. A subsequent level-up changed the visible maximum and isolated the new
+value at local-player `0x678`. Repeated bounded reads while current MP changed
+confirmed that `0x290` followed current and the signed 64-bit `0x678` value
+remained the independent maximum and never fell below current. No private value
 or capture was retained.
 
 The production reader now requires both values, bounds each to 0 through

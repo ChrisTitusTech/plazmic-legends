@@ -91,10 +91,10 @@ before publishing another version.
 - [x] Drive each fill from the exact current/maximum ratio, round the displayed
   percentage to the nearest whole number, show `0 / 0 (0%)` explicitly, and
   reserve enough gauge width for the complete MAXHP/MAXMP text.
-- [x] Correct the active August 6 MAXMP cache from rejected `0x2e8` and
-  `0x2d8` candidates to the exact-client `0x290` field after comparing the
-  open companion with the visible game gauge through the bounded read-only
-  path.
+- [x] Correct the active August 6 MAXMP cache after rejecting `0x2e8` and
+  `0x2d8` as unrelated resources and proving that `0x290` tracks current MP.
+  A level-up plus depleted-mana observation established `0x678` as the dynamic
+  maximum through the bounded read-only path.
 - [x] Keep all seven ordinary-NPC consider colors visible on map markers and
   labels and in the spawn table, while preserving named, player, and Other
   presentation.

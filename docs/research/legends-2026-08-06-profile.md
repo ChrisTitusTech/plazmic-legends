@@ -51,10 +51,13 @@ A same-day open-application check rejected the initially carried maximum-mana
 offset `0x2e8`: it produced a stable but semantically impossible gauge value.
 That displacement belonged to a stack/string-capacity path, not a validated
 local-player vital. A second bounded candidate at `0x2d8` was also rejected by
-the open UI because it represented a different resource. Exact label-family
-data flow, the remaining bounded candidate, and a private visible comparison
-against the game mana gauge established the signed 64-bit local-player cache
-at `0x290`. The private captures and raw values were deleted and were not
+the open UI because it represented a different resource. A third candidate at
+`0x290` matched only while mana was full; a depleted-mana sample proved that it
+tracks current MP. After a level-up changed the visible game maximum, a bounded
+search found the new value only at local-player `0x678`. Repeated reads while
+current mana changed confirmed that `0x290` followed current MP while the
+signed 64-bit value at `0x678` remained the independent maximum and never fell
+below current. The private captures and raw values were deleted and were not
 retained in the repository.
 
 No application or probe wrote target memory, injected code, changed the Wine

@@ -41,6 +41,7 @@ re-established against this build instead of adjusting the older profile.
 | Zone table | The world table and entry layout remain `0x30`, `0x0c`, and `0x10`, with a 64-byte short-name bound, `0x7fff` mask, and maximum ID 1000. |
 | Spawn list | Reciprocal links, bounded name, type, stable ID, and position retain their meanings. The exact byte-sized level field moved to `0x64c`, so the smallest approved record span is `0x64d`; traversal remains capped at 2,048. |
 | Character root | Character-window and stats paths resolve image RVA `0x00f05140`; the active-zone field remains `0x2810`. Stats lookup, current HP, current mana, adjustment, and profile-manager topology retain their proven widths and bounds. |
+| Maximum HP | The signed 64-bit local-player maximum-health cache is required at offset `0x2b0`; it is bounded and revalidated with current HP before publication. |
 | Maximum mana | Exact-client mana paths and a bounded aligned candidate-family check establish local-player offset `0x2e8`; the prior offset fails the complete vital bounds. |
 | Equipment name | The validated equipment container and fixed slot traversal remain bounded. Exact-client item-name paths distinguish the display-name pointer at `0x60` from another printable item text field; the prior offset fails closed. |
 

@@ -299,7 +299,7 @@ their owning object and prove every pointer hop, index, width, and bound.
 | --- | --- |
 | Character identity | Bounded character-name use tied to the validated local player; the value selects exactly one local combat log and is never logged or persisted |
 | Current HP | Signed or unsigned operand width and health-bar data flow; the value is nonnegative and independently confirmed at two visible values |
-| Maximum HP | A separately owned raw or stable cached value with proven width and bar/percentage data flow; omit the value and HP percentage if only a dynamic calculation is found |
+| Maximum HP | A separately owned raw or stable cached value with proven width and bar/percentage data flow; the character snapshot is unavailable if this required value cannot be established |
 | Current and maximum mana | Independent mana-bar or spell-resource data flow with the same range and lifecycle validation |
 | Equipment container | Pointer or inline array reached from an equipment UI or gameplay accessor, with an explicit fixed slot count and readable-mapping checks |
 | Equipped item | Null for empty or a validated readable object for occupied; no whole-object dump or unbounded graph traversal |
@@ -318,11 +318,10 @@ the exact upstream revision consulted, then prove the Legends instruction and
 live behavior independently. Never copy an upstream offset, structure, byte
 pattern, generated table, or implementation into the profile.
 
-For the `legends-2026-07-29` profile, current HP passed this workflow, but the
-client path for maximum HP terminates in a dynamic calculation rather than a
-separately proven raw or stable cached field. The profile therefore publishes
-current HP only. This is a deliberate fail-closed omission, not permission to
-infer a maximum from UI percentages or historical structures.
+Every supported character profile requires a separately validated maximum-HP
+cache. Never infer it from a displayed percentage, current HP, a historical
+structure, or another client's profile. If the cache cannot be re-established
+for an exact digest, keep character snapshots unavailable for that digest.
 
 ## Step 8: Perform bounded live confirmation
 
@@ -403,9 +402,9 @@ The live gate then requires:
   temporary artifacts.
 
 Only after every automated and live criterion passes may the new profile enter
-a release. If any required field cannot be re-established, omit that field or
-keep the updated client unsupported. Never weaken matching or carry an old
-offset forward to restore apparent compatibility.
+a release. If any required field cannot be re-established, keep the updated
+client unsupported. Never weaken matching or carry an old offset forward to
+restore apparent compatibility.
 
 ## How the current profile was established
 

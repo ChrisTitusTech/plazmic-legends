@@ -29,8 +29,7 @@ before publishing another version.
 ### P6-01: Establish the character-field evidence boundary
 
 - [x] Expand the normative offset workflow for character identity, current HP,
-  current and maximum mana, equipped slots, and equipped item names; record
-  maximum HP as omitted until independently proven.
+  maximum HP, current and maximum MP, equipped slots, and equipped item names.
 - [x] Record exact-profile static resolvers, explicit bounds, two controlled
   observations per displayed field, and rejection rules in a privacy-safe
   Phase 6 checkpoint.
@@ -81,6 +80,29 @@ before publishing another version.
   `AC-12` remain green, and the PR is ready for review without known blockers.
 
 ## Post-release maintenance
+
+### M-08: Complete HP/MP gauges and restore consider-color visibility
+
+- [x] Add a bounded exact-profile maximum-HP field, revalidate it with the
+  current HP owner, and reject zero, out-of-range, torn, or current-above-max
+  snapshots.
+- [x] Render HP as `current / max (percent)` with a red percentage-driven bar
+  and MP as `current / max (percent)` with a blue percentage-driven bar.
+- [x] Keep all seven ordinary-NPC consider colors visible on map markers and
+  labels and in the spawn table, while preserving named, player, and Other
+  presentation.
+- [x] Run the complete repository gate, exact active-client fingerprint and
+  read-only smoke, and overwrite the local installed binary with rollback and
+  matching artifact/install hashes.
+- Acceptance criteria: `AC-13` requires both maxima and percentages; both bars
+  reduce with their percentage; every consider band remains distinguishable;
+  invalid vitals fail closed; and the installed binary is the validated build.
+- Validation: fresh warnings-as-errors build, repository checks, 8 Python
+  tests, all 17 CTest cases, exact active-client fingerprint, bounded live
+  maximum-HP/MP read, and installed X11 launch passed. Build and
+  `/usr/local/bin/plazmic-legends` both matched SHA-256
+  `c7f85eece8bad03b7a10b666775e20bc822953ea906aa373a1c2ee98b395879e`;
+  the prior installed binary is retained in the ignored rollback directory.
 
 ### M-07: Support the 2026-08-06 Legends client
 
@@ -181,13 +203,14 @@ before publishing another version.
   without adding a client offset or exposing process addresses to the UI.
 - [x] Derive the modern gray, green, light-blue, blue, white, yellow, and red
   consider bands from immutable local-player and NPC levels.
-- [x] Apply consider colors to ordinary NPC dots while preserving named-NPC,
-  player-character, Ground / Other, selection, label, and filter behavior.
+- [x] Apply consider colors to ordinary NPC dots, labels, and spawn-table rows
+  while preserving named-NPC, player-character, Ground / Other, selection,
+  label, and filter behavior.
 - [x] Cover every color and level-band boundary with synthetic tests and run
   the complete repository gate.
-- Acceptance criteria: every ordinary NPC dot has the correct consider color
-  for the published local-player level; named NPCs retain their distinct
-  diamond treatment; and no compatibility-profile address or field changes.
+- Acceptance criteria: every ordinary NPC marker, visible label, and table row
+  has the correct consider color for the published local-player level; named
+  NPCs retain their distinct diamond treatment.
 
 ### M-04: Add top-level view and window controls
 

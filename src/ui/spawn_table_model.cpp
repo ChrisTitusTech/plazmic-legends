@@ -1,5 +1,6 @@
 #include "ui/spawn_table_model.h"
 
+#include "ui/map_canvas.h"
 #include "ui/spawn_presentation.h"
 
 #include <algorithm>
@@ -44,6 +45,14 @@ QVariant SpawnTableModel::data(const QModelIndex& index, int role) const {
             case column_count:
                 break;
         }
+    }
+    if (role == Qt::ForegroundRole &&
+        spawn_presentation_category(*spawn) ==
+            SpawnPresentationCategory::npc) {
+        return spawn_marker_color(
+            SpawnPresentationCategory::npc,
+            snapshot_.player_level,
+            spawn->level);
     }
     if (role != Qt::DisplayRole) {
         return {};
@@ -108,7 +117,7 @@ void SpawnTableModel::set_snapshot(SpawnCollectionSnapshot snapshot) {
         emit dataChanged(
             index(0, 0),
             index(rowCount() - 1, column_count - 1),
-            {Qt::DisplayRole, kSpawnSortRole});
+            {Qt::DisplayRole, Qt::ForegroundRole, kSpawnSortRole});
     }
 }
 

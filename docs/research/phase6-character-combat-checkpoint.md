@@ -39,7 +39,7 @@ The exact profile centralizes these bounded values:
 | --- | --- |
 | Character identity | The validated local-player record supplies a printable, terminated name bounded to 64 bytes. It is used only in the UI and to select one matching log. |
 | Current HP | A signed 64-bit current-health field plus the signed 32-bit active-zone adjustment used by the exact client's gauge path. The checked result is limited to 0 through 100,000,000. |
-| Maximum HP | Omitted. The exact client's gauge path reaches a dynamic calculation; no separate raw or stable cached value passed the evidence gate. |
+| Maximum HP | A later exact-profile maintenance pass established the stable signed 64-bit local-player maximum-health cache used by the gauge path. It is bounded to 0 through 100,000,000 and revalidated before publication. |
 | Current mana | A signed 32-bit stats value used by the exact client's mana path, bounded to the validated maximum. |
 | Maximum mana | A signed 64-bit local-player value independently used by the mana presentation path; it must be nonnegative and no greater than 100,000,000. Zero is accepted only with zero current mana. |
 | Equipment | The current profile manager selects one bounded inventory container. Its count must be 23 through 36 and only the first 23 known equipment slots are read. |
@@ -54,8 +54,9 @@ character snapshot instead of retaining partial or stale values.
 Two separate live application runs against the exact client confirmed current
 HP, current and maximum mana, the 23 slot labels, empty-slot handling, and all
 displayed occupied item text against the game UI. The observations were made
-visually and were not recorded with their private values. Maximum HP remained
-absent in both runs as required.
+visually and were not recorded with their private values. The later maximum-HP
+maintenance checkpoint is recorded in
+`docs/research/max-vitals-2026-08-08.md`.
 
 ## Combat-log parser boundary
 

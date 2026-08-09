@@ -288,9 +288,12 @@ CharacterReadResult read_character_snapshot(
         reader, character_zone, symbols.health_adjustment_offset, detail);
     const auto mana = read_value_at<std::int32_t>(
         reader, *stats, symbols.stats_current_mana_offset, detail);
+    const auto maximum_health = read_value_at<std::int64_t>(
+        reader, local_player, symbols.player_maximum_health_offset, detail);
     const auto maximum_mana = read_value_at<std::int64_t>(
         reader, local_player, symbols.player_maximum_mana_offset, detail);
-    if (!health_base || !health_adjustment || !mana || !maximum_mana) {
+    if (!health_base || !health_adjustment || !mana || !maximum_health ||
+        !maximum_mana) {
         return failure(CharacterReadError::read_failed, std::move(detail));
     }
     if ((*health_adjustment > 0 &&
@@ -305,7 +308,10 @@ CharacterReadResult read_character_snapshot(
     }
     const std::int64_t health = *health_base + *health_adjustment;
     constexpr std::int64_t kMaximumVital = 100'000'000;
-    if (health < 0 || health > kMaximumVital || *mana < 0 ||
+    if (health < 0 || health > kMaximumVital || *maximum_health < 0 ||
+        *maximum_health > kMaximumVital ||
+        (*maximum_health == 0 && health != 0) ||
+        (*maximum_health > 0 && health > *maximum_health) || *mana < 0 ||
         *mana > kMaximumVital || *maximum_mana < 0 ||
         *maximum_mana > kMaximumVital ||
         (*maximum_mana == 0 && *mana != 0) ||
@@ -431,6 +437,8 @@ CharacterReadResult read_character_snapshot(
         ? read_value_at<std::int32_t>(
               reader, *final_stats, symbols.stats_current_mana_offset, detail)
         : std::nullopt;
+    const auto final_maximum_health = read_value_at<std::int64_t>(
+        reader, local_player, symbols.player_maximum_health_offset, detail);
     const auto final_maximum_mana = read_value_at<std::int64_t>(
         reader, local_player, symbols.player_maximum_mana_offset, detail);
     const auto final_current_type = read_value_at<std::int32_t>(
@@ -448,14 +456,17 @@ CharacterReadResult read_character_snapshot(
         reader, inventory, symbols.inventory_data_offset, detail);
     if (!final_character || !final_name || !final_type_descriptor ||
         !final_displacement || !final_stats || !final_health_base ||
-        !final_health_adjustment || !final_mana || !final_maximum_mana ||
-        !final_current_type || !final_profile || !final_inventory_size ||
-        !final_inventory_data || *final_character != *character_root ||
+        !final_health_adjustment || !final_mana || !final_maximum_health ||
+        !final_maximum_mana || !final_current_type || !final_profile ||
+        !final_inventory_size || !final_inventory_data ||
+        *final_character != *character_root ||
         *final_name != *name || *final_type_descriptor != *type_descriptor ||
         *final_displacement != *displacement || *final_stats != *stats ||
         *final_health_base != *health_base ||
         *final_health_adjustment != *health_adjustment ||
-        *final_mana != *mana || *final_maximum_mana != *maximum_mana ||
+        *final_mana != *mana ||
+        *final_maximum_health != *maximum_health ||
+        *final_maximum_mana != *maximum_mana ||
         *final_current_type != *current_type || *final_profile != *profile ||
         *final_inventory_size != *inventory_size ||
         *final_inventory_data != *inventory_data) {
@@ -504,7 +515,7 @@ CharacterReadResult read_character_snapshot(
         .snapshot = CharacterSnapshot{
             .state = PlayerSnapshotState::in_world,
             .name = *name,
-            .health = {.current = health, .maximum = std::nullopt},
+            .health = {.current = health, .maximum = *maximum_health},
             .mana = {.current = *mana, .maximum = *maximum_mana},
             .equipment = std::move(equipment),
             .detail = "Live read-only character snapshot",

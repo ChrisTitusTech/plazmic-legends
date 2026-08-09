@@ -277,7 +277,7 @@ int main(int argc, char** argv) {
         const plazmic::CharacterSnapshot character{
             .state = plazmic::PlayerSnapshotState::in_world,
             .name = "synthetic_character",
-            .health = {.current = 90, .maximum = std::nullopt},
+            .health = {.current = 90, .maximum = 100},
             .mana = {.current = 40, .maximum = 50},
             .equipment =
                 {
@@ -319,10 +319,17 @@ int main(int argc, char** argv) {
         require(window.findChild<QLabel*>("character-name")->text() ==
                     "synthetic_character" &&
                     window.findChild<QProgressBar*>("character-health")
-                        ->text() == "HP 90" &&
+                        ->text() == "HP 90 / 100 (90%)" &&
+                    window.findChild<QProgressBar*>("character-health")
+                        ->value() == 90 &&
+                    window.findChild<QProgressBar*>("character-health")
+                        ->styleSheet().contains("#d32f2f") &&
                     window.findChild<QProgressBar*>("character-mana")
-                        ->text()
-                        .contains("40 / 50") &&
+                        ->text() == "MP 40 / 50 (80%)" &&
+                    window.findChild<QProgressBar*>("character-mana")
+                        ->value() == 80 &&
+                    window.findChild<QProgressBar*>("character-mana")
+                        ->styleSheet().contains("#1976d2") &&
                     window.findChild<QTableWidget*>("equipment-table")
                         ->rowCount() == 2,
                 "character dock did not render vitals and equipment");
@@ -348,7 +355,7 @@ int main(int argc, char** argv) {
         require(window.findChild<QProgressBar*>("character-health")->text() ==
                     "HP unavailable" &&
                     window.findChild<QProgressBar*>("character-mana")->text() ==
-                        "Mana unavailable",
+                        "MP unavailable",
                 "unavailable character vitals were rendered as zero");
 
         plazmic::CombatEncounterSnapshot large_combat{
@@ -617,6 +624,23 @@ int main(int argc, char** argv) {
         npc_marker_action->setChecked(true);
         require(spawn_table->model()->rowCount() == 4,
                 "spawn table did not publish all rows");
+        QModelIndex ordinary_npc;
+        for (int row = 0; row < spawn_table->model()->rowCount(); ++row) {
+            const QModelIndex candidate =
+                spawn_table->model()->index(row, 0);
+            if (candidate.data(plazmic::kSpawnIdRole).toUInt() == 11U) {
+                ordinary_npc = candidate;
+                break;
+            }
+        }
+        require(
+            ordinary_npc.isValid() &&
+                ordinary_npc.data(Qt::ForegroundRole).value<QColor>() ==
+                plazmic::spawn_marker_color(
+                    plazmic::SpawnPresentationCategory::npc,
+                    spawns.player_level,
+                    spawns.spawns[1].level),
+            "spawn table did not retain ordinary NPC consider color");
         require(spawn_type->itemText(spawn_type->findData(2)) == "Other",
                 "non-player, non-NPC type filter was not labeled Other");
         QString named_type;

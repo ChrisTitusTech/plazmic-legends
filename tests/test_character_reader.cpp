@@ -75,6 +75,10 @@ struct Fixture {
             kCharacterName.data(), kCharacterName.size());
         store(
             memory,
+            0x5000 + symbols.player_maximum_health_offset,
+            std::int64_t{1000});
+        store(
+            memory,
             0x5000 + symbols.player_maximum_mana_offset,
             std::int64_t{500});
 
@@ -165,8 +169,8 @@ int main() {
         require(result.snapshot->name == "synthetic_character",
                 "character name was not decoded");
         require(result.snapshot->health.current == 905 &&
-                    !result.snapshot->health.maximum,
-                "bounded current health was not decoded");
+                    result.snapshot->health.maximum == 1000,
+                "health current/maximum were not decoded");
         require(result.snapshot->mana.current == 400 &&
                     result.snapshot->mana.maximum == 500,
                 "mana current/maximum were not decoded");
@@ -238,6 +242,20 @@ int main() {
         require(invalid_mana_result.error ==
                     plazmic::CharacterReadError::invalid_value,
                 "mana above maximum did not fail closed");
+
+        Fixture invalid_health;
+        store(
+            invalid_health.memory,
+            0x5000 + invalid_health.symbols.player_maximum_health_offset,
+            std::int64_t{904});
+        const auto invalid_health_result =
+            plazmic::read_character_snapshot(
+                invalid_health.process,
+                invalid_health.local_player,
+                invalid_health.symbols);
+        require(invalid_health_result.error ==
+                    plazmic::CharacterReadError::invalid_value,
+                "health above maximum did not fail closed");
 
         Fixture invalid_inventory;
         store(

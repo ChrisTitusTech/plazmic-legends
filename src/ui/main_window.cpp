@@ -154,10 +154,16 @@ void MainWindow::build_ui() {
     health_bar_ = new QProgressBar;
     health_bar_->setObjectName("character-health");
     health_bar_->setTextVisible(true);
+    health_bar_->setStyleSheet(
+        "QProgressBar { text-align: center; } "
+        "QProgressBar::chunk { background-color: #d32f2f; }");
     character_layout->addWidget(health_bar_);
     mana_bar_ = new QProgressBar;
     mana_bar_->setObjectName("character-mana");
     mana_bar_->setTextVisible(true);
+    mana_bar_->setStyleSheet(
+        "QProgressBar { text-align: center; } "
+        "QProgressBar::chunk { background-color: #1976d2; }");
     character_layout->addWidget(mana_bar_);
     current_dps_ = new QLabel("Current DPS: 0.0");
     current_dps_->setObjectName("character-dps");
@@ -561,12 +567,12 @@ void MainWindow::update_character_snapshot(
         character_name_->setText(
             QString::fromStdString(snapshot.detail));
         set_vital_unavailable(health_bar_, "HP");
-        set_vital_unavailable(mana_bar_, "Mana");
+        set_vital_unavailable(mana_bar_, "MP");
         return;
     }
     character_name_->setText(QString::fromStdString(snapshot.name));
     update_vital_bar(health_bar_, "HP", snapshot.health);
-    update_vital_bar(mana_bar_, "Mana", snapshot.mana);
+    update_vital_bar(mana_bar_, "MP", snapshot.mana);
     equipment_table_->setRowCount(
         static_cast<int>(snapshot.equipment.size()));
     for (std::size_t row = 0U; row < snapshot.equipment.size(); ++row) {

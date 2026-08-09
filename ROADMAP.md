@@ -405,9 +405,9 @@ damage parser.
 ### Included work
 
 - Independently resolve and validate exact-profile character identity, current
-  HP, current and maximum mana, equipped slot pointers or IDs, and bounded
-  equipped item names. Display maximum HP and its percentage only if a
-  separate source satisfies the same evidence gate.
+  and maximum HP, current and maximum MP, equipped slot pointers or IDs, and
+  bounded equipped item names. Both maxima and percentages are required and
+  must satisfy the same exact-profile evidence gate.
 - Publish immutable character snapshots and invalidate them with the existing
   player lifecycle.
 - Implement a bounded incremental parser for the active character's local

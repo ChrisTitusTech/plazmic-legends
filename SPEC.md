@@ -110,9 +110,9 @@ cannot be isolated and validated safely is omitted rather than guessed.
 The post-release character/combat feature adds two vertically stacked docks in
 the default left column:
 
-- a Character dock showing the active character name, current HP, maximum HP
-  and an HP percentage only when separately proven, current and maximum mana,
-  the mana percentage, text-only equipped slot and item names, and the
+- a Character dock showing the active character name, current and maximum HP,
+  HP percentage, current and maximum MP, MP percentage, text-only equipped
+  slot and item names, and the
   character's current encounter DPS; and
 - a Parse dock showing one condensed current or most-recent encounter with
   participant, total damage, average DPS, percentage, and active duration.
@@ -405,9 +405,9 @@ its allowlist, confirmation, backup, and rollback contract.
   private Wine data, unused inherited services, or unsupported plugins.
 - AC-12: Every retained source directory and dependency maps to a requirement
   in this specification.
-- AC-13: Exact-profile character snapshots publish validated current HP,
-  current and maximum mana, and text-only equipment. Maximum HP and its
-  percentage remain absent until independently proven. Every invalid,
+- AC-13: Exact-profile character snapshots publish validated current and
+  maximum HP, current and maximum MP, both percentages, and text-only
+  equipment. Every invalid,
   inconsistent, zoning, camping, character-select, process-exit, and
   unsupported-client path clears stale character data.
 - AC-14: The bounded local combat-log parser produces deterministic encounter

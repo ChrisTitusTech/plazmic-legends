@@ -42,8 +42,10 @@ discovery, mapped-PE identity check, readable-mapping checks, bounded
 field validation, and staged snapshot revalidation. Two consecutive refreshes
 published complete player, spawn, and character snapshots. Each refresh
 contained a bounded 221-entry spawn collection and all 23 equipment slots;
-the aggregate type and occupancy counts were stable, and current health,
-current mana, and maximum mana passed their range checks.
+the aggregate type and occupancy counts were stable, and current and maximum
+health plus current and maximum mana passed their range checks. The maximum-HP
+cache and UI gauge validation are detailed in
+`docs/research/max-vitals-2026-08-08.md`.
 
 No application or probe wrote target memory, injected code, changed the Wine
 prefix, weakened host security, synthesized input, or printed a runtime name,

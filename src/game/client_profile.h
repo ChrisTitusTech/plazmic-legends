@@ -53,6 +53,7 @@ struct CharacterSymbols {
     std::size_t stats_current_mana_offset;
     std::size_t stats_current_health_offset;
     std::size_t health_adjustment_offset;
+    std::size_t player_maximum_health_offset;
     std::size_t player_maximum_mana_offset;
     std::size_t character_base_bias;
     std::size_t profile_manager_offset;

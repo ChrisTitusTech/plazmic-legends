@@ -615,7 +615,10 @@ void MapCanvas::paintEvent(QPaintEvent* event) {
                 painter.setPen(Qt::NoPen);
                 painter.setBrush(background);
                 painter.drawRoundedRect(label_rect, 2.0, 2.0);
-                painter.setPen(palette().color(QPalette::Text));
+                painter.setPen(
+                    category == SpawnPresentationCategory::npc
+                        ? color
+                        : palette().color(QPalette::Text));
                 painter.setBrush(Qt::NoBrush);
                 painter.drawText(
                     label_rect.adjusted(4.0, 2.0, -4.0, -2.0),

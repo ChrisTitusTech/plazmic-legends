@@ -31,6 +31,9 @@ The list below describes the current `main` branch; features added after
   most-recent encounter Parse dock when EverQuest combat logging is enabled.
 - Adds current-`main` combat damage/healing drill-down, one-second timelines,
   zone summaries, and capped owner-only per-character encounter history.
+- Adds current-`main` bounded XP/AA pace, loot and equipment-change activity,
+  observed ability evidence, and explicit inventory-output reconciliation in a
+  separate Activity dock.
 - Handles zoning, camping, character select, process exit, and client changes
   without leaving stale data visible.
 - Follows the active system light or dark theme.
@@ -126,6 +129,15 @@ the package.
   `User > Retain Combat History` is off by default; when enabled, it keeps at
   most 50 encounters for 90 days in an owner-only per-character local state
   file. That history includes combatant and target names for the History view.
+- The Activity dock recognizes exact local XP-percentage, AA-point, and loot
+  lines, records equipment changes from consecutive immutable snapshots, and
+  labels observed abilities without guessing a class or proc identity.
+  `User > Retain Activity History` is independently off by default. The User
+  menu can export or delete the selected character's bounded activity history.
+- Choose `User > Import Inventory Output...` to inspect an explicitly selected
+  local EverQuest `/outputfile inventory` text file and compare its item names
+  with the current text-only equipment snapshot. The import is capped at 2 MiB
+  and 4,096 rows and is never uploaded.
 - With live character data available, choose
   `User > Export Inventory...`, then use `Import Profile Backup` at the
   [EQ Legends Tools character sheet](https://eqlegendstools.com/char-sheet/).

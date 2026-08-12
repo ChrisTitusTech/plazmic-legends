@@ -1,5 +1,6 @@
 #pragma once
 
+#include "activity/activity_tracker.h"
 #include "game/combat_history_store.h"
 #include "model/combat_snapshot.h"
 
@@ -7,10 +8,12 @@
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 namespace plazmic {
@@ -30,6 +33,8 @@ struct DamageEvent {
     DamageKind kind{DamageKind::melee};
     std::string ability;
 };
+
+[[nodiscard]] bool is_activity_ability(const DamageEvent& event);
 
 struct HealingEvent {
     std::chrono::system_clock::time_point timestamp;
@@ -119,6 +124,7 @@ enum class CombatLogError {
 
 struct CombatLogRefresh {
     CombatAnalyticsSnapshot snapshot;
+    ActivityAnalyticsSnapshot activity;
     CombatLogError error{CombatLogError::none};
 };
 
@@ -129,6 +135,8 @@ class CombatLogTailer {
     static constexpr std::size_t maximum_lines_per_refresh = 4096U;
     static constexpr std::size_t maximum_log_entries = 4096U;
     static constexpr std::size_t boundary_bytes = 64U;
+    static constexpr std::size_t replay_prefix_bytes = 256U * 1024U;
+    static constexpr std::size_t maximum_replay_paths = 8U;
     static constexpr auto history_retry_delay = std::chrono::seconds(1);
 
     struct FileIdentity {
@@ -138,16 +146,47 @@ class CombatLogTailer {
         bool operator==(const FileIdentity&) const = default;
     };
 
+    struct ReplayContinuity {
+        FileIdentity identity;
+        std::shared_ptr<int> descriptor;
+        std::uintmax_t offset{};
+        std::string partial_line;
+        bool dropping_line{false};
+        bool oversized_line_seen{false};
+        std::string prefix;
+        std::string boundary;
+    };
+
     explicit CombatLogTailer(
         bool start_at_end = true,
         std::filesystem::path state_root =
             CombatHistoryStore::default_state_root(),
         bool history_enabled = false)
         : start_at_end_(start_at_end),
+          activity_tracker_(state_root),
           history_store_(std::move(state_root)),
           history_enabled_(history_enabled) {}
 
     void set_history_enabled(bool enabled);
+    void set_activity_history_enabled(bool enabled) {
+        activity_tracker_.set_retention_enabled(enabled);
+    }
+    void begin_deferred_persistence();
+    void commit_deferred_persistence(bool retain_history,
+                                     bool retain_activity);
+    [[nodiscard]] bool delete_activity_history(std::string_view key) {
+        return activity_tracker_.delete_history(key);
+    }
+    void observe_character(
+        const CharacterSnapshot& character,
+        std::string_view zone,
+        std::chrono::system_clock::time_point now =
+            std::chrono::system_clock::now());
+    [[nodiscard]] ActivityAnalyticsSnapshot activity_snapshot(
+        std::chrono::system_clock::time_point now =
+            std::chrono::system_clock::now()) {
+        return activity_tracker_.snapshot(now);
+    }
 
     [[nodiscard]] CombatLogRefresh refresh(
         const std::filesystem::path& game_directory,
@@ -161,12 +200,23 @@ class CombatLogTailer {
         std::chrono::system_clock::time_point now) {
         return refresh(game_directory, active_character, "Unknown", now);
     }
+    [[nodiscard]] CombatLogRefresh current_snapshot(
+        std::string_view active_character,
+        std::string_view zone = "Unknown",
+        std::chrono::system_clock::time_point now =
+            std::chrono::system_clock::now());
+    void maintain_retained_state(
+        std::chrono::system_clock::time_point now =
+            std::chrono::system_clock::now()) {
+        maintain_history_store();
+        activity_tracker_.maintain(now);
+    }
     void clear();
 
   private:
     [[nodiscard]] CombatLogRefresh failure(
         CombatLogError error,
-        std::string detail) const;
+        std::string detail);
     [[nodiscard]] std::optional<std::filesystem::path> select_log(
         const std::filesystem::path& game_directory,
         std::string_view active_character,
@@ -176,7 +226,8 @@ class CombatLogTailer {
                                std::string_view zone);
     [[nodiscard]] bool select_history(
         std::string_view active_character,
-        const std::filesystem::path& log_path);
+        const std::filesystem::path& log_path,
+        std::string& failure_detail);
     void retain_completed();
     void finalize_current();
     void retain_encounter(const CombatEncounterSnapshot& encounter);
@@ -187,14 +238,18 @@ class CombatLogTailer {
     std::string character_;
     std::filesystem::path path_;
     std::optional<FileIdentity> identity_;
+    std::shared_ptr<int> descriptor_;
     std::uintmax_t offset_{};
     std::string partial_line_;
     bool dropping_line_{false};
     bool oversized_line_seen_{false};
     std::size_t lines_this_refresh_{};
     std::string prefix_boundary_;
+    std::unordered_map<std::string, ReplayContinuity> replay_continuity_;
+    std::unordered_set<std::string> seen_log_paths_;
     std::string boundary_;
     bool reopen_from_start_{false};
+    ActivityTracker activity_tracker_;
     CombatAccumulator accumulator_;
     CombatHistoryStore history_store_;
     std::string history_key_;
@@ -204,6 +259,8 @@ class CombatLogTailer {
     bool history_visible_{false};
     bool history_load_compatible_{true};
     bool history_persisted_{true};
+    bool activity_partition_confirmed_{false};
+    bool persistence_deferred_{false};
     std::chrono::steady_clock::time_point history_retry_after_{};
     std::chrono::system_clock::time_point history_sweep_after_{};
 };

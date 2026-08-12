@@ -8,6 +8,7 @@
 #include <ctime>
 #include <string>
 #include <system_error>
+#include <utility>
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -170,6 +171,77 @@ bool write_all(int descriptor, std::string_view value) {
     return true;
 }
 
+class OwnedDescriptor {
+  public:
+    explicit OwnedDescriptor(int value = -1) : value_(value) {}
+    ~OwnedDescriptor() {
+        if (value_ >= 0) {
+            (void)::close(value_);
+        }
+    }
+    OwnedDescriptor(const OwnedDescriptor&) = delete;
+    OwnedDescriptor& operator=(const OwnedDescriptor&) = delete;
+    OwnedDescriptor(OwnedDescriptor&& other) noexcept
+        : value_(std::exchange(other.value_, -1)) {}
+    OwnedDescriptor& operator=(OwnedDescriptor&& other) noexcept {
+        if (this != &other) {
+            if (value_ >= 0) {
+                (void)::close(value_);
+            }
+            value_ = std::exchange(other.value_, -1);
+        }
+        return *this;
+    }
+    [[nodiscard]] int get() const { return value_; }
+    [[nodiscard]] int release() { return std::exchange(value_, -1); }
+    [[nodiscard]] explicit operator bool() const { return value_ >= 0; }
+
+  private:
+    int value_;
+};
+
+std::optional<OwnedDescriptor> open_directory_chain(
+    const std::filesystem::path& directory) {
+    if (directory.empty()) {
+        return std::nullopt;
+    }
+    std::error_code error;
+    const std::filesystem::path absolute =
+        std::filesystem::absolute(directory, error).lexically_normal();
+    if (error || absolute.empty()) {
+        return std::nullopt;
+    }
+    OwnedDescriptor current(::open(
+        absolute.root_path().c_str(),
+        O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW));
+    if (!current) {
+        return std::nullopt;
+    }
+    for (const auto& component : absolute.relative_path()) {
+        const std::string name = component.string();
+        if (name.empty() || name == "." || name == "..") {
+            return std::nullopt;
+        }
+        int next = ::openat(
+            current.get(), name.c_str(),
+            O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
+        if (next < 0 && errno == ENOENT) {
+            if (::mkdirat(current.get(), name.c_str(), 0700) != 0 &&
+                errno != EEXIST) {
+                return std::nullopt;
+            }
+            next = ::openat(
+                current.get(), name.c_str(),
+                O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
+        }
+        if (next < 0) {
+            return std::nullopt;
+        }
+        current = OwnedDescriptor(next);
+    }
+    return current;
+}
+
 }  // namespace
 
 PrivacyLog::PrivacyLog(std::filesystem::path path,
@@ -200,17 +272,19 @@ void PrivacyLog::append(std::string_view fields) {
         healthy_ = false;
         return;
     }
-    std::error_code error;
-    std::filesystem::create_directories(path_.parent_path(), error);
-    if (error) {
+    auto directory = open_directory_chain(path_.parent_path());
+    const std::string name = path_.filename().string();
+    if (!directory || name.empty() || name == "." || name == "..") {
         healthy_ = false;
         return;
     }
-    std::filesystem::permissions(
-        path_.parent_path(),
-        std::filesystem::perms::owner_all,
-        std::filesystem::perm_options::replace, error);
-    if (error) {
+    struct stat directory_status {};
+    if (::fstat(directory->get(), &directory_status) != 0 ||
+        !S_ISDIR(directory_status.st_mode) ||
+        directory_status.st_uid != ::geteuid() ||
+        ::fchmod(directory->get(), 0700) != 0 ||
+        ::fstat(directory->get(), &directory_status) != 0 ||
+        (directory_status.st_mode & 0777) != 0700) {
         healthy_ = false;
         return;
     }
@@ -222,8 +296,10 @@ void PrivacyLog::append(std::string_view fields) {
         return;
     }
     struct stat status {};
-    if (::lstat(path_.c_str(), &status) == 0) {
-        if (!S_ISREG(status.st_mode)) {
+    if (::fstatat(directory->get(), name.c_str(), &status,
+                  AT_SYMLINK_NOFOLLOW) == 0) {
+        if (!S_ISREG(status.st_mode) || status.st_uid != ::geteuid() ||
+            status.st_size < 0) {
             healthy_ = false;
             return;
         }
@@ -231,12 +307,29 @@ void PrivacyLog::append(std::string_view fields) {
             static_cast<std::uintmax_t>(status.st_size);
         if (current_size >
             static_cast<std::uintmax_t>(maximum_bytes_ - line.size())) {
-            const std::filesystem::path previous =
-                path_.string() + ".previous";
-            std::filesystem::remove(previous, error);
-            error.clear();
-            std::filesystem::rename(path_, previous, error);
-            if (error) {
+            const std::string previous = name + ".previous";
+            struct stat previous_status {};
+            if (::fstatat(directory->get(), previous.c_str(),
+                          &previous_status, AT_SYMLINK_NOFOLLOW) == 0) {
+                if (!S_ISREG(previous_status.st_mode) ||
+                    previous_status.st_uid != ::geteuid() ||
+                    ::unlinkat(directory->get(), previous.c_str(), 0) != 0) {
+                    healthy_ = false;
+                    return;
+                }
+            } else if (errno != ENOENT) {
+                healthy_ = false;
+                return;
+            }
+            struct stat current_status {};
+            if (::fstatat(directory->get(), name.c_str(), &current_status,
+                          AT_SYMLINK_NOFOLLOW) != 0 ||
+                current_status.st_dev != status.st_dev ||
+                current_status.st_ino != status.st_ino ||
+                !S_ISREG(current_status.st_mode) ||
+                current_status.st_uid != ::geteuid() ||
+                ::renameat(directory->get(), name.c_str(), directory->get(),
+                           previous.c_str()) != 0) {
                 healthy_ = false;
                 return;
             }
@@ -246,21 +339,23 @@ void PrivacyLog::append(std::string_view fields) {
         return;
     }
 
-    const int descriptor = ::open(
-        path_.c_str(),
+    OwnedDescriptor descriptor(::openat(
+        directory->get(), name.c_str(),
         O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC | O_NOFOLLOW,
-        S_IRUSR | S_IWUSR);
-    if (descriptor < 0) {
+        S_IRUSR | S_IWUSR));
+    if (!descriptor) {
         healthy_ = false;
         return;
     }
-    if (::fchmod(descriptor, S_IRUSR | S_IWUSR) != 0) {
-        (void)::close(descriptor);
+    struct stat opened {};
+    if (::fstat(descriptor.get(), &opened) != 0 ||
+        !S_ISREG(opened.st_mode) || opened.st_uid != ::geteuid() ||
+        ::fchmod(descriptor.get(), S_IRUSR | S_IWUSR) != 0) {
         healthy_ = false;
         return;
     }
-    const bool wrote = write_all(descriptor, line);
-    const bool closed = ::close(descriptor) == 0;
+    const bool wrote = write_all(descriptor.get(), line);
+    const bool closed = ::close(descriptor.release()) == 0;
     if (!wrote || !closed) {
         healthy_ = false;
     }

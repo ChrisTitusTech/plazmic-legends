@@ -131,6 +131,7 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
             .map = std::nullopt,
             .clear_map = true,
             .reset_combat = reset_combat,
+            .reset_activity = reset_combat,
         };
     }
 
@@ -142,6 +143,8 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
                                       : CharacterSnapshot{};
     const bool reset_combat = combat_context_changed(player, character);
     if (!refresh.map_load) {
+        const bool awaiting_new_map =
+            !handled_zone_.empty() && handled_zone_ != player.zone;
         if (!map_detail_.empty()) {
             player.detail = map_detail_;
         }
@@ -150,8 +153,9 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
             .spawns = std::move(spawns),
             .character = std::move(character),
             .map = std::nullopt,
-            .clear_map = false,
+            .clear_map = awaiting_new_map,
             .reset_combat = reset_combat,
+            .reset_activity = reset_combat,
         };
     }
 
@@ -166,6 +170,7 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
             .map = std::nullopt,
             .clear_map = true,
             .reset_combat = reset_combat,
+            .reset_activity = reset_combat,
         };
     }
 
@@ -177,6 +182,7 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
         .map = std::move(refresh.map_load->map),
         .clear_map = false,
         .reset_combat = reset_combat,
+        .reset_activity = reset_combat,
     };
 }
 

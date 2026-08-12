@@ -186,6 +186,42 @@ traffic.
 Missing, disabled, ambiguous, malformed, oversized, or unavailable logs show
 an explicit unavailable state without affecting memory-backed character data.
 
+The same bounded active-character stream may recognize exact XP percentage,
+AA-point-total, and loot forms for the Activity dock. It may also aggregate
+the active character's named damage abilities as observation evidence and
+record changes between consecutive immutable equipment snapshots. It does not
+turn an observed ability into an asserted proc or class, and it does not infer
+a class combination without a validated catalog. Rates use only the latest
+hour of retained progress observations; the level pace is the time to earn
+100% at that rate, not a claim about the character's current level position.
+Recent loot means the latest 24 hours.
+
+Activity retention is independently opt-in and partitioned by the same stable
+opaque character-and-selected-log key. The selected log filename must contain a
+bounded validated server-identity suffix and separates same-named characters on
+different servers. The
+unkeyed digest prevents raw names from appearing in filenames but does not
+resist candidate-name guessing; owner-only permissions are the confidentiality
+boundary. Each owner-only schema-1 partition is
+capped at 512 events, 512 ability/category pairs, 4,096 observations, 90 days,
+and 2 MiB. Timestamped replay metadata shares the same 90-day limit. Expiry
+maintenance also runs in bounded batches while the selected combat log is
+missing or unreadable. Replay suppression requires both same-file identity and
+complete-line evidence from a bounded common prefix; replacement and recreation
+lines receive fresh identities. A persisted generation counter prevents token
+reuse across restart. Persisted log-derived observations require the exact bounded source-identity shape;
+malformed partitions fail closed. The User menu
+can export the displayed bounded JSON or delete the selected partition.
+Diagnostics and network traffic contain none of its names or values.
+
+An explicitly selected local EverQuest inventory-output file may be parsed as
+a regular non-symlink file capped at 2 MiB, 4,096 rows, and 4,096 bytes per row.
+Recognized item and key-ring section headers define row shape; repeated slot
+labels and zero-count empty rows are valid. Quantities are bounded.
+Reconciliation compares case-insensitive item names with the current text
+equipment snapshot; it does not infer item stats, upgrades, inventory
+ownership, or class requirements.
+
 The parser is an independent implementation informed only by public product
 behavior. It does not copy third-party code, data, fixtures, or assets. Later
 phases may build bounded histories, timers, proc or resist analytics,
@@ -208,13 +244,13 @@ after importing the inventory-only backup.
   drawing inside the game process.
 - The main window contains a central map canvas and dockable spawn and detail
   views inspired conceptually by ShowEQ.
-- The default left dock area contains the Character dock above the Parse dock;
-  both retain the existing movable, closable, floatable, saved-layout, and X11
-  class behavior. This left column extends to the bottom of the window, while
-  Details spans below the central map and right-side Spawns dock.
+- The default left dock area contains Character above tabified Parse and
+  Activity docks. They retain movable, closable, floatable, saved-layout, and
+  X11 class behavior. Details spans below the central map and right-side Spawns
+  dock.
 - An embedded top menu bar exposes checkable Views actions for Character,
-  Parse, Spawns, and Details, plus minimize, maximize/restore, and close
-  controls aligned at the top right.
+  Parse, Activity, Spawns, and Details, plus minimize, maximize/restore, and
+  close controls aligned at the top right.
 - Its User menu exposes `UI File Install...` for an extracted private bundle.
 - The main window and any detached Plazmic tool windows expose
   `WM_CLASS(STRING) = "plazmic-legends", "PlazmicLegends"` so DWM can place
@@ -364,6 +400,9 @@ Future side effects use similarly explicit capability contracts.
   encounter snapshots without blocking the UI thread. Combat snapshots retain
   at most 4,096 aggregate attack/spell detail rows, and the UI independently
   enforces the same display cap.
+- Activity parsing shares the combat stream's byte, line, rotation, and
+  lifecycle bounds. Activity memory and storage cap events and observed
+  abilities at 512 each and inventory imports at 2 MiB and 4,096 rows.
 - A supported profile is immutable. A client patch creates a new profile and
   runs the compatibility gate.
 
@@ -519,7 +558,7 @@ expansion capability model; none is implicitly approved by this roadmap.
   and a recorded source, side-effect, privacy, license, lifecycle, resource,
   validation, and rollback contract.
 - AC-20: Combat and overview histories are immutable, bounded, deterministic,
-  lifecycle-aware, partitioned by a stable privacy-preserving local character
+  lifecycle-aware, partitioned by a stable opaque character-and-selected-log
   key, and testable with synthetic logs. Character switching and restart
   restore only that character's owner-only local history. The history may
   contain combatant and target names for display, while diagnostics and network

@@ -525,7 +525,7 @@ true game-target source requires its own exact-profile input checkpoint.
 
 - Private log content remains local; diagnostics and tests use synthetic names.
 - Histories have explicit count, byte, age, and persistence bounds. They are
-  partitioned by a stable privacy-preserving local character key, survive
+  partitioned by a stable opaque character-and-selected-log key, survive
   append, truncation, rotation, zoning, and restart, and restore only the newly
   selected character's partition after a switch.
 - Focused parser/model/UI tests, full gates, performance limits, privacy audit,
@@ -560,8 +560,8 @@ input checkpoint before implementation.
 
 ### Risks, exit criteria, and validation
 
-- Character separation uses a privacy-preserving stable local key and never
-  writes names to diagnostics.
+- Character and server separation uses a stable opaque
+  character-and-selected-log key and never writes names to diagnostics.
 - Stored activity is schema-versioned, capped, recoverable, and exportable or
   deletable by the user.
 - Synthetic activity, migration, corruption, lifecycle, UI, performance,

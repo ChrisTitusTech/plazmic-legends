@@ -143,6 +143,58 @@ int main() {
                         rotation_path.string() + ".previous") <= 512U,
                 "privacy log exceeded its configured bound");
 
+        const auto symlink_target = directory.path() / "symlink-target";
+        const auto symlink_parent = directory.path() / "symlink-parent";
+        std::filesystem::create_directories(symlink_target);
+        std::filesystem::create_directory_symlink(
+            symlink_target, symlink_parent);
+        plazmic::PrivacyLog symlinked(
+            symlink_parent / "escaped.log", 4096U);
+        symlinked.record_startup("0.1.0", "synthetic-profile");
+        require(!symlinked.healthy() &&
+                    !std::filesystem::exists(
+                        symlink_target / "escaped.log"),
+                "privacy log followed a symlinked parent directory");
+
+        const auto final_target = directory.path() / "final-target.log";
+        {
+            std::ofstream output(final_target, std::ios::binary);
+            output << "sentinel";
+        }
+        const auto final_link = directory.path() / "final-link.log";
+        std::filesystem::create_symlink(final_target, final_link);
+        plazmic::PrivacyLog final_symlink(final_link, 4096U);
+        final_symlink.record_startup("0.1.0", "synthetic-profile");
+        require(!final_symlink.healthy() &&
+                    read_file(final_target) == "sentinel",
+                "privacy log followed a final-component symlink");
+
+        const auto previous_target =
+            directory.path() / "previous-target.log";
+        {
+            std::ofstream output(previous_target, std::ios::binary);
+            output << "sentinel";
+        }
+        const auto guarded_rotation_path =
+            directory.path() / "guarded-rotation.log";
+        plazmic::PrivacyLog guarded_rotation(
+            guarded_rotation_path, 256U);
+        guarded_rotation.record_startup("0.1.0", "synthetic-profile");
+        std::filesystem::create_symlink(
+            previous_target,
+            guarded_rotation_path.string() + ".previous");
+        for (int index = 0; index < 20 && guarded_rotation.healthy(); ++index) {
+            auto changed = status;
+            changed.process =
+                index % 2 == 0
+                    ? plazmic::ProcessState::not_running
+                    : plazmic::ProcessState::running;
+            guarded_rotation.record_status(changed);
+        }
+        require(!guarded_rotation.healthy() &&
+                    read_file(previous_target) == "sentinel",
+                "privacy-log rotation followed a previous-file symlink");
+
         std::cout
             << "privacy-safe bounded XDG logging passed\n";
         return EXIT_SUCCESS;

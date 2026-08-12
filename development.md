@@ -24,6 +24,9 @@ The current `main` branch provides:
   local combat-log parser with bounded damage/healing analytics and an
   opt-in owner-only per-character history store capped at 50 encounters, 90
   days, and 2 MiB per partition;
+- a tabified Activity dock with bounded XP/AA pace, loot, equipment-change,
+  observed-ability, celebration, and explicit local inventory-output views,
+  plus an independent opt-in owner-only activity store;
 - Linux, Wine, and X11/XWayland support.
 
 This implementation is a foundation, not a permanent product-category limit.

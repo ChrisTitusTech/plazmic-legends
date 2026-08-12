@@ -10,12 +10,16 @@
 #include "ui/x11_window_class.h"
 
 #include <chrono>
+#include <cstdlib>
 #include <cstdint>
+#include <deque>
 #include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include <QApplication>
 #include <QCommandLineOption>
@@ -23,6 +27,7 @@
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QIcon>
+#include <QMessageBox>
 #include <QProcessEnvironment>
 #include <QPixmap>
 #include <QTimer>
@@ -41,8 +46,18 @@ std::filesystem::path selected_maps(
 
 struct CombatRefreshEnvelope {
     std::string character;
+    std::string zone;
     std::uint64_t generation{};
+    std::shared_ptr<plazmic::CombatLogTailer> tailer;
     plazmic::CombatLogRefresh refresh;
+};
+
+struct PlayerRefreshEnvelope {
+    std::uint64_t generation{};
+    std::string source;
+    std::string expected_character;
+    std::string expected_zone;
+    plazmic::PlayerRefresh refresh;
 };
 
 }  // namespace
@@ -183,12 +198,18 @@ int main(int argc, char** argv) {
         initial_status.detail +=
             "; local privacy log is unavailable";
     }
+    std::deque<std::string> activity_delete_queue;
+    std::unordered_map<std::string, std::string> activity_delete_errors;
     plazmic::MainWindow window(
         initial_status,
         settings_path,
         parser.isSet("reset-layout"),
         selected_game_directory);
     window.setWindowIcon(application_icon);
+    window.set_delete_activity_callback(
+        [&activity_delete_queue](std::string key) {
+            activity_delete_queue.push_back(std::move(key));
+        });
     window.show();
 
     QTimer status_timer;
@@ -208,20 +229,27 @@ int main(int argc, char** argv) {
     plazmic::PlayerLifecycle player_lifecycle;
     std::string active_character;
     std::string active_zone;
+    plazmic::CharacterSnapshot active_character_snapshot;
     std::uint64_t combat_generation = 0U;
-    QFutureWatcher<plazmic::PlayerRefresh> player_watcher;
-    QObject::connect(
-        &player_watcher,
-        &QFutureWatcher<plazmic::PlayerRefresh>::finished,
-        &window,
-        [&window, &player_watcher, &player_lifecycle, &privacy_log,
-         &active_character, &active_zone, &combat_generation]() {
-            plazmic::PlayerRefresh refresh =
-                player_watcher.result();
+    const std::string player_source = client.string();
+    QFutureWatcher<PlayerRefreshEnvelope> player_watcher;
+    QFutureWatcher<PlayerRefreshEnvelope> map_watcher;
+    const auto publish_player_refresh =
+        [&window, &player_lifecycle, &privacy_log, &active_character,
+         &active_zone, &active_character_snapshot,
+         &combat_generation, &player_source](PlayerRefreshEnvelope envelope) {
+            if (envelope.generation != combat_generation ||
+                envelope.source != player_source ||
+                (!envelope.expected_character.empty() &&
+                 envelope.expected_character != active_character) ||
+                (!envelope.expected_zone.empty() &&
+                 envelope.expected_zone != active_zone)) {
+                return false;
+            }
+            plazmic::PlayerRefresh refresh = std::move(envelope.refresh);
             privacy_log.record_game_state(refresh.state.error);
             if (refresh.map_load) {
-                privacy_log.record_map_state(
-                    refresh.map_load->error);
+                privacy_log.record_map_state(refresh.map_load->error);
             }
             plazmic::PlayerLifecycleUpdate update =
                 player_lifecycle.apply(std::move(refresh));
@@ -234,68 +262,124 @@ int main(int argc, char** argv) {
             }
             window.update_player_snapshot(update.player);
             window.update_spawn_snapshot(std::move(update.spawns));
-            const std::string next_character =
-                update.character.available()
-                    ? update.character.name
-                    : std::string{};
-            active_character = next_character;
+            active_character = update.character.available()
+                                   ? update.character.name
+                                   : std::string{};
             active_zone = update.player.available()
                               ? update.player.zone
                               : std::string{};
+            active_character_snapshot = update.character;
             if (update.reset_combat) {
                 ++combat_generation;
                 window.update_combat_snapshot(
                     plazmic::CombatAnalyticsSnapshot{});
             }
+            if (update.reset_activity) {
+                window.update_activity_snapshot(
+                    plazmic::ActivityAnalyticsSnapshot{});
+            }
             window.update_character_snapshot(update.character);
+            return true;
+        };
+    QObject::connect(
+        &map_watcher,
+        &QFutureWatcher<PlayerRefreshEnvelope>::finished,
+        &window,
+        [&map_watcher, &publish_player_refresh]() {
+            (void)publish_player_refresh(map_watcher.result());
+        });
+    QObject::connect(
+        &player_watcher,
+        &QFutureWatcher<PlayerRefreshEnvelope>::finished,
+        &window,
+        [&player_watcher, &map_watcher, &player_lifecycle, &game_probe,
+         &map_root, &publish_player_refresh, &active_character,
+         &active_zone, &combat_generation, &player_source]() {
+            PlayerRefreshEnvelope envelope = player_watcher.result();
+            std::optional<std::string> zone_to_load;
+            if (envelope.refresh.state &&
+                envelope.refresh.state.snapshot->zone !=
+                    player_lifecycle.handled_zone()) {
+                zone_to_load = envelope.refresh.state.snapshot->zone;
+            }
+            if (!publish_player_refresh(std::move(envelope)) ||
+                !zone_to_load || map_watcher.isRunning()) {
+                return;
+            }
+            const std::uint64_t generation = combat_generation;
+            const std::string character = active_character;
+            const std::string zone = active_zone;
+            map_watcher.setFuture(QtConcurrent::run(
+                [game_probe, map_root, generation, character, zone,
+                 player_source, loaded_zone = *zone_to_load]() {
+                    plazmic::MapLoadResult map_load =
+                        plazmic::load_zone_map(map_root, loaded_zone);
+                    plazmic::GameStateReadResult confirmation =
+                        game_probe->refresh();
+                    if (!confirmation) {
+                        return PlayerRefreshEnvelope{
+                            .generation = generation,
+                            .source = player_source,
+                            .expected_character = character,
+                            .expected_zone = zone,
+                            .refresh = {
+                                .state = std::move(confirmation),
+                                .map_load = std::nullopt,
+                            },
+                        };
+                    }
+                    if (confirmation.snapshot->zone != loaded_zone) {
+                        return PlayerRefreshEnvelope{
+                            .generation = generation,
+                            .source = player_source,
+                            .expected_character = character,
+                            .expected_zone = zone,
+                            .refresh = {
+                                .state = {
+                                    .snapshot = std::nullopt,
+                                    .spawns = std::nullopt,
+                                    .error =
+                                        plazmic::GameStateReadError::zoning,
+                                    .detail =
+                                        "zone changed while loading its map",
+                                    .character = std::nullopt,
+                                },
+                                .map_load = std::nullopt,
+                            },
+                        };
+                    }
+                    return PlayerRefreshEnvelope{
+                        .generation = generation,
+                        .source = player_source,
+                        .expected_character = character,
+                        .expected_zone = zone,
+                        .refresh = {
+                            .state = std::move(confirmation),
+                            .map_load = std::move(map_load),
+                        },
+                    };
+                }));
         });
 
     QTimer player_timer;
     const auto start_player_refresh =
-        [&player_watcher, &game_probe, &player_lifecycle, &map_root]() {
-        if (player_watcher.isRunning()) {
+        [&player_watcher, &map_watcher, &game_probe, &combat_generation,
+         &player_source]() {
+        if (player_watcher.isRunning() || map_watcher.isRunning()) {
             return;
         }
-        const std::string current_zone =
-            player_lifecycle.handled_zone();
         player_watcher.setFuture(QtConcurrent::run(
-            [game_probe, map_root, current_zone]() {
-                plazmic::PlayerRefresh refresh{
-                    .state = game_probe->refresh(),
-                    .map_load = std::nullopt,
+            [game_probe, generation = combat_generation, player_source]() {
+                return PlayerRefreshEnvelope{
+                    .generation = generation,
+                    .source = player_source,
+                    .expected_character = {},
+                    .expected_zone = {},
+                    .refresh = {
+                        .state = game_probe->refresh(),
+                        .map_load = std::nullopt,
+                    },
                 };
-                if (refresh.state &&
-                    refresh.state.snapshot->zone != current_zone) {
-                    const std::string loaded_zone =
-                        refresh.state.snapshot->zone;
-                    refresh.map_load = plazmic::load_zone_map(
-                        map_root, loaded_zone);
-                    if (*refresh.map_load) {
-                        plazmic::GameStateReadResult confirmation =
-                            game_probe->refresh();
-                        if (!confirmation) {
-                            refresh.state = std::move(confirmation);
-                            refresh.map_load.reset();
-                            return refresh;
-                        }
-                        if (confirmation.snapshot->zone != loaded_zone) {
-                            refresh.state = {
-                                .snapshot = std::nullopt,
-                                .spawns = std::nullopt,
-                                .error =
-                                    plazmic::GameStateReadError::
-                                        zoning,
-                                .detail =
-                                    "zone changed while loading its map",
-                                .character = std::nullopt,
-                            };
-                            refresh.map_load.reset();
-                            return refresh;
-                        }
-                        refresh.state = std::move(confirmation);
-                    }
-                }
-                return refresh;
             }));
     };
     QObject::connect(
@@ -305,46 +389,109 @@ int main(int argc, char** argv) {
 
     auto combat_tailer = std::make_shared<plazmic::CombatLogTailer>();
     std::uint64_t tailer_generation = combat_generation;
+    bool combat_result_consumed = true;
     QFutureWatcher<CombatRefreshEnvelope> combat_watcher;
+    const auto commit_combat_refresh =
+        [&window, &combat_tailer, &active_character, &combat_generation,
+         &activity_delete_errors](CombatRefreshEnvelope result) {
+            if (result.character != active_character ||
+                result.generation != combat_generation) {
+                return;
+            }
+            combat_tailer = std::move(result.tailer);
+            const bool retain_history = window.combat_history_enabled();
+            const bool retain_activity = window.activity_history_enabled();
+            combat_tailer->commit_deferred_persistence(
+                retain_history, retain_activity);
+            combat_tailer->maintain_retained_state();
+            if (result.refresh.error == plazmic::CombatLogError::none) {
+                result.refresh = combat_tailer->current_snapshot(
+                    result.character,
+                    result.zone.empty() ? "Unknown" : result.zone);
+            } else {
+                result.refresh.snapshot.history_retention_enabled =
+                    retain_history;
+                result.refresh.activity.retention_enabled =
+                    retain_activity;
+            }
+            const auto activity_delete_error = activity_delete_errors.find(
+                result.refresh.activity.storage_key);
+            if (activity_delete_error != activity_delete_errors.end()) {
+                result.refresh.activity.persisted = false;
+                result.refresh.activity.detail = activity_delete_error->second;
+            }
+            window.update_combat_snapshot(result.refresh.snapshot);
+            window.update_activity_snapshot(result.refresh.activity);
+        };
     QObject::connect(
         &combat_watcher,
         &QFutureWatcher<CombatRefreshEnvelope>::finished,
         &window,
-        [&window, &combat_watcher, &active_character,
-         &combat_generation]() {
-            const CombatRefreshEnvelope result = combat_watcher.result();
-            if (result.character == active_character &&
-                result.generation == combat_generation) {
-                window.update_combat_snapshot(result.refresh.snapshot);
-            }
+        [&combat_watcher, &combat_result_consumed,
+         &commit_combat_refresh]() {
+            combat_result_consumed = true;
+            commit_combat_refresh(combat_watcher.result());
         });
     QTimer combat_timer;
     const auto start_combat_refresh =
         [&combat_watcher, &combat_tailer, &active_character, &active_zone,
-         &combat_generation, &tailer_generation, &window,
+         &active_character_snapshot, &combat_generation,
+         &tailer_generation, &combat_result_consumed,
+         &activity_delete_queue, &activity_delete_errors, &window,
          game_directory = selection.game_directory]() {
             if (combat_watcher.isRunning()) {
                 return;
             }
             const std::string character = active_character;
             const std::string zone = active_zone;
+            const plazmic::CharacterSnapshot character_snapshot =
+                active_character_snapshot;
             const std::uint64_t generation = combat_generation;
             const bool reset_tailer = tailer_generation != generation;
-            const bool retain_history = window.combat_history_enabled();
+            while (!activity_delete_queue.empty()) {
+                std::string key = std::move(activity_delete_queue.front());
+                activity_delete_queue.pop_front();
+                const bool succeeded =
+                    combat_tailer->delete_activity_history(key);
+                if (succeeded) {
+                    activity_delete_errors.erase(key);
+                } else {
+                    activity_delete_errors[key] =
+                        "Activity history deletion failed; the retained file "
+                        "remains on disk and can be retried";
+                }
+                window.report_activity_deletion_result(key, succeeded);
+            }
+            const auto source_tailer = combat_tailer;
             tailer_generation = generation;
+            combat_result_consumed = false;
             combat_watcher.setFuture(QtConcurrent::run(
-                [combat_tailer, game_directory, character, zone, generation,
-                 reset_tailer, retain_history]() {
-                    combat_tailer->set_history_enabled(retain_history);
+                [source_tailer, game_directory, character, zone, generation,
+                 character_snapshot, reset_tailer]() {
+                    auto staged_tailer =
+                        std::make_shared<plazmic::CombatLogTailer>(
+                            *source_tailer);
+                    staged_tailer->begin_deferred_persistence();
                     if (reset_tailer) {
-                        combat_tailer->clear();
+                        staged_tailer->clear();
+                    }
+                    plazmic::CombatLogRefresh refresh =
+                        staged_tailer->refresh(
+                            game_directory, character,
+                            zone.empty() ? "Unknown" : zone);
+                    if (refresh.error == plazmic::CombatLogError::none) {
+                        staged_tailer->observe_character(
+                            character_snapshot,
+                            zone.empty() ? "Unknown" : zone);
+                        refresh.activity =
+                            staged_tailer->activity_snapshot();
                     }
                     return CombatRefreshEnvelope{
                         .character = character,
+                        .zone = zone,
                         .generation = generation,
-                        .refresh = combat_tailer->refresh(
-                            game_directory, character,
-                            zone.empty() ? "Unknown" : zone),
+                        .tailer = std::move(staged_tailer),
+                        .refresh = std::move(refresh),
                     };
                 }));
         };
@@ -356,16 +503,45 @@ int main(int argc, char** argv) {
         QTimer::singleShot(std::chrono::seconds(duration_seconds),
                            &window, &QWidget::close);
     }
-    const int result = application.exec();
+    int result = application.exec();
     player_timer.stop();
     combat_timer.stop();
     if (player_watcher.isRunning()) {
         player_watcher.waitForFinished();
     }
+    if (map_watcher.isRunning()) {
+        map_watcher.waitForFinished();
+    }
     if (combat_watcher.isRunning()) {
         combat_watcher.waitForFinished();
     }
+    if (!combat_result_consumed) {
+        combat_result_consumed = true;
+        commit_combat_refresh(combat_watcher.result());
+    }
+    for (const auto& [key, detail] : activity_delete_errors) {
+        (void)detail;
+        activity_delete_queue.push_back(key);
+    }
+    activity_delete_errors.clear();
     combat_tailer->set_history_enabled(window.combat_history_enabled());
+    combat_tailer->set_activity_history_enabled(
+        window.activity_history_enabled());
+    bool activity_deletion_failed = false;
+    for (const auto& key : activity_delete_queue) {
+        if (!combat_tailer->delete_activity_history(key)) {
+            activity_deletion_failed = true;
+            window.report_activity_deletion_result(key, false);
+        }
+    }
+    if (activity_deletion_failed) {
+        QMessageBox::warning(
+            nullptr, "Activity History Deletion Failed",
+            "One or more confirmed activity-history deletions could not be "
+            "completed. The retained files remain on disk; reopen Plazmic "
+            "Legends to retry.");
+        result = EXIT_FAILURE;
+    }
     combat_tailer->clear();
     privacy_log.record_shutdown();
     return result;

@@ -101,7 +101,7 @@ int main() {
                 "initial zone map was not published");
         require(!first.clear_map,
                 "initial map publication requested invalidation");
-        require(first.reset_combat,
+        require(first.reset_combat && first.reset_activity,
                 "initial player context did not reset combat state");
         require(lifecycle.handled_zone() == "zone_a",
                 "initial handled zone was not retained");
@@ -114,8 +114,19 @@ int main() {
                 "unchanged player became unavailable");
         require(!unchanged.map && !unchanged.clear_map,
                 "unchanged zone altered the map");
-        require(!unchanged.reset_combat,
+        require(!unchanged.reset_combat && !unchanged.reset_activity,
                 "unchanged player context reset combat state");
+
+        auto pending_second = lifecycle.apply({
+            .state = live_state("zone_b"),
+            .map_load = std::nullopt,
+        });
+        require(pending_second.player.available() &&
+                    pending_second.player.zone == "zone_b" &&
+                    !pending_second.map && pending_second.clear_map &&
+                    pending_second.reset_combat &&
+                    pending_second.reset_activity,
+                "new-zone player retained the prior zone map");
 
         auto second = lifecycle.apply({
             .state = live_state("zone_b"),
@@ -128,8 +139,8 @@ int main() {
                 "second-zone map was not published");
         require(lifecycle.handled_zone() == "zone_b",
                 "second zone did not replace the handled zone");
-        require(second.reset_combat,
-                "same-character zone change did not reset combat state");
+        require(!second.reset_combat && !second.reset_activity,
+                "map publication repeated the zone-change reset");
 
         plazmic::GameStateReadResult character_unavailable =
             live_state("zone_b");
@@ -142,8 +153,31 @@ int main() {
                     optional_character.spawns.available() &&
                     !optional_character.character.available() &&
                     !optional_character.clear_map &&
-                    optional_character.reset_combat,
+                    optional_character.reset_combat &&
+                    optional_character.reset_activity,
                 "optional character failure cleared valid player state");
+
+        const auto recovered_character = lifecycle.apply({
+            .state = live_state("zone_b"),
+            .map_load = std::nullopt,
+        });
+        require(recovered_character.character.available() &&
+                    recovered_character.character.name ==
+                        "synthetic_character" &&
+                    recovered_character.reset_combat &&
+                    recovered_character.reset_activity,
+                "character recovery did not reset activity consumers");
+        auto changed_character_state = live_state("zone_b");
+        changed_character_state.character->name = "other_character";
+        const auto changed_character = lifecycle.apply({
+            .state = std::move(changed_character_state),
+            .map_load = std::nullopt,
+        });
+        require(changed_character.character.available() &&
+                    changed_character.character.name == "other_character" &&
+                    changed_character.reset_combat &&
+                    changed_character.reset_activity,
+                "character change did not reset activity consumers");
 
         const std::array transitions{
             std::pair{
@@ -192,7 +226,8 @@ int main() {
                     "lifecycle transition retained a stale zone");
             require(invalidated.clear_map && !invalidated.map,
                     "lifecycle transition retained stale map geometry");
-            require(invalidated.reset_combat,
+            require(invalidated.reset_combat &&
+                        invalidated.reset_activity,
                     "lifecycle transition retained stale combat state");
             require(transition_lifecycle.handled_zone().empty(),
                     "lifecycle transition retained the handled zone");

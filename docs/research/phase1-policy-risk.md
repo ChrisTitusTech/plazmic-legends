@@ -30,11 +30,16 @@ risk; it does not grant permission, waive Daybreak's rights, prevent account
 action, or provide legal advice.
 
 Phase 1 approved external, read-only process inspection, including client
-symbols and the MVP state. On 2026-08-12, the owner replaced Phase 1's
-product-category limits with the capability-scoped expansion model in
-`SPEC.md`. A later write, injection, input, automation, scripting, remote, or
-service capability requires explicit approval and validation under its own
-numbered phase; this historical Phase 1 decision does not approve or reject it.
+symbols and the MVP state. Its mandatory boundaries at the time were no game
+memory or client-file writes; no injection, DLL override, DirectX hook, or
+client patch; no gameplay input, automation, macros, scripting, or remote
+control; and no authentication, integrity, anti-cheat, or protection bypass.
+
+On 2026-08-12, the owner superseded those product-category limits for future
+work with the capability-scoped expansion model in `SPEC.md`. A later write,
+injection, input, automation, scripting, remote, or service capability requires
+explicit approval and validation under its own numbered phase. This later
+policy does not change what Phase 1 itself approved.
 
 Protection bypass remains outside the project boundary. Credentials, private
 chat, memory dumps, and account data remain excluded from logs and fixtures.

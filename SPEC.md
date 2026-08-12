@@ -8,8 +8,8 @@ implementation so Plazmic Legends could establish a native Linux foundation
 for the EverQuest Legends client running under Wine.
 
 Plazmic Legends is now an extensible companion rather than a permanently
-minimal viewer. The current release provides read-only client observations,
-local combat-log parsing, maps, and user-directed file tools. Future phases may
+minimal viewer. The current `main` branch provides read-only client
+observations, local combat-log parsing, maps, and user-directed file tools. Future phases may
 add history, analytics, planners, alerts, audio, overlays, sharing, optional
 services, extensions, and other useful capabilities. Each capability must have
 an explicit contract for provenance, consent, privacy, security, lifecycle,
@@ -66,8 +66,9 @@ support tier.
 ### Planned product surfaces
 
 - Combat and overview: bounded encounter and zone history, attack and spell
-  drill-down, damage and healing timelines, current-target context, recent
-  activity, and rate/ETA summaries.
+  drill-down, damage and healing timelines, log-derived active-encounter target
+  context, recent activity, and rate/ETA summaries. A true game-target field is
+  a separate exact-profile input that this surface does not approve.
 - Progression and activity: per-character XP and AA history, loot history,
   inventory reconciliation, class-combination summaries, proc analytics, and
   upgrade observations derived from bounded active-log events, existing

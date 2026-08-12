@@ -517,6 +517,10 @@ Extend the local parser with capped encounter and zone history, attack/spell
 and damage/healing drill-down, a timeline, current-target context, and overview
 cards for the current fight and recent encounters.
 
+Phase 8 derives current-target context only from the target of the active
+log-derived encounter. It does not add or infer a game target memory field; a
+true game-target source requires its own exact-profile input checkpoint.
+
 ### Risks, exit criteria, and validation
 
 - Private log content remains local; diagnostics and tests use synthetic names.
@@ -677,14 +681,16 @@ Status: Planned as a separate pull request stacked on Phase 13.
 
 ### Outcome and included work
 
-Add per-character switching, settings/alert import and export, and an isolated
-service boundary for separately enabled updates, feedback, sharing, or
-telemetry when concrete endpoints and retention policies exist.
+Add per-character switching, atomic settings import/export, previewed additive
+alert import that never replaces existing rules, and an isolated service
+boundary for separately enabled updates, feedback, sharing, or telemetry when
+concrete endpoints and retention policies exist.
 
 ### Risks, exit criteria, and validation
 
-- Local import/export lands first and is atomic, bounded, versioned, previewed,
-  and owner-only.
+- Local import/export lands first and is bounded, versioned, previewed, and
+  owner-only. Settings writes are atomic; alert imports merge additively and
+  never replace existing rules.
 - Each online service is independently disabled by default, displays its exact
   endpoint and payload, requires consent, minimizes retention, and provides
   disable/delete behavior. Package-manager updates remain supported.

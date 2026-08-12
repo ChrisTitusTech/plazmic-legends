@@ -22,16 +22,17 @@ fingerprint. Write "Not applicable" when no manual test is needed.
 
 ## Safety and scope
 
-Capability phase and task (required):
-<!-- Link the numbered ROADMAP/TASKS contract. -->
+Capability phase or maintenance task (required):
+<!-- Link the numbered ROADMAP/TASKS contract, or explain why this is not applicable. -->
 
-Owner approval (required):
-<!-- Link or quote the approval and include its date. -->
+Owner approval for a new capability:
+<!-- Link or quote the approval and include its date, or write "Not applicable". -->
 
-Capability contract (required):
-<!-- Link inputs, outputs, side effects, privacy, lifecycle, validation, and rollback. -->
+Capability contract for a new capability:
+<!-- Link inputs, outputs, side effects, privacy, lifecycle, validation, and
+rollback, or write "Not applicable". -->
 
-- [ ] The change maps to an approved task and capability phase.
+- [ ] The change maps to an approved capability phase or maintenance task.
 - [ ] Unknown or changed clients still fail closed.
 - [ ] No game files, maps, Wine-prefix content, credentials, memory captures,
       personal paths, or private runtime data are included.

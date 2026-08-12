@@ -78,8 +78,6 @@ review. It does not authorize merging or releasing the pull requests.
   - `ctest --preset dev --output-on-failure` passed all 18 tests, including the
     X11 and performance suites, on 2026-08-12.
   - `git diff --check` passed after the complete documentation rewrite.
-  - The final uncommitted Codex review reported no actionable defects, and the
-    independent CodeRabbit review reported zero findings on 2026-08-12.
   - Manual installed-game and lifecycle checks are skipped because Phase 7
     changes only planning, contribution, and policy documentation. Every
     runtime expansion remains unimplemented and is residual work for its
@@ -88,6 +86,11 @@ review. It does not authorize merging or releasing the pull requests.
     this documentation-only phase; the diff adds no runtime path for them and
     records that they remain disabled by default. Their future implementation
     and verification remain residual risk in Phase 14.
+- Review status: iterative Codex and independent CodeRabbit review reached zero
+  findings before publication. Exact-head CI, mergeability, and thread state
+  are recorded on PR #20 rather than self-certified by a commit that would
+  immediately make that evidence stale. Mark the publication task complete
+  after merge in the next planning update.
 
 ## Expansion phase backlog
 
@@ -144,7 +147,8 @@ review. It does not authorize merging or releasing the pull requests.
 
 ### Phase 14: Profiles, sharing, and optional services
 
-- [ ] Add per-character switching and atomic settings/alert import/export.
+- [ ] Add per-character switching, previewed additive alert import that never
+  replaces existing rules, and atomic settings import/export.
 - [ ] Add only concretely specified, separately consented services whose
   endpoint, payload, retention, deletion, offline, and threat model gates pass
   under `AC-26`.

@@ -9,13 +9,13 @@ see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Product foundation and expansion boundary
 
-The current Plazmic Legends release is a native Linux Qt 6 application that
+The current Plazmic Legends `main` branch is a native Linux Qt 6 application that
 observes the supported 64-bit EverQuest Legends client externally through
 bounded, read-only process access. It renders a normal independent window. Its
 currently implemented game-installation write path is the confirmed private
 UI-file installer described below.
 
-The current release provides:
+The current `main` branch provides:
 
 - one exact compatibility profile at a time;
 - locally installed maps only;

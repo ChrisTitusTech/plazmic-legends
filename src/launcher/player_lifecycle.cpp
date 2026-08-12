@@ -99,7 +99,7 @@ std::string map_failure_detail(const MapLoadResult& result) {
 
 }  // namespace
 
-bool PlayerLifecycle::combat_context_changed(
+PlayerLifecycle::CombatContextChange PlayerLifecycle::combat_context_changed(
     const PlayerSnapshot& player,
     const CharacterSnapshot& character) {
     const std::string next_zone =
@@ -109,10 +109,17 @@ bool PlayerLifecycle::combat_context_changed(
     const bool changed = !combat_context_initialized_ ||
                          combat_zone_ != next_zone ||
                          combat_character_ != next_character;
+    const bool preserve_respawn_alerts =
+        combat_context_initialized_ && !next_character.empty() &&
+        combat_character_ == next_character && !next_zone.empty() &&
+        combat_zone_ != next_zone;
     combat_context_initialized_ = true;
     combat_zone_ = next_zone;
     combat_character_ = next_character;
-    return changed;
+    return {
+        .changed = changed,
+        .preserve_respawn_alerts = preserve_respawn_alerts,
+    };
 }
 
 PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
@@ -122,7 +129,7 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
         PlayerSnapshot player = invalid_snapshot(refresh.state);
         SpawnCollectionSnapshot spawns = invalid_spawns(refresh.state);
         CharacterSnapshot character = invalid_character(refresh.state);
-        const bool reset_combat =
+        const CombatContextChange context_change =
             combat_context_changed(player, character);
         return {
             .player = std::move(player),
@@ -130,8 +137,10 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
             .character = std::move(character),
             .map = std::nullopt,
             .clear_map = true,
-            .reset_combat = reset_combat,
-            .reset_activity = reset_combat,
+            .reset_combat = context_change.changed,
+            .reset_activity = context_change.changed,
+            .preserve_respawn_alerts =
+                context_change.preserve_respawn_alerts,
         };
     }
 
@@ -141,7 +150,8 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
     CharacterSnapshot character = refresh.state.character
                                       ? std::move(*refresh.state.character)
                                       : CharacterSnapshot{};
-    const bool reset_combat = combat_context_changed(player, character);
+    const CombatContextChange context_change =
+        combat_context_changed(player, character);
     if (!refresh.map_load) {
         const bool awaiting_new_map =
             !handled_zone_.empty() && handled_zone_ != player.zone;
@@ -154,8 +164,10 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
             .character = std::move(character),
             .map = std::nullopt,
             .clear_map = awaiting_new_map,
-            .reset_combat = reset_combat,
-            .reset_activity = reset_combat,
+            .reset_combat = context_change.changed,
+            .reset_activity = context_change.changed,
+            .preserve_respawn_alerts =
+                context_change.preserve_respawn_alerts,
         };
     }
 
@@ -169,8 +181,10 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
             .character = std::move(character),
             .map = std::nullopt,
             .clear_map = true,
-            .reset_combat = reset_combat,
-            .reset_activity = reset_combat,
+            .reset_combat = context_change.changed,
+            .reset_activity = context_change.changed,
+            .preserve_respawn_alerts =
+                context_change.preserve_respawn_alerts,
         };
     }
 
@@ -181,8 +195,9 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
         .character = std::move(character),
         .map = std::move(refresh.map_load->map),
         .clear_map = false,
-        .reset_combat = reset_combat,
-        .reset_activity = reset_combat,
+        .reset_combat = context_change.changed,
+        .reset_activity = context_change.changed,
+        .preserve_respawn_alerts = context_change.preserve_respawn_alerts,
     };
 }
 

@@ -61,6 +61,14 @@ No new library or package dependency is introduced. Removing Phase 9 removes
 `activity_tracker`, its model and tests, the Activity dock, and its User-menu
 actions without changing the Phase 8 dependency inventory.
 
+## Phase 10 update
+
+The alert engine reuses Qt Core JSON and the Alerts dock and optional desktop
+beep reuse Qt Widgets. Qt Multimedia is not required and no sound or voice pack
+is packaged. Removing Phase 10 removes `alert_engine`, its model and tests, the
+Alerts dock, and its User-menu actions without changing the package dependency
+inventory.
+
 ## ShowEQ provenance boundary
 
 The ShowEQ 6.4.25 checkout was used only to identify useful product concepts:

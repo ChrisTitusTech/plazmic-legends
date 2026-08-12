@@ -1014,7 +1014,8 @@ CombatEncounterSnapshot CombatAccumulator::snapshot(
 
 CombatLogRefresh CombatLogTailer::failure(
     CombatLogError error,
-    std::string detail) {
+    std::string detail,
+    std::chrono::system_clock::time_point now) {
     activity_tracker_.break_equipment_baseline();
     ActivityAnalyticsSnapshot activity =
         activity_tracker_.unavailable_snapshot(detail);
@@ -1060,6 +1061,7 @@ CombatLogRefresh CombatLogTailer::failure(
     return {
         .snapshot = std::move(analytics),
         .activity = std::move(activity),
+        .alerts = alert_engine_.snapshot(now),
         .error = error,
     };
 }
@@ -1138,7 +1140,8 @@ std::optional<std::filesystem::path> CombatLogTailer::select_log(
 bool CombatLogTailer::consume(
     char byte,
     std::string_view active_character,
-    std::string_view zone) {
+    std::string_view zone,
+    std::chrono::system_clock::time_point now) {
     if (byte == '\r') {
         return true;
     }
@@ -1155,7 +1158,16 @@ bool CombatLogTailer::consume(
                 !ci_equal(damage->defender, active_character) &&
                 is_activity_ability(*damage);
             const std::string activity_source = activity_tracker_.consume(
-                partial_line_, active_character, zone, outgoing_ability);
+                partial_line_, active_character, zone,
+                outgoing_ability || alert_engine_.has_rules(),
+                outgoing_ability);
+            if (!activity_source.empty()) {
+                if (alert_engine_.consume(
+                        partial_line_, zone, activity_source, now)) {
+                    activity_tracker_.retain_transient_source(
+                        activity_source, partial_line_);
+                }
+            }
             if (damage && !ci_equal(damage->defender, active_character)) {
                 activity_tracker_.observe_damage(
                     *damage, active_character, activity_source);
@@ -1195,7 +1207,7 @@ CombatLogRefresh CombatLogTailer::refresh(
         clear();
         return failure(
             CombatLogError::invalid_character,
-            "Combat log unavailable for the active character");
+            "Combat log unavailable for the active character", now);
     }
     if (!ci_equal(character_, active_character)) {
         clear();
@@ -1210,7 +1222,8 @@ CombatLogRefresh CombatLogTailer::refresh(
             selection_error,
             selection_error == CombatLogError::ambiguous
                 ? "Multiple combat logs match the active character"
-                : "Combat logging is unavailable");
+                : "Combat logging is unavailable",
+            now);
     }
     std::optional<ReplayContinuity> retained_stream;
     if (path_ != *selected) {
@@ -1220,7 +1233,7 @@ CombatLogRefresh CombatLogTailer::refresh(
                 active_character, *selected, history_selection_failure)) {
             return failure(
                 CombatLogError::unavailable,
-                std::move(history_selection_failure));
+                std::move(history_selection_failure), now);
         }
         const std::string selected_path = selected->lexically_normal().string();
         const auto retained = replay_continuity_.find(selected_path);
@@ -1251,7 +1264,7 @@ CombatLogRefresh CombatLogTailer::refresh(
                 active_character, *selected, history_selection_failure)) {
             return failure(
                 CombatLogError::unavailable,
-                std::move(history_selection_failure));
+                std::move(history_selection_failure), now);
         }
     }
     history_zone_ = std::string(zone);
@@ -1262,7 +1275,7 @@ CombatLogRefresh CombatLogTailer::refresh(
     if (!current_file) {
         return failure(
             CombatLogError::unavailable,
-            "Combat log is unavailable");
+            "Combat log is unavailable", now);
     }
     descriptor_ = current_file->descriptor;
     const std::uintmax_t size = current_file->size;
@@ -1271,7 +1284,7 @@ CombatLogRefresh CombatLogTailer::refresh(
     if (!observed_prefix) {
         return failure(
             CombatLogError::read_failed,
-            "Combat log prefix cannot be read");
+            "Combat log prefix cannot be read", now);
     }
     if (!identity_ && retained_stream &&
         retained_stream->descriptor &&
@@ -1341,7 +1354,7 @@ CombatLogRefresh CombatLogTailer::refresh(
     if (!observed_boundary) {
         return failure(
             CombatLogError::read_failed,
-            "Combat log boundary cannot be read");
+            "Combat log boundary cannot be read", now);
     }
     if (had_identity && !stream_reset &&
         *observed_boundary != boundary_) {
@@ -1364,18 +1377,18 @@ CombatLogRefresh CombatLogTailer::refresh(
         if (!bytes) {
             return failure(
                 CombatLogError::read_failed,
-                "Combat log cannot be read");
+                "Combat log cannot be read", now);
         }
         const std::size_t received = bytes->size();
         if (received == 0U && requested != 0U) {
             return failure(
                 CombatLogError::read_failed,
-                "Combat log read made no progress");
+                "Combat log read made no progress", now);
         }
         lines_this_refresh_ = 0U;
         std::size_t consumed = 0U;
         for (; consumed < received; ++consumed) {
-            if (!consume((*bytes)[consumed], active_character, zone)) {
+            if (!consume((*bytes)[consumed], active_character, zone, now)) {
                 break;
             }
         }
@@ -1386,7 +1399,7 @@ CombatLogRefresh CombatLogTailer::refresh(
     if (!final_boundary) {
         return failure(
             CombatLogError::read_failed,
-            "Combat log boundary cannot be updated");
+            "Combat log boundary cannot be updated", now);
     }
     boundary_ = *final_boundary;
     const std::string active_path = path_.lexically_normal().string();
@@ -1409,7 +1422,7 @@ CombatLogRefresh CombatLogTailer::refresh(
         oversized_line_seen_ = false;
         return failure(
             CombatLogError::unavailable,
-            "Combat log contains an oversized line");
+            "Combat log contains an oversized line", now);
     }
 
     return current_snapshot(active_character, zone, now);
@@ -1448,6 +1461,7 @@ CombatLogRefresh CombatLogTailer::current_snapshot(
     return {
         .snapshot = std::move(analytics),
         .activity = activity_tracker_.snapshot(now),
+        .alerts = alert_engine_.snapshot(now),
         .error = CombatLogError::none,
     };
 }
@@ -1705,6 +1719,16 @@ void CombatLogTailer::finalize_current() {
 }
 
 void CombatLogTailer::clear() {
+    clear_context(false);
+}
+
+void CombatLogTailer::reset_context(std::string_view active_character,
+                                    bool preserve_respawn_alerts) {
+    clear_context(preserve_respawn_alerts);
+    character_ = std::string(active_character);
+}
+
+void CombatLogTailer::clear_context(bool preserve_respawn_alerts) {
     if (!path_.empty() && identity_) {
         const std::string active_path = path_.lexically_normal().string();
         if (!replay_continuity_.contains(active_path) &&
@@ -1740,7 +1764,13 @@ void CombatLogTailer::clear() {
     boundary_.clear();
     reopen_from_start_ = false;
     accumulator_.clear();
-    activity_tracker_.reset_transient_observations();
+    if (preserve_respawn_alerts) {
+        activity_tracker_.reset_transient_observations();
+        alert_engine_.reset_transient();
+    } else {
+        activity_tracker_.clear_transient_replay_sources();
+        alert_engine_.clear_observations();
+    }
     activity_partition_confirmed_ = false;
     history_visible_ = false;
     history_zone_.clear();

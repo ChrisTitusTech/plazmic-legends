@@ -222,6 +222,42 @@ Reconciliation compares case-insensitive item names with the current text
 equipment snapshot; it does not infer item stats, upgrades, inventory
 ownership, or class requirements.
 
+An explicitly selected local alert-rule pack may match bounded literal text in
+the same active-character log stream and create visible buff, crowd-control,
+respawn, or custom countdowns. Schema-1 packs are owned regular non-symlink
+JSON files capped at 256 KiB and 128 rules. Identifiers, labels, and
+case-insensitive literals are capped at 64, 128, and 256 UTF-8 bytes. Each rule
+also carries a kind, user-stated duration capped at seven days, cooldown capped
+at one day, and optional sound request. Matching examines one bounded
+4,096-byte active-log line at a time, and displayed zone text is capped at 128
+bytes. Plazmic does not bundle or infer spell or respawn durations and labels
+these timers as observed rule matches rather than authoritative game data.
+Memory caps live timers at 256 and recent fires at 128. The alert engine and
+tracker each hold at most 4,096 matching replay identities and use the same
+insertion-order eviction policy. The tracker may separately hold 4,096 retained
+activity identities, which evict by event timestamp. Unmatched lines do not
+consume replay capacity. Matching identities are not removed by
+activity-history deletion or wall-clock pruning; explicit character or client
+invalidation clears them.
+Transient timers may preserve respawn clocks within an explicitly retained
+character session, but character invalidation clears all timers, recent fires,
+cooldowns, and replay identities.
+
+Alert processing and alert sound are independently disabled by default. When
+processing is enabled, imported rules may create visible timers and fires.
+When sound is also enabled, one or more newly fired rules that request sound
+invoke at most one local desktop beep per 250 ms refresh after cooldown checks.
+Pending batch sound intent is tracked independently of the bounded visible
+recent-fire rows.
+Enabling alerts and replacing a rule pack each establish a fresh replay time
+boundary. The supplied wall clock governs future-line rejection, cooldowns,
+and timer expiry; a backward correction adjusts the replay boundary without
+rewinding an established positive cooldown.
+There is no audio-pack, voice-pack, network, or Qt Multimedia dependency in
+Phase 10. The owner-only UI settings retain only the selected pack path and the
+alert-processing and sound preferences; the pack is revalidated on restart and
+remains user-owned.
+
 The parser is an independent implementation informed only by public product
 behavior. It does not copy third-party code, data, fixtures, or assets. Later
 phases may build bounded histories, timers, proc or resist analytics,
@@ -244,12 +280,12 @@ after importing the inventory-only backup.
   drawing inside the game process.
 - The main window contains a central map canvas and dockable spawn and detail
   views inspired conceptually by ShowEQ.
-- The default left dock area contains Character above tabified Parse and
-  Activity docks. They retain movable, closable, floatable, saved-layout, and
+- The default left dock area contains Character above tabified Parse, Activity,
+  and Alerts docks. They retain movable, closable, floatable, saved-layout, and
   X11 class behavior. Details spans below the central map and right-side Spawns
   dock.
 - An embedded top menu bar exposes checkable Views actions for Character,
-  Parse, Activity, Spawns, and Details, plus minimize, maximize/restore, and
+  Parse, Activity, Alerts, Spawns, and Details, plus minimize, maximize/restore, and
   close controls aligned at the top right.
 - Its User menu exposes `UI File Install...` for an extracted private bundle.
 - The main window and any detached Plazmic tool windows expose

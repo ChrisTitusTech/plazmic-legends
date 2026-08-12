@@ -46,6 +46,9 @@ int main() {
             .other_spawns_visible = false,
             .combat_history_enabled = true,
             .activity_history_enabled = true,
+            .alerts_enabled = true,
+            .alert_sounds_enabled = true,
+            .alert_rules_path = directory.filePath("synthetic-alerts.json"),
             .spawn_filter = "guard",
             .spawn_type_filter = 1,
             .spawn_sort_column = 0,
@@ -92,6 +95,10 @@ int main() {
                         expected.combat_history_enabled &&
                     loaded->activity_history_enabled ==
                         expected.activity_history_enabled &&
+                    loaded->alerts_enabled == expected.alerts_enabled &&
+                    loaded->alert_sounds_enabled ==
+                        expected.alert_sounds_enabled &&
+                    loaded->alert_rules_path == expected.alert_rules_path &&
                     loaded->spawn_filter == expected.spawn_filter &&
                     loaded->spawn_type_filter ==
                         expected.spawn_type_filter &&
@@ -139,6 +146,18 @@ int main() {
         require(
             !partial_settings.save(relative_state),
             "relative client directory unexpectedly saved");
+
+        plazmic::UiState invalid_alert_path = expected;
+        invalid_alert_path.alert_rules_path = "relative/alerts.json";
+        require(!partial_settings.save(invalid_alert_path),
+                "relative alert rules path unexpectedly saved");
+        invalid_alert_path.alert_rules_path = "/tmp/alerts\ninvalid.json";
+        require(!partial_settings.save(invalid_alert_path),
+                "control character in alert rules path unexpectedly saved");
+        invalid_alert_path.alert_rules_path =
+            "/tmp/" + QString(2050, QChar(0x00e9));
+        require(!partial_settings.save(invalid_alert_path),
+                "oversized UTF-8 alert rules path unexpectedly saved");
 
         const QString legacy_path =
             directory.filePath("legacy/config.toml");

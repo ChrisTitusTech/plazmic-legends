@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <filesystem>
 #include <ranges>
@@ -18,6 +19,7 @@
 
 #include <QAbstractItemView>
 #include <QAction>
+#include <QApplication>
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QCheckBox>
@@ -162,6 +164,7 @@ MainWindow::MainWindow(StatusSnapshot snapshot,
       settings_(std::move(settings_path)),
       reset_layout_(reset_layout),
       client_directory_(std::move(client_directory)) {
+    alert_sound_callback_ = []() { QApplication::beep(); };
     build_ui();
     update_snapshot(snapshot_);
     restore_ui_state();
@@ -438,6 +441,56 @@ void MainWindow::build_ui() {
     tabifyDockWidget(parse_dock, activity_dock);
     parse_dock->raise();
 
+    auto* alerts_container = new QWidget;
+    auto* alerts_layout = new QVBoxLayout(alerts_container);
+    alerts_layout->setContentsMargins(6, 6, 6, 6);
+    alerts_overview_ = new QLabel("Import a local alert rule pack");
+    alerts_overview_->setObjectName("alerts-overview");
+    alerts_overview_->setTextFormat(Qt::PlainText);
+    alerts_overview_->setWordWrap(true);
+    alerts_layout->addWidget(alerts_overview_);
+    auto* alerts_tabs = new QTabWidget;
+    alerts_tabs->setObjectName("alerts-tabs");
+    alert_timers_ = new QTableWidget;
+    alert_timers_->setObjectName("alert-timers");
+    alert_timers_->setColumnCount(5);
+    alert_timers_->setHorizontalHeaderLabels(
+        {"Type", "Timer", "Zone", "Remaining", "Evidence"});
+    alert_timers_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    alert_timers_->setAlternatingRowColors(true);
+    alert_timers_->verticalHeader()->setVisible(false);
+    alert_timers_->horizontalHeader()->setSectionResizeMode(
+        0, QHeaderView::ResizeToContents);
+    alert_timers_->horizontalHeader()->setSectionResizeMode(
+        1, QHeaderView::Stretch);
+    alert_timers_->horizontalHeader()->setSectionResizeMode(
+        2, QHeaderView::ResizeToContents);
+    alert_timers_->horizontalHeader()->setSectionResizeMode(
+        3, QHeaderView::ResizeToContents);
+    alert_timers_->horizontalHeader()->setSectionResizeMode(
+        4, QHeaderView::Stretch);
+    alerts_tabs->addTab(alert_timers_, "Timers");
+    recent_alerts_ = new QTableWidget;
+    recent_alerts_->setObjectName("recent-alerts");
+    recent_alerts_->setColumnCount(3);
+    recent_alerts_->setHorizontalHeaderLabels({"Alert", "Zone", "Sound"});
+    recent_alerts_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    recent_alerts_->setAlternatingRowColors(true);
+    recent_alerts_->verticalHeader()->setVisible(false);
+    recent_alerts_->horizontalHeader()->setSectionResizeMode(
+        0, QHeaderView::Stretch);
+    recent_alerts_->horizontalHeader()->setSectionResizeMode(
+        1, QHeaderView::ResizeToContents);
+    recent_alerts_->horizontalHeader()->setSectionResizeMode(
+        2, QHeaderView::ResizeToContents);
+    alerts_tabs->addTab(recent_alerts_, "Recent Alerts");
+    alerts_layout->addWidget(alerts_tabs, 1);
+    auto* alerts_dock = create_dock(
+        "Alerts", "alerts-dock", alerts_container, this);
+    addDockWidget(Qt::LeftDockWidgetArea, alerts_dock);
+    tabifyDockWidget(activity_dock, alerts_dock);
+    parse_dock->raise();
+
     auto* spawn_container = new QWidget;
     auto* spawn_layout = new QVBoxLayout(spawn_container);
     spawn_state_ = new QLabel("Waiting for live spawn data");
@@ -489,7 +542,7 @@ void MainWindow::build_ui() {
     setCorner(Qt::BottomLeftCorner, Qt::LeftDockWidgetArea);
     setCorner(Qt::BottomRightCorner, Qt::BottomDockWidgetArea);
 
-    build_menu_bar(character_dock, parse_dock, activity_dock,
+    build_menu_bar(character_dock, parse_dock, activity_dock, alerts_dock,
                    spawn_dock, detail_dock);
 
     connect(
@@ -605,6 +658,51 @@ void MainWindow::open_inventory_import() {
         return;
     }
     update_inventory_reconciliation(imported, source);
+}
+
+void MainWindow::open_alert_rules() {
+    const QString source = QFileDialog::getOpenFileName(
+        this, "Import Plazmic Alert Rules", QDir::homePath(),
+        "Plazmic alert rules (*.json);;All files (*)");
+    if (source.isEmpty()) {
+        return;
+    }
+    std::string detail;
+    auto pack = load_alert_rule_pack(
+        std::filesystem::path(source.toStdString()), detail);
+    if (!pack) {
+        QMessageBox::warning(
+            this, "Import Alert Rules", QString::fromStdString(detail));
+        return;
+    }
+    const auto previous_pack = alert_rule_pack_;
+    const QString previous_path = alert_rules_path_;
+    const std::uint64_t previous_generation = alert_rules_generation_;
+    pack->generation = ++alert_rules_generation_;
+    alert_rule_pack_ = *pack;
+    alert_rules_path_ = source;
+    if (!save_ui_state()) {
+        alert_rule_pack_ = previous_pack;
+        alert_rules_path_ = previous_path;
+        alert_rules_generation_ = previous_generation;
+        QMessageBox::critical(
+            this, "Import Alert Rules",
+            "The validated rule pack could not be saved to local settings.");
+        return;
+    }
+    if (alert_rules_callback_) {
+        alert_rules_callback_(*alert_rule_pack_);
+    }
+    update_alert_snapshot({
+        .timers = {},
+        .recent_alerts = {},
+        .rules_source = alert_rule_pack_->source_name,
+        .rules_generation = alert_rule_pack_->generation,
+        .available = alerts_enabled(),
+        .detail = alerts_enabled()
+                      ? "Local rules loaded; waiting for observed log matches"
+                      : "Local rules loaded; alerts disabled",
+    });
 }
 
 void MainWindow::update_inventory_reconciliation(
@@ -737,6 +835,7 @@ void MainWindow::report_activity_deletion_result(std::string_view key,
 void MainWindow::build_menu_bar(QDockWidget* character_dock,
                                 QDockWidget* parse_dock,
                                 QDockWidget* activity_dock,
+                                QDockWidget* alerts_dock,
                                 QDockWidget* spawn_dock,
                                 QDockWidget* detail_dock) {
     QMenuBar* bar = menuBar();
@@ -786,13 +885,38 @@ void MainWindow::build_menu_bar(QDockWidget* character_dock,
     delete_activity_action_->setEnabled(false);
     connect(delete_activity_action_, &QAction::triggered,
             this, &MainWindow::delete_activity_history);
+    import_alert_rules_action_ =
+        user_menu->addAction("Import Alert Rules...");
+    import_alert_rules_action_->setObjectName("import-alert-rules-action");
+    connect(import_alert_rules_action_, &QAction::triggered,
+            this, &MainWindow::open_alert_rules);
+    alerts_enabled_action_ = user_menu->addAction("Enable Alerts");
+    alerts_enabled_action_->setObjectName("enable-alerts-action");
+    alerts_enabled_action_->setCheckable(true);
+    connect(alerts_enabled_action_, &QAction::toggled, this, [this](bool enabled) {
+        if (enabled) {
+            last_alert_sound_sequence_ = 0U;
+        }
+        save_alert_preferences(!enabled, alert_sounds_enabled());
+        if (alert_enabled_callback_) {
+            alert_enabled_callback_(alerts_enabled());
+        }
+    });
+    alert_sounds_action_ = user_menu->addAction("Enable Alert Sounds");
+    alert_sounds_action_->setObjectName("alert-sounds-action");
+    alert_sounds_action_->setCheckable(true);
+    connect(alert_sounds_action_, &QAction::toggled,
+            this, [this](bool enabled) {
+                save_alert_preferences(alerts_enabled(), !enabled);
+            });
 
     QMenu* views_menu = bar->addMenu("&Views");
     views_menu->setObjectName("views-menu");
-    const std::array<std::pair<QDockWidget*, QString>, 5> views{
+    const std::array<std::pair<QDockWidget*, QString>, 6> views{
         std::pair{character_dock, QString("view-character-action")},
         std::pair{parse_dock, QString("view-parse-action")},
         std::pair{activity_dock, QString("view-activity-action")},
+        std::pair{alerts_dock, QString("view-alerts-action")},
         std::pair{spawn_dock, QString("view-spawns-action")},
         std::pair{detail_dock, QString("view-details-action")},
     };
@@ -1225,6 +1349,108 @@ void MainWindow::update_activity_snapshot(
     }
 }
 
+void MainWindow::update_alert_snapshot(
+    const AlertAnalyticsSnapshot& analytics) {
+    if (analytics.rules_generation != alert_rules_generation_) {
+        return;
+    }
+    alert_analytics_ = analytics;
+    if (analytics.recent_alerts.empty() &&
+        analytics.latest_sound_sequence == 0U) {
+        last_alert_sound_sequence_ = 0U;
+    }
+    alerts_overview_->setText(
+        QString::fromStdString(analytics.detail) +
+        (analytics.rules_source.empty()
+             ? QString{}
+             : QString(" | %1").arg(
+                   QString::fromStdString(analytics.rules_source))));
+    const auto now = std::chrono::duration_cast<std::chrono::seconds>(
+                         std::chrono::system_clock::now().time_since_epoch())
+                         .count();
+    alert_timers_->setRowCount(static_cast<int>(analytics.timers.size()));
+    for (std::size_t row = 0U; row < analytics.timers.size(); ++row) {
+        const AlertTimerSnapshot& timer = analytics.timers[row];
+        const int table_row = static_cast<int>(row);
+        alert_timers_->setItem(
+            table_row, 0,
+            new QTableWidgetItem(QString::fromLatin1(
+                alert_timer_kind_label(timer.kind).data(),
+                static_cast<qsizetype>(
+                    alert_timer_kind_label(timer.kind).size()))));
+        alert_timers_->setItem(
+            table_row, 1,
+            new QTableWidgetItem(QString::fromStdString(timer.name)));
+        alert_timers_->setItem(
+            table_row, 2,
+            new QTableWidgetItem(QString::fromStdString(timer.zone)));
+        alert_timers_->setItem(
+            table_row, 3,
+            new QTableWidgetItem(QString::number(
+                std::max<std::int64_t>(0, timer.ends_unix_seconds - now)) +
+                                 " s"));
+        alert_timers_->setItem(
+            table_row, 4,
+            new QTableWidgetItem(
+                timer.observed
+                    ? "Observed local log match; duration user-provided"
+                    : "Reference duration"));
+    }
+    recent_alerts_->setRowCount(
+        static_cast<int>(analytics.recent_alerts.size()));
+    const bool sound_requested =
+        analytics.latest_sound_sequence > last_alert_sound_sequence_;
+    std::uint64_t newest_sequence = last_alert_sound_sequence_;
+    for (std::size_t offset = 0U;
+         offset < analytics.recent_alerts.size(); ++offset) {
+        const std::size_t index =
+            analytics.recent_alerts.size() - offset - 1U;
+        const FiredAlertSnapshot& alert = analytics.recent_alerts[index];
+        const int row = static_cast<int>(offset);
+        recent_alerts_->setItem(
+            row, 0, new QTableWidgetItem(QString::fromStdString(alert.label)));
+        recent_alerts_->setItem(
+            row, 1, new QTableWidgetItem(QString::fromStdString(alert.zone)));
+        recent_alerts_->setItem(
+            row, 2, new QTableWidgetItem(alert.sound ? "Requested" : "Off"));
+        if (alert.sequence > last_alert_sound_sequence_) {
+            newest_sequence = std::max(newest_sequence, alert.sequence);
+        }
+    }
+    last_alert_sound_sequence_ = std::max(
+        newest_sequence, analytics.latest_sound_sequence);
+    if (sound_requested && alerts_enabled() && alert_sounds_enabled() &&
+        alert_sound_callback_) {
+        alert_sound_callback_();
+    }
+}
+
+void MainWindow::reset_alert_snapshot(bool preserve_respawn_alerts) {
+    if (preserve_respawn_alerts) {
+        AlertAnalyticsSnapshot retained = alert_analytics_;
+        std::erase_if(retained.timers, [](const AlertTimerSnapshot& timer) {
+            return timer.kind != AlertTimerKind::respawn;
+        });
+        retained.detail = retained.available
+                              ? "Zone changed; bounded respawn timers retained"
+                              : retained.detail;
+        update_alert_snapshot(retained);
+        return;
+    }
+    update_alert_snapshot({
+        .timers = {},
+        .recent_alerts = {},
+        .rules_source = alert_rule_pack_
+                            ? alert_rule_pack_->source_name
+                            : std::string{},
+        .rules_generation = alert_rules_generation_,
+        .available = false,
+        .detail = alert_rule_pack_
+                      ? "Local rules loaded; waiting for active character"
+                      : "Import a local alert rule pack",
+    });
+}
+
 void MainWindow::render_combat_encounter(
     const CombatEncounterSnapshot& snapshot) {
     parse_table_->setRowCount(
@@ -1540,6 +1766,43 @@ void MainWindow::restore_ui_state() {
             state->combat_history_enabled);
         retain_activity_history_action_->setChecked(
             state->activity_history_enabled);
+        alert_rules_path_ = state->alert_rules_path;
+        {
+            const QSignalBlocker blocker(alerts_enabled_action_);
+            alerts_enabled_action_->setChecked(state->alerts_enabled);
+        }
+        {
+            const QSignalBlocker blocker(alert_sounds_action_);
+            alert_sounds_action_->setChecked(state->alert_sounds_enabled);
+        }
+        if (!alert_rules_path_.isEmpty()) {
+            std::string detail;
+            alert_rule_pack_ = load_alert_rule_pack(
+                std::filesystem::path(alert_rules_path_.toStdString()),
+                detail);
+            if (alert_rule_pack_) {
+                alert_rule_pack_->generation = ++alert_rules_generation_;
+            } else {
+                alert_rules_path_.clear();
+                (void)save_ui_state();
+            }
+            update_alert_snapshot({
+                .timers = {},
+                .recent_alerts = {},
+                .rules_source = alert_rule_pack_
+                                    ? alert_rule_pack_->source_name
+                                    : std::string{},
+                .rules_generation = alert_rule_pack_
+                                        ? alert_rule_pack_->generation
+                                        : alert_rules_generation_,
+                .available = alert_rule_pack_.has_value() && alerts_enabled(),
+                .detail = alert_rule_pack_
+                              ? alerts_enabled()
+                                    ? "Restored local alert rules; waiting for observed log matches"
+                                    : "Restored local alert rules; alerts disabled"
+                              : std::move(detail),
+            });
+        }
     }
     QTimer::singleShot(0, this, [this]() { ensure_on_screen(); });
 }
@@ -1604,6 +1867,9 @@ bool MainWindow::save_ui_state() {
             map_canvas_->other_spawns_visible(),
         .combat_history_enabled = combat_history_enabled(),
         .activity_history_enabled = activity_history_enabled(),
+        .alerts_enabled = alerts_enabled(),
+        .alert_sounds_enabled = alert_sounds_enabled(),
+        .alert_rules_path = alert_rules_path_,
         .spawn_filter = spawn_filter_->text(),
         .spawn_type_filter = type_filter,
         .spawn_sort_column = header->sortIndicatorSection(),
@@ -1646,6 +1912,34 @@ void MainWindow::save_activity_history_preference() {
         "setting was restored");
 }
 
+void MainWindow::save_alert_preferences(bool previous_alerts,
+                                        bool previous_sounds) {
+    const bool requested_alerts = alerts_enabled();
+    const bool requested_sounds = alert_sounds_enabled();
+    auto state = settings_.load();
+    bool saved = false;
+    if (!state) {
+        saved = save_ui_state();
+    } else {
+        previous_alerts = state->alerts_enabled;
+        previous_sounds = state->alert_sounds_enabled;
+        state->alerts_enabled = requested_alerts;
+        state->alert_sounds_enabled = requested_sounds;
+        state->alert_rules_path = alert_rules_path_;
+        saved = settings_.save(*state);
+    }
+    if (saved) {
+        return;
+    }
+    const QSignalBlocker alerts_blocker(alerts_enabled_action_);
+    const QSignalBlocker sounds_blocker(alert_sounds_action_);
+    alerts_enabled_action_->setChecked(previous_alerts);
+    alert_sounds_action_->setChecked(previous_sounds);
+    statusBar()->showMessage(
+        "Alert preferences could not be saved; the previous settings were "
+        "restored");
+}
+
 bool MainWindow::combat_history_enabled() const {
     return retain_combat_history_action_ != nullptr &&
            retain_combat_history_action_->isChecked();
@@ -1654,6 +1948,15 @@ bool MainWindow::combat_history_enabled() const {
 bool MainWindow::activity_history_enabled() const {
     return retain_activity_history_action_ != nullptr &&
            retain_activity_history_action_->isChecked();
+}
+
+bool MainWindow::alerts_enabled() const {
+    return alerts_enabled_action_ != nullptr &&
+           alerts_enabled_action_->isChecked();
+}
+
+bool MainWindow::alert_sounds_enabled() const {
+    return alert_sounds_action_ != nullptr && alert_sounds_action_->isChecked();
 }
 
 void MainWindow::changeEvent(QEvent* event) {

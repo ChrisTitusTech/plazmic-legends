@@ -24,6 +24,7 @@ struct PlayerLifecycleUpdate {
     bool clear_map{false};
     bool reset_combat{false};
     bool reset_activity{false};
+    bool preserve_respawn_alerts{false};
 };
 
 class PlayerLifecycle {
@@ -35,7 +36,12 @@ class PlayerLifecycle {
     [[nodiscard]] PlayerLifecycleUpdate apply(PlayerRefresh refresh);
 
   private:
-    [[nodiscard]] bool combat_context_changed(
+    struct CombatContextChange {
+        bool changed{false};
+        bool preserve_respawn_alerts{false};
+    };
+
+    [[nodiscard]] CombatContextChange combat_context_changed(
         const PlayerSnapshot& player,
         const CharacterSnapshot& character);
 

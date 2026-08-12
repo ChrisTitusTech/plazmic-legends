@@ -200,6 +200,8 @@ int main(int argc, char** argv) {
     }
     std::deque<std::string> activity_delete_queue;
     std::unordered_map<std::string, std::string> activity_delete_errors;
+    std::optional<plazmic::AlertRulePack> pending_alert_rules;
+    std::deque<bool> pending_alert_enabled;
     plazmic::MainWindow window(
         initial_status,
         settings_path,
@@ -209,6 +211,14 @@ int main(int argc, char** argv) {
     window.set_delete_activity_callback(
         [&activity_delete_queue](std::string key) {
             activity_delete_queue.push_back(std::move(key));
+        });
+    window.set_alert_rules_callback(
+        [&pending_alert_rules](plazmic::AlertRulePack pack) {
+            pending_alert_rules = std::move(pack);
+        });
+    window.set_alert_enabled_callback(
+        [&pending_alert_enabled](bool enabled) {
+            pending_alert_enabled.push_back(enabled);
         });
     window.show();
 
@@ -231,13 +241,15 @@ int main(int argc, char** argv) {
     std::string active_zone;
     plazmic::CharacterSnapshot active_character_snapshot;
     std::uint64_t combat_generation = 0U;
+    bool preserve_respawn_alerts_on_reset = false;
     const std::string player_source = client.string();
     QFutureWatcher<PlayerRefreshEnvelope> player_watcher;
     QFutureWatcher<PlayerRefreshEnvelope> map_watcher;
     const auto publish_player_refresh =
         [&window, &player_lifecycle, &privacy_log, &active_character,
          &active_zone, &active_character_snapshot,
-         &combat_generation, &player_source](PlayerRefreshEnvelope envelope) {
+         &combat_generation, &preserve_respawn_alerts_on_reset,
+         &player_source](PlayerRefreshEnvelope envelope) {
             if (envelope.generation != combat_generation ||
                 envelope.source != player_source ||
                 (!envelope.expected_character.empty() &&
@@ -270,6 +282,8 @@ int main(int argc, char** argv) {
                               : std::string{};
             active_character_snapshot = update.character;
             if (update.reset_combat) {
+                preserve_respawn_alerts_on_reset =
+                    update.preserve_respawn_alerts;
                 ++combat_generation;
                 window.update_combat_snapshot(
                     plazmic::CombatAnalyticsSnapshot{});
@@ -277,6 +291,7 @@ int main(int argc, char** argv) {
             if (update.reset_activity) {
                 window.update_activity_snapshot(
                     plazmic::ActivityAnalyticsSnapshot{});
+                window.reset_alert_snapshot(update.preserve_respawn_alerts);
             }
             window.update_character_snapshot(update.character);
             return true;
@@ -393,7 +408,9 @@ int main(int argc, char** argv) {
     QFutureWatcher<CombatRefreshEnvelope> combat_watcher;
     const auto commit_combat_refresh =
         [&window, &combat_tailer, &active_character, &combat_generation,
-         &activity_delete_errors](CombatRefreshEnvelope result) {
+         &activity_delete_errors,
+         &pending_alert_enabled](CombatRefreshEnvelope result,
+                                 bool publish_ui) {
             if (result.character != active_character ||
                 result.generation != combat_generation) {
                 return;
@@ -420,8 +437,13 @@ int main(int argc, char** argv) {
                 result.refresh.activity.persisted = false;
                 result.refresh.activity.detail = activity_delete_error->second;
             }
-            window.update_combat_snapshot(result.refresh.snapshot);
-            window.update_activity_snapshot(result.refresh.activity);
+            if (publish_ui) {
+                window.update_combat_snapshot(result.refresh.snapshot);
+                window.update_activity_snapshot(result.refresh.activity);
+                if (pending_alert_enabled.empty()) {
+                    window.update_alert_snapshot(result.refresh.alerts);
+                }
+            }
         };
     QObject::connect(
         &combat_watcher,
@@ -430,14 +452,16 @@ int main(int argc, char** argv) {
         [&combat_watcher, &combat_result_consumed,
          &commit_combat_refresh]() {
             combat_result_consumed = true;
-            commit_combat_refresh(combat_watcher.result());
+            commit_combat_refresh(combat_watcher.result(), true);
         });
     QTimer combat_timer;
     const auto start_combat_refresh =
         [&combat_watcher, &combat_tailer, &active_character, &active_zone,
          &active_character_snapshot, &combat_generation,
          &tailer_generation, &combat_result_consumed,
+         &preserve_respawn_alerts_on_reset,
          &activity_delete_queue, &activity_delete_errors, &window,
+         &pending_alert_rules, &pending_alert_enabled,
          game_directory = selection.game_directory]() {
             if (combat_watcher.isRunning()) {
                 return;
@@ -448,6 +472,8 @@ int main(int argc, char** argv) {
                 active_character_snapshot;
             const std::uint64_t generation = combat_generation;
             const bool reset_tailer = tailer_generation != generation;
+            const bool preserve_respawn_alerts =
+                reset_tailer && preserve_respawn_alerts_on_reset;
             while (!activity_delete_queue.empty()) {
                 std::string key = std::move(activity_delete_queue.front());
                 activity_delete_queue.pop_front();
@@ -462,18 +488,30 @@ int main(int argc, char** argv) {
                 }
                 window.report_activity_deletion_result(key, succeeded);
             }
+            if (pending_alert_rules) {
+                combat_tailer->set_alert_rules(
+                    std::move(*pending_alert_rules));
+                pending_alert_rules.reset();
+            }
+            while (!pending_alert_enabled.empty()) {
+                combat_tailer->set_alert_enabled(
+                    pending_alert_enabled.front());
+                pending_alert_enabled.pop_front();
+            }
             const auto source_tailer = combat_tailer;
             tailer_generation = generation;
             combat_result_consumed = false;
             combat_watcher.setFuture(QtConcurrent::run(
                 [source_tailer, game_directory, character, zone, generation,
-                 character_snapshot, reset_tailer]() {
+                 character_snapshot, reset_tailer,
+                 preserve_respawn_alerts]() {
                     auto staged_tailer =
                         std::make_shared<plazmic::CombatLogTailer>(
                             *source_tailer);
                     staged_tailer->begin_deferred_persistence();
                     if (reset_tailer) {
-                        staged_tailer->clear();
+                        staged_tailer->reset_context(
+                            character, preserve_respawn_alerts);
                     }
                     plazmic::CombatLogRefresh refresh =
                         staged_tailer->refresh(
@@ -517,7 +555,7 @@ int main(int argc, char** argv) {
     }
     if (!combat_result_consumed) {
         combat_result_consumed = true;
-        commit_combat_refresh(combat_watcher.result());
+        commit_combat_refresh(combat_watcher.result(), false);
     }
     for (const auto& [key, detail] : activity_delete_errors) {
         (void)detail;

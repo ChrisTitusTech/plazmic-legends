@@ -1,6 +1,7 @@
 #pragma once
 
 #include "activity/activity_tracker.h"
+#include "alerts/alert_engine.h"
 #include "game/combat_history_store.h"
 #include "model/combat_snapshot.h"
 
@@ -125,6 +126,7 @@ enum class CombatLogError {
 struct CombatLogRefresh {
     CombatAnalyticsSnapshot snapshot;
     ActivityAnalyticsSnapshot activity;
+    AlertAnalyticsSnapshot alerts;
     CombatLogError error{CombatLogError::none};
 };
 
@@ -171,6 +173,16 @@ class CombatLogTailer {
     void set_activity_history_enabled(bool enabled) {
         activity_tracker_.set_retention_enabled(enabled);
     }
+    void set_alert_rules(AlertRulePack pack) {
+        alert_engine_.set_rules(std::move(pack));
+    }
+    void clear_alert_rules() { alert_engine_.clear_rules(); }
+    void set_alert_enabled(
+        bool enabled,
+        std::chrono::system_clock::time_point now =
+            std::chrono::system_clock::now()) {
+        alert_engine_.set_enabled(enabled, now);
+    }
     void begin_deferred_persistence();
     void commit_deferred_persistence(bool retain_history,
                                      bool retain_activity);
@@ -186,6 +198,11 @@ class CombatLogTailer {
         std::chrono::system_clock::time_point now =
             std::chrono::system_clock::now()) {
         return activity_tracker_.snapshot(now);
+    }
+    [[nodiscard]] AlertAnalyticsSnapshot alert_snapshot(
+        std::chrono::system_clock::time_point now =
+            std::chrono::system_clock::now()) {
+        return alert_engine_.snapshot(now);
     }
 
     [[nodiscard]] CombatLogRefresh refresh(
@@ -212,24 +229,29 @@ class CombatLogTailer {
         activity_tracker_.maintain(now);
     }
     void clear();
+    void reset_context(std::string_view active_character,
+                       bool preserve_respawn_alerts);
 
   private:
     [[nodiscard]] CombatLogRefresh failure(
         CombatLogError error,
-        std::string detail);
+        std::string detail,
+        std::chrono::system_clock::time_point now);
     [[nodiscard]] std::optional<std::filesystem::path> select_log(
         const std::filesystem::path& game_directory,
         std::string_view active_character,
         CombatLogError& error) const;
     [[nodiscard]] bool consume(char byte,
                                std::string_view active_character,
-                               std::string_view zone);
+                               std::string_view zone,
+                               std::chrono::system_clock::time_point now);
     [[nodiscard]] bool select_history(
         std::string_view active_character,
         const std::filesystem::path& log_path,
         std::string& failure_detail);
     void retain_completed();
     void finalize_current();
+    void clear_context(bool preserve_respawn_alerts);
     void retain_encounter(const CombatEncounterSnapshot& encounter);
     void maintain_history();
     void maintain_history_store();
@@ -250,6 +272,7 @@ class CombatLogTailer {
     std::string boundary_;
     bool reopen_from_start_{false};
     ActivityTracker activity_tracker_;
+    AlertEngine alert_engine_;
     CombatAccumulator accumulator_;
     CombatHistoryStore history_store_;
     std::string history_key_;

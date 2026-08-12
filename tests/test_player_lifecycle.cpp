@@ -101,7 +101,8 @@ int main() {
                 "initial zone map was not published");
         require(!first.clear_map,
                 "initial map publication requested invalidation");
-        require(first.reset_combat && first.reset_activity,
+        require(first.reset_combat && first.reset_activity &&
+                    !first.preserve_respawn_alerts,
                 "initial player context did not reset combat state");
         require(lifecycle.handled_zone() == "zone_a",
                 "initial handled zone was not retained");
@@ -125,7 +126,8 @@ int main() {
                     pending_second.player.zone == "zone_b" &&
                     !pending_second.map && pending_second.clear_map &&
                     pending_second.reset_combat &&
-                    pending_second.reset_activity,
+                    pending_second.reset_activity &&
+                    pending_second.preserve_respawn_alerts,
                 "new-zone player retained the prior zone map");
 
         auto second = lifecycle.apply({
@@ -139,7 +141,8 @@ int main() {
                 "second-zone map was not published");
         require(lifecycle.handled_zone() == "zone_b",
                 "second zone did not replace the handled zone");
-        require(!second.reset_combat && !second.reset_activity,
+        require(!second.reset_combat && !second.reset_activity &&
+                    !second.preserve_respawn_alerts,
                 "map publication repeated the zone-change reset");
 
         plazmic::GameStateReadResult character_unavailable =
@@ -154,7 +157,8 @@ int main() {
                     !optional_character.character.available() &&
                     !optional_character.clear_map &&
                     optional_character.reset_combat &&
-                    optional_character.reset_activity,
+                    optional_character.reset_activity &&
+                    !optional_character.preserve_respawn_alerts,
                 "optional character failure cleared valid player state");
 
         const auto recovered_character = lifecycle.apply({
@@ -165,7 +169,8 @@ int main() {
                     recovered_character.character.name ==
                         "synthetic_character" &&
                     recovered_character.reset_combat &&
-                    recovered_character.reset_activity,
+                    recovered_character.reset_activity &&
+                    !recovered_character.preserve_respawn_alerts,
                 "character recovery did not reset activity consumers");
         auto changed_character_state = live_state("zone_b");
         changed_character_state.character->name = "other_character";
@@ -176,7 +181,8 @@ int main() {
         require(changed_character.character.available() &&
                     changed_character.character.name == "other_character" &&
                     changed_character.reset_combat &&
-                    changed_character.reset_activity,
+                    changed_character.reset_activity &&
+                    !changed_character.preserve_respawn_alerts,
                 "character change did not reset activity consumers");
 
         const std::array transitions{

@@ -50,7 +50,8 @@ bool valid_client_directory(const QString& directory) {
     }
     const QByteArray encoded = directory.toUtf8();
     if (encoded.isEmpty() ||
-        encoded.size() > kMaximumClientDirectoryBytes) {
+        encoded.size() > kMaximumClientDirectoryBytes ||
+        QString::fromUtf8(encoded) != directory) {
         return false;
     }
     for (QChar character : directory) {
@@ -190,6 +191,7 @@ std::optional<UiState> UiSettings::load() const {
         spawns,
         combat,
         activity,
+        alerts,
     };
     Section section = Section::other;
     std::optional<QString> client_directory;
@@ -208,6 +210,9 @@ std::optional<UiState> UiSettings::load() const {
     bool other_spawns_visible = true;
     bool combat_history_enabled = false;
     bool activity_history_enabled = false;
+    bool alerts_enabled = false;
+    bool alert_sounds_enabled = false;
+    QString alert_rules_path;
     QString spawn_filter;
     int spawn_type_filter = -1;
     int spawn_sort_column = 3;
@@ -231,6 +236,8 @@ std::optional<UiState> UiSettings::load() const {
                 section = Section::combat;
             } else if (line == "[activity]") {
                 section = Section::activity;
+            } else if (line == "[alerts]") {
+                section = Section::alerts;
             } else {
                 section = Section::other;
             }
@@ -354,6 +361,26 @@ std::optional<UiState> UiSettings::load() const {
                 }
                 activity_history_enabled = *value == "true";
             }
+        } else if (section == Section::alerts) {
+            if (line.startsWith("enabled")) {
+                const auto value = scalar_value(line, "enabled");
+                if (!value || (*value != "true" && *value != "false")) {
+                    return std::nullopt;
+                }
+                alerts_enabled = *value == "true";
+            } else if (line.startsWith("sounds_enabled")) {
+                const auto value = scalar_value(line, "sounds_enabled");
+                if (!value || (*value != "true" && *value != "false")) {
+                    return std::nullopt;
+                }
+                alert_sounds_enabled = *value == "true";
+            } else if (line.startsWith("rules_path")) {
+                const auto value = toml_string_value(line, "rules_path");
+                if (!value || value->size() > 4096 || value->contains('\0')) {
+                    return std::nullopt;
+                }
+                alert_rules_path = *value;
+            }
         } else if (section == Section::spawns) {
             if (line.startsWith("filter")) {
                 const auto value = quoted_value(line, "filter");
@@ -434,6 +461,9 @@ std::optional<UiState> UiSettings::load() const {
         .other_spawns_visible = other_spawns_visible,
         .combat_history_enabled = combat_history_enabled,
         .activity_history_enabled = activity_history_enabled,
+        .alerts_enabled = alerts_enabled,
+        .alert_sounds_enabled = alert_sounds_enabled,
+        .alert_rules_path = alert_rules_path,
         .spawn_filter = spawn_filter,
         .spawn_type_filter = spawn_type_filter,
         .spawn_sort_column = spawn_sort_column,
@@ -456,6 +486,8 @@ bool UiSettings::save(const UiState& state) const {
         state.height_filter_above < 0.0 ||
         state.height_filter_above > 1000.0 ||
         state.spawn_filter.size() > 256 ||
+        (!state.alert_rules_path.isEmpty() &&
+         !valid_client_directory(state.alert_rules_path)) ||
         state.spawn_type_filter < -1 ||
         state.spawn_type_filter > 2 ||
         state.spawn_sort_column < 0 ||
@@ -537,6 +569,16 @@ bool UiSettings::save(const UiState& state) const {
     contents += "\n[activity]\n";
     contents += QByteArray("retain_history = ") +
                 (state.activity_history_enabled ? "true\n" : "false\n");
+    contents += "\n[alerts]\n";
+    contents += QByteArray("enabled = ") +
+                (state.alerts_enabled ? "true\n" : "false\n");
+    contents += QByteArray("sounds_enabled = ") +
+                (state.alert_sounds_enabled ? "true\n" : "false\n");
+    if (!state.alert_rules_path.isEmpty()) {
+        contents += "rules_path = " +
+                    toml_string(QDir::cleanPath(state.alert_rules_path)) +
+                    "\n";
+    }
     contents += "\n[spawns]\n";
     contents += "filter = \"" +
                 state.spawn_filter.toUtf8().toBase64() + "\"\n";

@@ -27,6 +27,9 @@ The current `main` branch provides:
 - a tabified Activity dock with bounded XP/AA pace, loot, equipment-change,
   observed-ability, celebration, and explicit local inventory-output views,
   plus an independent opt-in owner-only activity store;
+- a tabified Alerts dock driven by a validated user-owned local rule pack, with
+  bounded timers, recent fires, cooldowns, and an independently enabled desktop
+  beep;
 - Linux, Wine, and X11/XWayland support.
 
 This implementation is a foundation, not a permanent product-category limit.

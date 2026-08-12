@@ -575,26 +575,51 @@ event.
 
 ## Phase 10: Buffs, timers, alerts, and audio
 
-Status: Planned as a separate pull request stacked on Phase 9.
+Status: Implementation complete in a separate pull request stacked on Phase 9;
+exit criteria remain pending for installed notification and audio validation.
 
 ### Outcome and included work
 
-Add bounded buff duration and respawn timers, local text rules, rank-upgrade and
-custom kill alerts, visible notifications, optional sound/voice packs,
-configurable rate limits, and independent enable/disable controls.
+Add bounded user-described buff, crowd-control, respawn, and custom timers,
+local literal rules, visible notifications, an optional desktop beep,
+configurable cooldowns, and independent alert and sound controls. Voice-pack playback and
+rank-upgrade inference remain deferred because the current dependency and data
+boundaries provide neither a validated audio sink nor an approved catalog.
 
 Phase 10 inputs are bounded cast, landing, fade, kill, and user-rule matches
-from the active local log; Phase 9 kill/activity snapshots; user-configured
-timer values; and schema/provenance-validated user-imported duration and audio
-packs. Observed durations and imported reference durations remain visibly
-distinct. No new process-memory or network source is approved by this phase.
+from the active local log and user-configured timer values in a validated local
+rule pack. Observed match evidence and user-stated durations remain visibly
+distinct. No new process-memory, bundled database, audio asset, or network
+source is approved by this phase.
+
+Schema-1 packs are capped at 256 KiB and 128 rules. Rule identifiers, labels,
+and case-insensitive literals are capped at 64, 128, and 256 UTF-8 bytes,
+respectively. The active log match window is one 4,096-byte line, and rendered
+zone text is capped at 128 bytes. User durations are capped at seven days and
+cooldowns at one day. Runtime state is capped at 256 timers, 128 recent fires,
+4,096 alert-engine matching identities, 4,096 tracker matching identities, and
+4,096 separately retained activity identities. The two matching stores evict
+in insertion order; the retained activity store evicts by event timestamp.
+Unmatched lines consume no replay capacity, and matching identities are
+independent of activity-history deletion and wall-clock pruning. Notification
+text is derived only from the bounded rule label and zone.
 
 ### Risks, exit criteria, and validation
 
-- Alert matching and timer recovery are deterministic across clock changes,
-  zoning, character changes, and restart.
-- Audio is optional, user-selectable, rate-limited, and testable with a fake
-  sink; packs require compatible provenance.
+- Alert matching, cooldown handling, lifecycle reset, and timer expiry are
+  deterministic across clock changes, zoning, and character changes. The pack
+  is revalidated across restart; no pre-restart timer is replayed or invented.
+- Log timestamps and timer expiry use `system_clock`. Validation covers
+  forward and backward wall-clock corrections, suspend/resume, the inclusive
+  cooldown boundary, zero-cooldown unique lines, duplicates, out-of-order
+  lines, future lines beyond 24 hours, rotation, pack replacement, and restart.
+  Enabling alerts or replacing rules establishes a fresh replay boundary;
+  backward wall-clock correction lowers that boundary to the supplied current
+  time without rewinding an existing positive cooldown baseline.
+- Audio is optional, user-selectable, and testable with a fake sink. Sound
+  requests in one 250 ms refresh are coalesced to at most one desktop beep;
+  batch sound intent remains independent of the 128-row visible history cap.
+  Packs require compatible provenance.
 - Rule, timer, lifecycle, accessibility, performance, privacy, review, CI, and
   installed notification/audio validation pass.
 

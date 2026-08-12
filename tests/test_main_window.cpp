@@ -12,6 +12,7 @@
 #include <array>
 #include <cstdlib>
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -27,6 +28,7 @@
 #include <QMenuBar>
 #include <QMouseEvent>
 #include <QProgressBar>
+#include <QSignalBlocker>
 #include <QStatusBar>
 #include <QTableWidget>
 #include <QTableView>
@@ -151,6 +153,12 @@ int main(int argc, char** argv) {
             window.findChild<QAction*>("export-activity-action");
         QAction* delete_activity_action =
             window.findChild<QAction*>("delete-activity-action");
+        QAction* import_alert_rules_action =
+            window.findChild<QAction*>("import-alert-rules-action");
+        QAction* alerts_enabled_action =
+            window.findChild<QAction*>("enable-alerts-action");
+        QAction* alert_sounds_action =
+            window.findChild<QAction*>("alert-sounds-action");
         require(
             menu_bar->actions().contains(user_menu->menuAction()) &&
                 menu_bar->actions().contains(views_menu->menuAction()) &&
@@ -175,7 +183,15 @@ int main(int argc, char** argv) {
                 export_activity_action != nullptr &&
                 !export_activity_action->isEnabled() &&
                 delete_activity_action != nullptr &&
-                !delete_activity_action->isEnabled(),
+                !delete_activity_action->isEnabled() &&
+                import_alert_rules_action != nullptr &&
+                user_menu->actions().contains(import_alert_rules_action) &&
+                alerts_enabled_action != nullptr &&
+                alerts_enabled_action->isCheckable() &&
+                !window.alerts_enabled() &&
+                alert_sounds_action != nullptr &&
+                alert_sounds_action->isCheckable() &&
+                !window.alert_sounds_enabled(),
             "User actions or Views menu hierarchy is incomplete");
         retain_history_action->trigger();
         retain_activity_action->trigger();
@@ -215,6 +231,26 @@ int main(int argc, char** argv) {
                                 .contains("could not be saved"),
                     "failed activity preference save was not surfaced and "
                     "rolled back");
+            auto* failed_alerts_action =
+                failed_preference_window.findChild<QAction*>(
+                    "enable-alerts-action");
+            auto* failed_sounds_action =
+                failed_preference_window.findChild<QAction*>(
+                    "alert-sounds-action");
+            require(failed_alerts_action != nullptr &&
+                        failed_sounds_action != nullptr,
+                    "failed-preference alert actions are missing");
+            {
+                const QSignalBlocker blocker(failed_alerts_action);
+                failed_alerts_action->setChecked(true);
+            }
+            failed_sounds_action->trigger();
+            require(failed_alerts_action->isChecked() &&
+                        !failed_sounds_action->isChecked() &&
+                        failed_preference_window.statusBar()
+                            ->currentMessage()
+                            .contains("could not be saved"),
+                    "failed sound preference save changed alert processing");
         }
         QWidget* window_controls =
             menu_bar->cornerWidget(Qt::TopRightCorner);
@@ -249,16 +285,21 @@ int main(int argc, char** argv) {
         auto* parse_dock = window.findChild<QDockWidget*>("parse-dock");
         auto* activity_dock =
             window.findChild<QDockWidget*>("activity-dock");
+        auto* alerts_dock =
+            window.findChild<QDockWidget*>("alerts-dock");
         auto* spawn_dock = window.findChild<QDockWidget*>("spawn-dock");
         auto* detail_dock = window.findChild<QDockWidget*>("detail-dock");
         require(character_dock != nullptr && parse_dock != nullptr &&
                     activity_dock != nullptr &&
+                    alerts_dock != nullptr &&
                     spawn_dock != nullptr && detail_dock != nullptr &&
                     window.dockWidgetArea(character_dock) ==
                         Qt::LeftDockWidgetArea &&
                     window.dockWidgetArea(parse_dock) ==
                         Qt::LeftDockWidgetArea &&
                     window.dockWidgetArea(activity_dock) ==
+                        Qt::LeftDockWidgetArea &&
+                    window.dockWidgetArea(alerts_dock) ==
                         Qt::LeftDockWidgetArea &&
                     character_dock->geometry().top() <
                         parse_dock->geometry().top(),
@@ -284,11 +325,12 @@ int main(int argc, char** argv) {
                     detail_dock->geometry().top(),
             "Details is not below the map and Spawns with a full-height "
             "Character/Parse column");
-        const std::array<std::pair<const char*, QDockWidget*>, 5>
+        const std::array<std::pair<const char*, QDockWidget*>, 6>
             view_actions{
                 std::pair{"view-character-action", character_dock},
                 std::pair{"view-parse-action", parse_dock},
                 std::pair{"view-activity-action", activity_dock},
+                std::pair{"view-alerts-action", alerts_dock},
                 std::pair{"view-spawns-action", spawn_dock},
                 std::pair{"view-details-action", detail_dock},
             };
@@ -684,6 +726,144 @@ int main(int argc, char** argv) {
                     !export_activity_action->isEnabled() &&
                     !delete_activity_action->isEnabled(),
                 "successful activity deletion retained exportable UI data");
+        const auto alert_now =
+            std::chrono::duration_cast<std::chrono::seconds>(
+                std::chrono::system_clock::now().time_since_epoch())
+                .count();
+        int alert_sound_count = 0;
+        window.set_alert_sound_callback(
+            [&alert_sound_count]() { ++alert_sound_count; });
+        alerts_enabled_action->trigger();
+        alert_sounds_action->trigger();
+        window.update_alert_snapshot({
+            .timers = {{
+                .id = "synthetic-timer",
+                .name = "Synthetic Timer",
+                .kind = plazmic::AlertTimerKind::buff,
+                .zone = "synthetic_zone",
+                .started_unix_seconds = alert_now,
+                .ends_unix_seconds = alert_now + 60,
+                .observed = true,
+            }, {
+                .id = "synthetic-respawn",
+                .name = "Synthetic Respawn",
+                .kind = plazmic::AlertTimerKind::respawn,
+                .zone = "synthetic_zone",
+                .started_unix_seconds = alert_now,
+                .ends_unix_seconds = alert_now + 120,
+                .observed = true,
+            }},
+            .recent_alerts = {{
+                .rule_id = "synthetic-alert",
+                .label = "Synthetic Alert",
+                .zone = "synthetic_zone",
+                .timestamp_unix_seconds = alert_now,
+                .sequence = 1U,
+                .sound = true,
+            }},
+            .rules_source = "synthetic-alerts.json",
+            .latest_sound_sequence = 1U,
+            .available = true,
+            .detail = "Synthetic local rules",
+        });
+        require(window.findChild<QTableWidget*>("alert-timers")
+                            ->rowCount() == 2 &&
+                    window.findChild<QTableWidget*>("alert-timers")
+                            ->item(0, 4)
+                            ->text()
+                            .contains("duration user-provided") &&
+                    window.findChild<QTableWidget*>("recent-alerts")
+                            ->rowCount() == 1 &&
+                    window.findChild<QLabel*>("alerts-overview")
+                        ->text()
+                        .contains("synthetic-alerts.json") &&
+                    alert_sound_count == 1,
+                "alert timers and recent fires did not render");
+        window.reset_alert_snapshot(true);
+        require(window.findChild<QTableWidget*>("alert-timers")
+                            ->rowCount() == 1 &&
+                    window.findChild<QTableWidget*>("alert-timers")
+                            ->item(0, 0)
+                            ->text() == "Respawn" &&
+                    alert_sound_count == 1,
+                "zone reset did not retain only respawn timers");
+        window.update_alert_snapshot({
+            .timers = {},
+            .recent_alerts = {{
+                .rule_id = "synthetic-alert",
+                .label = "Synthetic Alert",
+                .zone = "synthetic_zone",
+                .timestamp_unix_seconds = alert_now,
+                .sequence = 1U,
+                .sound = true,
+            }},
+            .rules_source = {},
+            .latest_sound_sequence = 1U,
+            .available = true,
+            .detail = "Synthetic local rules",
+        });
+        require(alert_sound_count == 1,
+                "unchanged alert sequence replayed its sound");
+        window.update_alert_snapshot({
+            .timers = {},
+            .recent_alerts = {},
+            .rules_source = "synthetic-alerts.json",
+            .available = true,
+            .detail = "Synthetic generation reset",
+        });
+        window.update_alert_snapshot({
+            .timers = {},
+            .recent_alerts = {{
+                .rule_id = "next-generation-alert",
+                .label = "Next Generation Alert",
+                .zone = "other_zone",
+                .timestamp_unix_seconds = alert_now + 1,
+                .sequence = 1U,
+                .sound = true,
+            }},
+            .rules_source = "synthetic-alerts.json",
+            .latest_sound_sequence = 1U,
+            .available = true,
+            .detail = "Synthetic next generation",
+        });
+        require(alert_sound_count == 2,
+                "alert generation reset suppressed its first sound");
+        alerts_enabled_action->trigger();
+        window.update_alert_snapshot({
+            .timers = {},
+            .recent_alerts = {{
+                .rule_id = "stale-enabled-alert",
+                .label = "Stale Enabled Alert",
+                .zone = "other_zone",
+                .timestamp_unix_seconds = alert_now + 2,
+                .sequence = 2U,
+                .sound = true,
+            }},
+            .rules_source = "synthetic-alerts.json",
+            .latest_sound_sequence = 2U,
+            .available = true,
+            .detail = "Synthetic stale enabled result",
+        });
+        require(alert_sound_count == 2,
+                "processing opt-out allowed a stale snapshot sound");
+        alerts_enabled_action->trigger();
+        window.update_alert_snapshot({
+            .timers = {},
+            .recent_alerts = {{
+                .rule_id = "restarted-alert",
+                .label = "Restarted Alert",
+                .zone = "other_zone",
+                .timestamp_unix_seconds = alert_now + 3,
+                .sequence = 1U,
+                .sound = true,
+            }},
+            .rules_source = "synthetic-alerts.json",
+            .latest_sound_sequence = 1U,
+            .available = true,
+            .detail = "Synthetic restarted processing",
+        });
+        require(alert_sound_count == 3,
+                "rapid alert restart retained a stale sound cursor");
         auto* history_table =
             window.findChild<QTableWidget*>("combat-history");
         require(history_table->selectionMode() ==
@@ -1350,6 +1530,10 @@ int main(int argc, char** argv) {
                 "close did not persist player-follow state");
         require(saved_state->combat_history_enabled,
                 "close did not persist combat-history retention consent");
+        require(saved_state->alert_sounds_enabled,
+                "close did not persist alert-sound consent");
+        require(saved_state->alerts_enabled,
+                "close did not persist alert-processing consent");
         require(saved_state->named_spawn_labels_visible &&
                     saved_state->player_labels_visible &&
                     saved_state->npc_labels_visible &&
@@ -1429,6 +1613,10 @@ int main(int argc, char** argv) {
                 "saved player-follow state was not restored");
         require(restored.combat_history_enabled(),
                 "saved combat-history retention consent was not restored");
+        require(restored.alert_sounds_enabled(),
+                "saved alert-sound consent was not restored");
+        require(restored.alerts_enabled(),
+                "saved alert-processing consent was not restored");
         require(restored.map_canvas()->named_spawn_labels_visible() &&
                     restored.map_canvas()->player_labels_visible() &&
                     restored.map_canvas()->npc_labels_visible() &&
@@ -1473,6 +1661,178 @@ int main(int argc, char** argv) {
                 restored_saved_state->client_directory ==
                     client_directory,
             "restored window did not preserve the client directory");
+
+        const QString generation_pack_path =
+            directory.filePath("generation-alerts.json");
+        {
+            std::ofstream output(generation_pack_path.toStdString(),
+                                 std::ios::binary);
+            output << R"({"schema":1,"rules":[{"id":"generation","name":"Generation","match":"generation alert","kind":"custom","durationSeconds":0,"cooldownSeconds":0,"sound":true}]})";
+        }
+        const QString generation_settings_path =
+            directory.filePath("generation.toml");
+        plazmic::UiState generation_state;
+        generation_state.client_directory = client_directory;
+        generation_state.alert_rules_path = generation_pack_path;
+        generation_state.alerts_enabled = true;
+        generation_state.alert_sounds_enabled = true;
+        require(plazmic::UiSettings(generation_settings_path)
+                    .save(generation_state),
+                "alert generation fixture settings could not be saved");
+        plazmic::MainWindow generation_window(
+            snapshot, generation_settings_path, false, client_directory);
+        require(generation_window.alert_rule_pack().has_value() &&
+                    generation_window.alert_rules_generation() == 1U &&
+                    generation_window.alert_rule_pack()->generation == 1U,
+                "restored alert rules did not receive a generation");
+        int generation_sounds = 0;
+        generation_window.set_alert_sound_callback(
+            [&generation_sounds]() { ++generation_sounds; });
+        generation_window.update_alert_snapshot({
+            .timers = {},
+            .recent_alerts = {{
+                .rule_id = "stale",
+                .label = "Stale",
+                .zone = "synthetic_zone",
+                .timestamp_unix_seconds = alert_now,
+                .sequence = 1U,
+                .sound = true,
+            }},
+            .rules_source = "old-alerts.json",
+            .rules_generation = 0U,
+            .latest_sound_sequence = 1U,
+            .available = true,
+            .detail = "Stale in-flight rules",
+        });
+        require(generation_sounds == 0 &&
+                    generation_window
+                            .findChild<QTableWidget*>("recent-alerts")
+                            ->rowCount() == 0,
+                "stale alert-rule generation was rendered or sounded");
+        generation_window.update_alert_snapshot({
+            .timers = {},
+            .recent_alerts = {{
+                .rule_id = "generation",
+                .label = "Generation",
+                .zone = "synthetic_zone",
+                .timestamp_unix_seconds = alert_now + 1,
+                .sequence = 1U,
+                .sound = true,
+            }},
+            .rules_source = "generation-alerts.json",
+            .rules_generation = 1U,
+            .latest_sound_sequence = 1U,
+            .available = true,
+            .detail = "Current rules",
+        });
+        require(generation_sounds == 1 &&
+                    generation_window
+                            .findChild<QTableWidget*>("recent-alerts")
+                            ->rowCount() == 1,
+                "current alert-rule generation was suppressed");
+        generation_window.update_alert_snapshot({
+            .timers = {},
+            .recent_alerts = {
+                {
+                    .rule_id = "generation",
+                    .label = "Generation",
+                    .zone = "synthetic_zone",
+                    .timestamp_unix_seconds = alert_now + 1,
+                    .sequence = 1U,
+                    .sound = true,
+                },
+                {
+                    .rule_id = "second",
+                    .label = "Second",
+                    .zone = "synthetic_zone",
+                    .timestamp_unix_seconds = alert_now + 2,
+                    .sequence = 2U,
+                    .sound = true,
+                },
+                {
+                    .rule_id = "third",
+                    .label = "Third",
+                    .zone = "synthetic_zone",
+                    .timestamp_unix_seconds = alert_now + 2,
+                    .sequence = 3U,
+                    .sound = true,
+                },
+            },
+            .rules_source = "generation-alerts.json",
+            .rules_generation = 1U,
+            .latest_sound_sequence = 3U,
+            .available = true,
+            .detail = "Current batched rules",
+        });
+        require(generation_sounds == 2,
+                "batched sound requests were not coalesced to one dispatch");
+        generation_window.update_alert_snapshot({
+            .timers = {},
+            .recent_alerts = {
+                {
+                    .rule_id = "second",
+                    .label = "Second",
+                    .zone = "synthetic_zone",
+                    .timestamp_unix_seconds = alert_now + 2,
+                    .sequence = 2U,
+                    .sound = true,
+                },
+                {
+                    .rule_id = "third",
+                    .label = "Third",
+                    .zone = "synthetic_zone",
+                    .timestamp_unix_seconds = alert_now + 2,
+                    .sequence = 3U,
+                    .sound = true,
+                },
+            },
+            .rules_source = "generation-alerts.json",
+            .rules_generation = 1U,
+            .latest_sound_sequence = 3U,
+            .available = true,
+            .detail = "Repeated batched rules",
+        });
+        require(generation_sounds == 2,
+                "coalesced sound batch replayed after sequence advance");
+        generation_window.update_alert_snapshot({
+            .timers = {},
+            .recent_alerts = {},
+            .rules_source = "generation-alerts.json",
+            .rules_generation = 1U,
+            .latest_sound_sequence = 4U,
+            .available = true,
+            .detail = "Trimmed sound batch",
+        });
+        generation_window.update_alert_snapshot({
+            .timers = {},
+            .recent_alerts = {},
+            .rules_source = "generation-alerts.json",
+            .rules_generation = 1U,
+            .latest_sound_sequence = 4U,
+            .available = true,
+            .detail = "Repeated trimmed sound batch",
+        });
+        require(generation_sounds == 3,
+                "trimmed batch sound watermark replayed or was lost");
+
+        const QString invalid_pack_settings_path =
+            directory.filePath("invalid-alert-path.toml");
+        plazmic::UiState invalid_pack_state;
+        invalid_pack_state.client_directory = client_directory;
+        invalid_pack_state.alert_rules_path =
+            directory.filePath("missing-alerts.json");
+        invalid_pack_state.alerts_enabled = true;
+        require(plazmic::UiSettings(invalid_pack_settings_path)
+                    .save(invalid_pack_state),
+                "invalid restored alert path fixture could not be saved");
+        plazmic::MainWindow invalid_pack_window(
+            snapshot, invalid_pack_settings_path, false, client_directory);
+        const auto sanitized_invalid_pack =
+            plazmic::UiSettings(invalid_pack_settings_path).load();
+        require(!invalid_pack_window.alert_rule_pack().has_value() &&
+                    sanitized_invalid_pack &&
+                    sanitized_invalid_pack->alert_rules_path.isEmpty(),
+                "invalid restored alert path remained persisted");
 
         const QString shutdown_path = directory.filePath("shutdown.toml");
         plazmic::MainWindow lifecycle(snapshot, shutdown_path, true);

@@ -117,13 +117,19 @@ review. It does not authorize merging or releasing the pull requests.
 
 ### Phase 10: Buffs, timers, alerts, and audio
 
-- [ ] Add bounded buff/respawn timers, local alert rules, visible notifications,
-  and optional rate-limited sound/voice packs under `AC-22`.
-- [ ] Limit Phase 10 inputs to bounded local log/activity events,
-  user-configured timers, and validated imported duration/audio packs; keep
-  observed and reference durations visibly distinct.
-- [ ] Complete fake-sink, lifecycle, accessibility, installed, review, CI, and
-  thread-resolution gates in a separate pull request.
+- [x] Add bounded user-described buff, crowd-control, respawn, and custom
+  timers, local literal rules, visible notifications, and an optional
+  rate-limited desktop beep with independent alert and sound consent under
+  `AC-22`.
+- [x] Limit Phase 10 inputs to bounded active-character log events and
+  user-configured timers in a validated imported rule pack; keep observed
+  matches and user-stated durations visibly distinct.
+- [ ] Add voice-pack playback or rank-upgrade inference only after an approved
+  audio dependency, pack provenance contract, and validated catalog exist.
+- [x] Complete fake-sink, lifecycle, accessibility, and local validation in a
+  separate pull request.
+- [ ] Complete installed notification/audio, exact-head CI, review, and
+  thread-resolution gates before merge.
 
 ### Phase 11: Map workflows
 

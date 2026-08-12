@@ -33,6 +33,7 @@ the bounded process reader or the independent Qt companion.
 
 | Retained path | Current requirement |
 | --- | --- |
+| `src/alerts` | Bounded local rule matching, timers, cooldowns, and dispatch state |
 | `src/common` | Exact SHA-256 fingerprinting and narrow shared utilities |
 | `src/game` | Immutable exact-build profiles and bounded read-only game adapter |
 | `src/integration` | Same-user Linux process discovery, mappings, and exact reads |

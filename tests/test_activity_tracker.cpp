@@ -1803,6 +1803,231 @@ int main() {
                     std::filesystem::is_regular_file(symlink_delete_target),
                 "activity deletion followed a symlinked parent directory");
 
+        const auto incompatible_root = directory / "incompatible-alert-state";
+        const auto incompatible_directory = incompatible_root / "activity";
+        std::filesystem::create_directories(incompatible_directory);
+        require(::chmod(incompatible_root.c_str(), 0700) == 0 &&
+                    ::chmod(incompatible_directory.c_str(), 0700) == 0,
+                "incompatible alert source fixture has unsafe directories");
+        const std::string incompatible_alert_key =
+            plazmic::CombatHistoryStore::privacy_key("incompatible alert");
+        const auto incompatible_alert_file =
+            incompatible_directory / (incompatible_alert_key + ".json");
+        {
+            std::ofstream output(incompatible_alert_file, std::ios::binary);
+            output << "not-json";
+        }
+        require(::chmod(incompatible_alert_file.c_str(), 0600) == 0,
+                "incompatible alert source fixture has unsafe file mode");
+        plazmic::ActivityTracker incompatible_alert_source(incompatible_root);
+        incompatible_alert_source.set_retention_enabled(true);
+        require(!incompatible_alert_source.select(incompatible_alert_key) &&
+                    incompatible_alert_source.selected_key() ==
+                        incompatible_alert_key,
+                "corrupt activity partition did not fail closed");
+        require(!incompatible_alert_source
+                     .consume(
+                         timestamped(persistence_event,
+                                     "Synthetic alert-only event"),
+                         kCharacter, "synthetic_zone", true, false)
+                     .empty(),
+                "incompatible activity storage disabled transient alert IDs");
+
+        plazmic::ActivityTracker replay_capacity(
+            directory / "replay-capacity-state");
+        require(replay_capacity.select(
+                    plazmic::CombatHistoryStore::privacy_key(
+                        "replay capacity")),
+                "replay capacity fixture could not select its partition");
+        const std::string retained_experience_line = timestamped(
+            persistence_event, "You gain experience! (0.125%)");
+        replay_capacity.consume(retained_experience_line, kCharacter,
+                                "synthetic_zone");
+        for (std::size_t index = 0U; index < 4097U; ++index) {
+            replay_capacity.consume(
+                timestamped(
+                    persistence_event + std::chrono::seconds(index + 1U),
+                    "Synthetic alert-only line " + std::to_string(index)),
+                kCharacter, "synthetic_zone", true, false);
+        }
+        replay_capacity.begin_log_stream(retained_experience_line + "\n");
+        replay_capacity.consume(retained_experience_line, kCharacter,
+                                "synthetic_zone");
+        require(replay_capacity.snapshot(persistence_now).events.size() ==
+                    1U,
+                "transient alert replay identities evicted persisted "
+                "activity replay protection");
+
+        plazmic::ActivityTracker reserved_alert_capacity(
+            directory / "reserved-alert-capacity-state");
+        require(reserved_alert_capacity.select(
+                    plazmic::CombatHistoryStore::privacy_key(
+                        "reserved alert capacity")),
+                "reserved alert capacity fixture could not select its "
+                "partition");
+        for (std::size_t index = 0U; index < 4096U; ++index) {
+            reserved_alert_capacity.consume(
+                timestamped(
+                    persistence_event + std::chrono::seconds(index),
+                    "Synthetic retained source " + std::to_string(index)),
+                kCharacter, "synthetic_zone", true, true);
+        }
+        const std::string alert_only_line = timestamped(
+            persistence_event + std::chrono::hours(2),
+            "Synthetic alert-only replay line");
+        const std::string initial_alert_source =
+            reserved_alert_capacity.consume(
+                alert_only_line, kCharacter, "synthetic_zone", true, false);
+        reserved_alert_capacity.retain_transient_source(
+            initial_alert_source, alert_only_line);
+        reserved_alert_capacity.begin_log_stream(alert_only_line + "\n");
+        const std::string replayed_alert_source =
+            reserved_alert_capacity.consume(
+                alert_only_line, kCharacter, "synthetic_zone", true, false);
+        require(!initial_alert_source.empty() &&
+                    replayed_alert_source == initial_alert_source,
+                "persistent activity history exhausted alert-only replay "
+                "capacity");
+
+        plazmic::ActivityTracker matched_alert_replay(
+            directory / "matched-alert-replay-state");
+        require(matched_alert_replay.select(
+                    plazmic::CombatHistoryStore::privacy_key(
+                        "matched alert replay")),
+                "matched alert replay fixture could not select its partition");
+        const std::string matched_alert_line = timestamped(
+            persistence_event, "Synthetic matched alert line");
+        std::string matched_prefix = matched_alert_line + "\n";
+        const std::string matched_source = matched_alert_replay.consume(
+            matched_alert_line, kCharacter, "synthetic_zone", true, false);
+        matched_alert_replay.retain_transient_source(
+            matched_source, matched_alert_line);
+        for (std::size_t index = 0U; index < 4096U; ++index) {
+            const std::string unrelated_line = timestamped(
+                persistence_event + std::chrono::seconds(index + 1U),
+                "Synthetic unrelated alert line " + std::to_string(index));
+            matched_prefix += unrelated_line + "\n";
+            (void)matched_alert_replay.consume(
+                unrelated_line, kCharacter, "synthetic_zone", true, false);
+        }
+        matched_alert_replay.begin_log_stream(matched_prefix);
+        const std::string matched_replay_source = matched_alert_replay.consume(
+            matched_alert_line, kCharacter, "synthetic_zone", true, false);
+        require(!matched_source.empty() &&
+                    matched_replay_source == matched_source,
+                "unmatched alert traffic evicted a retained matching identity");
+
+        plazmic::ActivityTracker out_of_order_alert_replay(
+            directory / "out-of-order-alert-replay-state");
+        require(out_of_order_alert_replay.select(
+                    plazmic::CombatHistoryStore::privacy_key(
+                        "out of order alert replay")),
+                "out-of-order alert replay fixture could not select its "
+                "partition");
+        std::string protected_line;
+        std::string protected_source;
+        for (std::size_t index = 0U; index < 4097U; ++index) {
+            auto event_time = persistence_event +
+                              std::chrono::seconds(index);
+            if (index == 0U) {
+                event_time = persistence_event + std::chrono::hours(2);
+            } else if (index == 1U) {
+                event_time = persistence_event - std::chrono::hours(2);
+            }
+            const std::string line = timestamped(
+                event_time,
+                "Synthetic out-of-order alert " + std::to_string(index));
+            const std::string source = out_of_order_alert_replay.consume(
+                line, kCharacter, "synthetic_zone", true, false);
+            out_of_order_alert_replay.retain_transient_source(source, line);
+            if (index == 1U) {
+                protected_line = line;
+                protected_source = source;
+            }
+        }
+        out_of_order_alert_replay.begin_log_stream(protected_line + "\n");
+        const std::string protected_replay_source =
+            out_of_order_alert_replay.consume(
+                protected_line, kCharacter, "synthetic_zone", true, false);
+        require(!protected_source.empty() &&
+                    protected_replay_source == protected_source,
+                "out-of-order alert identity used a different eviction "
+                "policy than the alert engine");
+
+        plazmic::ActivityTracker activity_alert_replay(
+            directory / "activity-alert-replay-state");
+        require(activity_alert_replay.select(
+                    plazmic::CombatHistoryStore::privacy_key(
+                        "activity alert replay")),
+                "activity alert replay fixture could not select its "
+                "partition");
+        const std::string activity_alert_line = timestamped(
+            persistence_event, "You gain experience! (0.500%)");
+        const std::string activity_alert_source =
+            activity_alert_replay.consume(
+                activity_alert_line, kCharacter, "synthetic_zone", true,
+                false);
+        activity_alert_replay.retain_transient_source(
+            activity_alert_source, activity_alert_line);
+        require(activity_alert_replay.delete_history(
+                    activity_alert_replay.selected_key()),
+                "activity-event alert history deletion failed");
+        activity_alert_replay.begin_log_stream(activity_alert_line + "\n");
+        const std::string activity_alert_replayed_source =
+            activity_alert_replay.consume(
+                activity_alert_line, kCharacter, "synthetic_zone", true,
+                false);
+        require(!activity_alert_source.empty() &&
+                    activity_alert_replayed_source == activity_alert_source,
+                "activity deletion discarded a matching activity-event "
+                "alert identity");
+
+        plazmic::ActivityTracker clock_corrected_alert_replay(
+            directory / "clock-corrected-alert-replay-state");
+        require(clock_corrected_alert_replay.select(
+                    plazmic::CombatHistoryStore::privacy_key(
+                        "clock corrected alert replay")),
+                "clock-corrected alert replay fixture could not select its "
+                "partition");
+        const std::string clock_corrected_line = timestamped(
+            persistence_event, "Synthetic clock-corrected alert line");
+        const std::string clock_corrected_source =
+            clock_corrected_alert_replay.consume(
+                clock_corrected_line, kCharacter, "synthetic_zone", true,
+                false);
+        clock_corrected_alert_replay.retain_transient_source(
+            clock_corrected_source, clock_corrected_line);
+        clock_corrected_alert_replay.maintain(
+            persistence_event - std::chrono::hours(48));
+        clock_corrected_alert_replay.begin_log_stream(
+            clock_corrected_line + "\n");
+        const std::string clock_corrected_replay_source =
+            clock_corrected_alert_replay.consume(
+                clock_corrected_line, kCharacter, "synthetic_zone", true,
+                false);
+        require(!clock_corrected_source.empty() &&
+                    clock_corrected_replay_source == clock_corrected_source,
+                "wall-clock pruning discarded an independent alert identity");
+
+        require(matched_alert_replay.delete_history(
+                    matched_alert_replay.selected_key()),
+                "activity deletion failed in alert replay fixture");
+        matched_alert_replay.begin_log_stream(matched_alert_line + "\n");
+        const std::string after_activity_delete =
+            matched_alert_replay.consume(
+                matched_alert_line, kCharacter, "synthetic_zone", true,
+                false);
+        require(after_activity_delete == matched_source,
+                "activity deletion discarded independent alert replay state");
+        matched_alert_replay.clear_transient_replay_sources();
+        matched_alert_replay.begin_log_stream(matched_alert_line + "\n");
+        const std::string after_character_invalidation =
+            matched_alert_replay.consume(
+                matched_alert_line, kCharacter, "synthetic_zone", true,
+                false);
+        require(after_character_invalidation != matched_source,
+                "character invalidation retained alert replay state");
+
         std::filesystem::remove_all(directory);
         directory.clear();
         std::cout << "bounded progression and activity tracker passed\n";

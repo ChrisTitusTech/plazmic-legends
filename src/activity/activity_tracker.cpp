@@ -42,6 +42,7 @@ constexpr std::uintmax_t kMaximumActivityBytes = 2U * 1024U * 1024U;
 constexpr qsizetype kMaximumActivityFiles = 1024;
 constexpr std::size_t kMaximumStreamFingerprints = 4096U;
 constexpr std::size_t kMaximumReplaySources = 4096U;
+constexpr std::size_t kMaximumTransientReplaySources = 4096U;
 
 std::string lowercase(std::string_view value) {
     std::string result(value);
@@ -697,6 +698,9 @@ void ActivityTracker::clear() {
     replay_sources_.clear();
     boundary_source_ids_.clear();
     replay_history_.clear();
+    transient_replay_history_.clear();
+    replay_history_index_.clear();
+    transient_replay_history_index_.clear();
     begin_log_stream();
 }
 
@@ -726,6 +730,9 @@ bool ActivityTracker::select(std::string key) {
     replay_sources_.clear();
     boundary_source_ids_.clear();
     replay_history_.clear();
+    transient_replay_history_.clear();
+    replay_history_index_.clear();
+    transient_replay_history_index_.clear();
     generation_counter_ = 0U;
     const bool selected = !retention_enabled_ || load();
     begin_log_stream();
@@ -748,11 +755,21 @@ void ActivityTracker::set_retention_enabled(bool enabled) {
     const auto session_events = events_;
     const auto session_abilities = abilities_;
     const auto session_replay_history = replay_history_;
+    const auto session_transient_replay_history = transient_replay_history_;
     const std::uint64_t session_generation_counter = generation_counter_;
     if (!load()) {
         events_ = session_events;
         abilities_ = session_abilities;
         replay_history_ = session_replay_history;
+        transient_replay_history_ = session_transient_replay_history;
+        replay_history_index_.clear();
+        transient_replay_history_index_.clear();
+        for (const auto& source : replay_history_) {
+            replay_history_index_.insert(source.source_id);
+        }
+        for (const auto& source : transient_replay_history_) {
+            transient_replay_history_index_.insert(source.source_id);
+        }
         generation_counter_ = session_generation_counter;
         begin_log_stream();
         return;
@@ -790,7 +807,11 @@ void ActivityTracker::set_retention_enabled(bool enabled) {
     bound_ability_observations();
     for (const auto& source : session_replay_history) {
         remember_replay_source(
-            source.source_id, source.timestamp_unix_seconds);
+            source.source_id, source.timestamp_unix_seconds, true);
+    }
+    for (const auto& source : session_transient_replay_history) {
+        remember_replay_source(
+            source.source_id, source.timestamp_unix_seconds, false);
     }
     generation_counter_ =
         std::max(generation_counter_, session_generation_counter);
@@ -828,6 +849,7 @@ bool ActivityTracker::delete_history(std::string_view key) {
         replay_sources_.clear();
         boundary_source_ids_.clear();
         replay_history_.clear();
+        replay_history_index_.clear();
         generation_counter_ = 0U;
         begin_log_stream();
     };
@@ -900,19 +922,24 @@ void ActivityTracker::append(ActivityEventSnapshot event) {
 std::string ActivityTracker::consume(std::string_view line,
                                      std::string_view active_character,
                                      std::string_view zone,
-                                     bool source_required) {
-    if (!compatible_ || !valid_text(active_character, 128U)) {
+                                     bool source_required,
+                                     bool retain_source) {
+    if (!valid_text(active_character, 128U)) {
         return {};
     }
     if (!character_.empty() && !ci_equal(character_, active_character)) {
         return {};
     }
     character_ = std::string(active_character);
+    if (!compatible_) {
+        return source_required ? next_source_id(line, false) : std::string{};
+    }
     auto event = parse_activity_line(line, active_character, zone);
     if (!event && !source_required) {
         return {};
     }
-    const std::string source_id = next_source_id(line);
+    const std::string source_id =
+        next_source_id(line, event.has_value() || retain_source);
     if (event) {
         event->source_id = source_id;
         append(std::move(*event));
@@ -990,9 +1017,19 @@ void ActivityTracker::begin_log_stream(std::string_view replay_prefix) {
         }
     }
     std::unordered_map<std::string, std::vector<std::string>> candidates;
+    std::unordered_set<std::string> candidate_source_ids;
     for (const auto& source : replay_history_) {
         const auto fingerprint = source_fingerprint(source.source_id);
-        if (!fingerprint) {
+        if (!fingerprint ||
+            !candidate_source_ids.insert(source.source_id).second) {
+            continue;
+        }
+        candidates[*fingerprint].push_back(source.source_id);
+    }
+    for (const auto& source : transient_replay_history_) {
+        const auto fingerprint = source_fingerprint(source.source_id);
+        if (!fingerprint ||
+            !candidate_source_ids.insert(source.source_id).second) {
             continue;
         }
         candidates[*fingerprint].push_back(source.source_id);
@@ -1001,7 +1038,8 @@ void ActivityTracker::begin_log_stream(std::string_view replay_prefix) {
     std::size_t begin = 0U;
     std::size_t retained_sources = 0U;
     while (begin < replay_prefix.size() &&
-           retained_sources < kMaximumReplaySources) {
+           retained_sources <
+               kMaximumReplaySources + kMaximumTransientReplaySources) {
         const std::size_t newline = replay_prefix.find('\n', begin);
         if (newline == std::string_view::npos) {
             break;
@@ -1035,12 +1073,19 @@ void ActivityTracker::reset_transient_observations() {
     begin_log_stream();
 }
 
+void ActivityTracker::clear_transient_replay_sources() {
+    transient_replay_history_.clear();
+    transient_replay_history_index_.clear();
+    reset_transient_observations();
+}
+
 void ActivityTracker::break_equipment_baseline() {
     equipment_.clear();
     character_.clear();
 }
 
-std::string ActivityTracker::next_source_id(std::string_view line) {
+std::string ActivityTracker::next_source_id(std::string_view line,
+                                            bool persistent) {
     const std::string fingerprint = CombatHistoryStore::privacy_key(line);
     std::string_view payload;
     const auto timestamp = parse_timestamp(line, payload);
@@ -1072,7 +1117,9 @@ std::string ActivityTracker::next_source_id(std::string_view line) {
                                    ":" +
                                    std::to_string(stream_overflow_sequence_);
         ++stream_overflow_sequence_;
-        remember_replay_source(result, timestamp_unix_seconds);
+        if (persistent) {
+            remember_replay_source(result, timestamp_unix_seconds, true);
+        }
         return result;
     }
     std::uint32_t& occurrence = stream_occurrences_[fingerprint];
@@ -1083,8 +1130,26 @@ std::string ActivityTracker::next_source_id(std::string_view line) {
             : stream_generation_ + ":" + fingerprint + ":" +
                   std::to_string(occurrence);
     ++occurrence;
-    remember_replay_source(result, timestamp_unix_seconds);
+    if (persistent) {
+        remember_replay_source(result, timestamp_unix_seconds, true);
+    }
     return result;
+}
+
+void ActivityTracker::retain_transient_source(
+    std::string_view source_id,
+    std::string_view line) {
+    std::string_view payload;
+    const auto timestamp = parse_timestamp(line, payload);
+    if (!timestamp) {
+        return;
+    }
+    remember_replay_source(
+        std::string(source_id),
+        std::chrono::duration_cast<std::chrono::seconds>(
+            timestamp->time_since_epoch())
+            .count(),
+        false);
 }
 
 std::string ActivityTracker::allocate_stream_generation() {
@@ -1098,7 +1163,12 @@ std::string ActivityTracker::allocate_stream_generation() {
         const bool retained_collision = std::ranges::any_of(
             replay_history_, [&candidate](const ReplaySource& source) {
                 return source.source_id.starts_with(candidate + ":");
-            });
+            }) ||
+            std::ranges::any_of(
+                transient_replay_history_,
+                [&candidate](const ReplaySource& source) {
+                    return source.source_id.starts_with(candidate + ":");
+                });
         if (!retained_collision) {
             return candidate;
         }
@@ -1107,13 +1177,17 @@ std::string ActivityTracker::allocate_stream_generation() {
 
 void ActivityTracker::remember_replay_source(
     const std::string& source_id,
-    std::int64_t timestamp_unix_seconds) {
+    std::int64_t timestamp_unix_seconds,
+    bool persistent) {
     if (!source_fingerprint(source_id) || timestamp_unix_seconds <= 0) {
         return;
     }
-    const auto existing = std::ranges::find(
-        replay_history_, source_id, &ReplaySource::source_id);
-    if (existing != replay_history_.end()) {
+    auto existing = replay_history_.end();
+    if (replay_history_index_.contains(source_id)) {
+        existing = std::ranges::find(
+            replay_history_, source_id, &ReplaySource::source_id);
+    }
+    if (persistent && existing != replay_history_.end()) {
         if (timestamp_unix_seconds > existing->timestamp_unix_seconds) {
             existing->timestamp_unix_seconds = timestamp_unix_seconds;
             dirty_ = true;
@@ -1121,20 +1195,47 @@ void ActivityTracker::remember_replay_source(
         }
         return;
     }
-    if (replay_history_.size() == kMaximumReplaySources) {
-        const auto oldest = std::ranges::min_element(
-            replay_history_, {}, &ReplaySource::timestamp_unix_seconds);
-        if (timestamp_unix_seconds < oldest->timestamp_unix_seconds) {
-            return;
-        }
-        replay_history_.erase(oldest);
+    auto transient = transient_replay_history_.end();
+    if (transient_replay_history_index_.contains(source_id)) {
+        transient = std::ranges::find(
+            transient_replay_history_, source_id, &ReplaySource::source_id);
     }
-    replay_history_.push_back({
+    if (!persistent && transient != transient_replay_history_.end()) {
+        if (timestamp_unix_seconds > transient->timestamp_unix_seconds) {
+            transient->timestamp_unix_seconds = timestamp_unix_seconds;
+        }
+        return;
+    }
+    auto& history = persistent ? replay_history_ : transient_replay_history_;
+    const std::size_t maximum = persistent ? kMaximumReplaySources
+                                           : kMaximumTransientReplaySources;
+    if (history.size() == maximum) {
+        if (!persistent) {
+            transient_replay_history_index_.erase(history.front().source_id);
+            history.erase(history.begin());
+        } else {
+            const auto oldest = std::ranges::min_element(
+                history, {}, &ReplaySource::timestamp_unix_seconds);
+            if (timestamp_unix_seconds < oldest->timestamp_unix_seconds) {
+                return;
+            }
+            replay_history_index_.erase(oldest->source_id);
+            history.erase(oldest);
+        }
+    }
+    history.push_back({
         .source_id = source_id,
         .timestamp_unix_seconds = timestamp_unix_seconds,
     });
-    dirty_ = true;
-    persisted_ = false;
+    if (persistent) {
+        replay_history_index_.insert(source_id);
+    } else {
+        transient_replay_history_index_.insert(source_id);
+    }
+    if (persistent) {
+        dirty_ = true;
+        persisted_ = false;
+    }
 }
 
 void ActivityTracker::bound_ability_observations() {
@@ -1307,6 +1408,10 @@ void ActivityTracker::prune(std::chrono::system_clock::time_point now) {
             return source.timestamp_unix_seconds < cutoff ||
                    source.timestamp_unix_seconds > future_limit;
         });
+    replay_history_index_.clear();
+    for (const auto& source : replay_history_) {
+        replay_history_index_.insert(source.source_id);
+    }
     if (removed > 0U || removed_abilities > 0U || removed_replay > 0U) {
         dirty_ = true;
         persisted_ = false;
@@ -1593,6 +1698,12 @@ bool ActivityTracker::load(std::chrono::system_clock::time_point now) {
     events_ = std::move(loaded_events);
     abilities_ = std::move(loaded_abilities);
     replay_history_ = std::move(loaded_replay_history);
+    transient_replay_history_.clear();
+    replay_history_index_.clear();
+    transient_replay_history_index_.clear();
+    for (const auto& source : replay_history_) {
+        replay_history_index_.insert(source.source_id);
+    }
     generation_counter_ = *loaded_generation_counter;
     dirty_ = replay_migration_needed;
     persisted_ = !replay_migration_needed;

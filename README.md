@@ -34,6 +34,9 @@ The list below describes the current `main` branch; features added after
 - Adds current-`main` bounded XP/AA pace, loot and equipment-change activity,
   observed ability evidence, and explicit inventory-output reconciliation in a
   separate Activity dock.
+- Adds user-imported bounded local alert rules, buff/CC/respawn/custom
+  countdowns, visible recent fires, configurable cooldowns, and an opt-in
+  desktop alert beep in a separate Alerts dock.
 - Handles zoning, camping, character select, process exit, and client changes
   without leaving stale data visible.
 - Follows the active system light or dark theme.

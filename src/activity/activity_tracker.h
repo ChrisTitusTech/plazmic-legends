@@ -50,13 +50,17 @@ class ActivityTracker {
     std::string consume(std::string_view line,
                         std::string_view active_character,
                         std::string_view zone,
-                        bool source_required = false);
+                        bool source_required = false,
+                        bool retain_source = false);
+    void retain_transient_source(std::string_view source_id,
+                                 std::string_view line);
     void observe_damage(const DamageEvent& event,
                         std::string_view active_character,
                         std::string source_id);
     void begin_log_stream(std::string_view replay_prefix = {});
     void break_equipment_baseline();
     void reset_transient_observations();
+    void clear_transient_replay_sources();
     void observe_character(const CharacterSnapshot& character,
                            std::string_view zone,
                            std::chrono::system_clock::time_point now =
@@ -96,12 +100,14 @@ class ActivityTracker {
     [[nodiscard]] bool save();
     [[nodiscard]] bool persist();
     void maintain_store(std::chrono::system_clock::time_point now);
-    [[nodiscard]] std::string next_source_id(std::string_view line);
+    [[nodiscard]] std::string next_source_id(std::string_view line,
+                                             bool persistent);
     [[nodiscard]] std::string allocate_stream_generation();
     void bound_ability_observations();
     void bound_ability_aggregates();
     void remember_replay_source(const std::string& source_id,
-                                std::int64_t timestamp_unix_seconds);
+                                std::int64_t timestamp_unix_seconds,
+                                bool persistent = true);
 
     std::vector<ActivityEventSnapshot> events_;
     std::unordered_map<std::string, AbilityAggregate> abilities_;
@@ -122,6 +128,9 @@ class ActivityTracker {
     std::unordered_map<std::string, std::vector<std::string>> replay_sources_;
     std::unordered_set<std::string> boundary_source_ids_;
     std::vector<ReplaySource> replay_history_;
+    std::vector<ReplaySource> transient_replay_history_;
+    std::unordered_set<std::string> replay_history_index_;
+    std::unordered_set<std::string> transient_replay_history_index_;
     std::string stream_generation_;
     std::uint64_t stream_overflow_sequence_{};
     std::uint64_t generation_counter_{};

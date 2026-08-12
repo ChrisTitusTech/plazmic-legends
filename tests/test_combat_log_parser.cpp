@@ -512,6 +512,19 @@ int main() {
         plazmic::CombatLogTailer tailer(
             false, directory / "state", true);
         tailer.set_activity_history_enabled(true);
+        tailer.set_alert_rules({
+            .rules = {{
+                .id = "synthetic-loot-alert",
+                .name = "Synthetic Loot Timer",
+                .match = "looted synthetic gem",
+                .kind = plazmic::AlertTimerKind::custom,
+                .duration_seconds = 30U,
+                .cooldown_seconds = 2U,
+                .sound = false,
+            }},
+            .source_name = "synthetic-alerts.json",
+        });
+        tailer.set_alert_enabled(true, melee->timestamp - 1h);
         auto refresh = tailer.refresh(
             directory, kCharacter, "synthetic_zone",
             melee->timestamp + 1s);
@@ -572,7 +585,10 @@ int main() {
                     refresh.activity.persisted &&
                     refresh.activity.experience_percent == 0.125 &&
                     refresh.activity.alternate_advancement_points == 42U &&
-                    refresh.activity.recent_loot_count == 1U,
+                    refresh.activity.recent_loot_count == 1U &&
+                    refresh.alerts.available &&
+                    refresh.alerts.timers.size() == 1U &&
+                    refresh.alerts.recent_alerts.size() == 1U,
                 "log tailer did not publish or persist activity analytics");
         const std::string activity_key =
             plazmic::CombatHistoryStore::privacy_key(
@@ -1554,6 +1570,117 @@ int main() {
                             .events.size() == 1U,
                 "lifecycle clear lost dirty retained activity after a "
                 "partial failing refresh");
+
+        const auto alert_log =
+            directory / "Logs" / "eqlog_Alerthero_synthetic.txt";
+        const std::string alert_line =
+            "[Sun Aug 03 12:04:00 2026] A synthetic alert occurs.\n";
+        const std::string rewritten_alert_line =
+            "[Sun Aug 03 12:04:01 2026] A distinct rewritten event "
+            "occurs.\n";
+        append(alert_log, alert_line);
+        plazmic::CombatLogTailer alert_tailer(
+            false, directory / "alert-state");
+        alert_tailer.set_alert_rules({
+            .rules = {
+                {
+                    .id = "synthetic-alert",
+                    .name = "Synthetic Alert",
+                    .match = "synthetic alert occurs",
+                    .kind = plazmic::AlertTimerKind::respawn,
+                    .duration_seconds = 120U,
+                    .cooldown_seconds = 0U,
+                    .sound = true,
+                },
+                {
+                    .id = "rewritten-alert",
+                    .name = "Rewritten Synthetic Alert",
+                    .match = "distinct rewritten event occurs",
+                    .kind = plazmic::AlertTimerKind::custom,
+                    .duration_seconds = 0U,
+                    .cooldown_seconds = 0U,
+                    .sound = true,
+                },
+            },
+            .source_name = "synthetic-alerts.json",
+        });
+        alert_tailer.set_alert_enabled(true, melee->timestamp);
+        auto alert_refresh = alert_tailer.refresh(
+            directory, "Alerthero", "synthetic_zone",
+            melee->timestamp + 241s);
+        require(alert_refresh.alerts.recent_alerts.size() == 1U &&
+                    alert_refresh.alerts.timers.size() == 1U,
+                "initial tailer alert was not observed");
+        const auto before_alert_expiry =
+            std::chrono::system_clock::time_point(std::chrono::seconds(
+                alert_refresh.alerts.timers.front().ends_unix_seconds - 1));
+        const auto failed_alert_refresh = alert_tailer.refresh(
+            directory / "missing-game", "Alerthero", "synthetic_zone",
+            before_alert_expiry);
+        require(failed_alert_refresh.error !=
+                    plazmic::CombatLogError::none &&
+                    failed_alert_refresh.alerts.timers.size() == 1U,
+                "failure snapshot ignored its injected timer clock");
+        alert_tailer.reset_context("Alerthero", true);
+        const auto retained_alerts = alert_tailer.alert_snapshot(
+            melee->timestamp + 241s);
+        require(retained_alerts.timers.size() == 1U &&
+                    retained_alerts.timers.front().kind ==
+                        plazmic::AlertTimerKind::respawn,
+                "same-character zone reset discarded a respawn timer");
+        {
+            std::ofstream rewritten(alert_log, std::ios::trunc);
+            rewritten << alert_line << rewritten_alert_line;
+        }
+        alert_refresh = alert_tailer.refresh(
+            directory, "Alerthero", "synthetic_zone",
+            melee->timestamp + 242s);
+        require(alert_refresh.alerts.recent_alerts.size() == 2U,
+                "rewritten log replayed an old alert or lost a new one");
+        require(std::ranges::count(
+                    alert_refresh.alerts.recent_alerts,
+                    std::string("Synthetic Alert"),
+                    &plazmic::FiredAlertSnapshot::label) == 1 &&
+                    std::ranges::count(
+                        alert_refresh.alerts.recent_alerts,
+                        std::string("Rewritten Synthetic Alert"),
+                        &plazmic::FiredAlertSnapshot::label) == 1,
+                "rewritten log alert identities were not deterministic");
+        const auto alert_other_log =
+            directory / "Logs" / "eqlog_Alertother_synthetic.txt";
+        append(alert_other_log, alert_line);
+        alert_refresh = alert_tailer.refresh(
+            directory, "Alertother", "other_zone",
+            melee->timestamp + 243s);
+        require(alert_refresh.alerts.recent_alerts.size() == 1U &&
+                    alert_refresh.alerts.recent_alerts.front().zone ==
+                        "other_zone",
+                "character switch retained another character's alert state");
+
+        const auto future_alert_log =
+            directory / "Logs" / "eqlog_Futurealert_synthetic.txt";
+        append(future_alert_log, alert_line);
+        plazmic::CombatLogTailer future_alert_tailer(
+            false, directory / "future-alert-state");
+        future_alert_tailer.set_alert_rules({
+            .rules = {{
+                .id = "future-alert",
+                .name = "Future Alert",
+                .match = "synthetic alert occurs",
+                .kind = plazmic::AlertTimerKind::custom,
+                .duration_seconds = 0U,
+                .cooldown_seconds = 0U,
+                .sound = false,
+            }},
+            .source_name = "future-alerts.json",
+        });
+        future_alert_tailer.set_alert_enabled(
+            true, melee->timestamp - std::chrono::hours(72));
+        const auto future_alert_refresh = future_alert_tailer.refresh(
+            directory, "Futurealert", "synthetic_zone",
+            melee->timestamp - std::chrono::hours(48));
+        require(future_alert_refresh.alerts.recent_alerts.empty(),
+                "tailer alert matching ignored the injected refresh clock");
 
         std::filesystem::remove_all(directory);
         directory.clear();

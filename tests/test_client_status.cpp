@@ -88,7 +88,6 @@ int main() {
                 august_third->timestamp == 0x6a711da7U &&
                 august_third->optional_magic == 0x20bU &&
                 august_third->image_size == 0x16c0000U &&
-                august_third->preferred_image_base == 0x140000000ULL &&
                 !august_third->character_snapshot_supported &&
                 august_third->game_state.local_player_pointer_rva ==
                     0x00f05ff8U &&

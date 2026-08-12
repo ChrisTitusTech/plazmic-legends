@@ -78,7 +78,6 @@ struct ClientProfile {
     std::uint32_t timestamp;
     std::uint16_t optional_magic;
     std::uint32_t image_size;
-    std::uint64_t preferred_image_base;
     bool character_snapshot_supported{false};
     GameStateSymbols game_state;
     SpawnSymbols spawns;

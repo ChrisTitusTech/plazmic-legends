@@ -29,6 +29,8 @@ The list below describes the current `main` branch; features added after
   backup for EQ Legends Tools' character sheet.
 - Condenses newly appended local combat-log damage into a current or
   most-recent encounter Parse dock when EverQuest combat logging is enabled.
+- Adds current-`main` combat damage/healing drill-down, one-second timelines,
+  zone summaries, and capped owner-only per-character encounter history.
 - Handles zoning, camping, character select, process exit, and client changes
   without leaving stale data visible.
 - Follows the active system light or dark theme.
@@ -120,8 +122,10 @@ the package.
 - Use the status area when the client is not running, unsupported, zoning, or
   outside the world.
 - Enable EverQuest combat logging to populate the Parse dock. Plazmic Legends
-  starts at the active log's current end and does not upload or save encounter
-  history.
+  starts at the active log's current end and never uploads its contents.
+  `User > Retain Combat History` is off by default; when enabled, it keeps at
+  most 50 encounters for 90 days in an owner-only per-character local state
+  file. That history includes combatant and target names for the History view.
 - With live character data available, choose
   `User > Export Inventory...`, then use `Import Profile Backup` at the
   [EQ Legends Tools character sheet](https://eqlegendstools.com/char-sheet/).

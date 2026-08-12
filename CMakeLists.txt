@@ -35,6 +35,7 @@ add_library(
     src/common/client_file_monitor.cpp
     src/common/sha256.cpp
     src/game/character_reader.cpp
+    src/game/combat_history_store.cpp
     src/game/combat_log_parser.cpp
     src/game/client_profile.cpp
     src/game/game_state_reader.cpp
@@ -49,6 +50,11 @@ add_library(
     src/map/map_view_model.cpp
     src/model/status_snapshot.cpp
 )
+# Phase 8 uses Qt Core JSON, SHA-256, and QSaveFile for bounded owner-only combat
+# history. Qt is LGPL-3.0-only or GPL-3.0-only with the Qt exception; removing
+# this link requires replacing that serializer and atomic store. See
+# docs/phase2-dependency-audit.md.
+target_link_libraries(plazmic_core PUBLIC Qt6::Core)
 
 target_compile_features(plazmic_core PUBLIC cxx_std_20)
 set_target_properties(

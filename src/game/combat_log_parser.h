@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/combat_history_store.h"
 #include "model/combat_snapshot.h"
 
 #include <array>
@@ -10,6 +11,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 
 namespace plazmic {
 
@@ -26,9 +28,20 @@ struct DamageEvent {
     std::string defender;
     std::uint64_t damage{};
     DamageKind kind{DamageKind::melee};
+    std::string ability;
+};
+
+struct HealingEvent {
+    std::chrono::system_clock::time_point timestamp;
+    std::string healer;
+    std::string target;
+    std::uint64_t healing{};
 };
 
 [[nodiscard]] std::optional<DamageEvent> parse_damage_line(
+    std::string_view line,
+    std::string_view active_character);
+[[nodiscard]] std::optional<HealingEvent> parse_healing_line(
     std::string_view line,
     std::string_view active_character);
 
@@ -36,28 +49,63 @@ class CombatAccumulator {
   public:
     static constexpr auto inactivity = std::chrono::seconds(10);
     static constexpr std::size_t maximum_participants = 256U;
+    static constexpr std::size_t maximum_abilities_per_participant = 128U;
+    static constexpr std::size_t maximum_total_abilities =
+        CombatHistoryStore::maximum_total_abilities;
 
     void clear();
     [[nodiscard]] bool add(const DamageEvent& event,
-                           std::string_view active_character = {});
+                           std::string_view active_character = {},
+                           std::string_view zone = {});
+    [[nodiscard]] bool add(const HealingEvent& event,
+                           std::string_view active_character = {},
+                           std::string_view zone = {});
+    [[nodiscard]] std::optional<CombatEncounterSnapshot> take_completed();
+    [[nodiscard]] std::optional<CombatEncounterSnapshot> finalize(
+        std::string_view active_character);
     [[nodiscard]] CombatEncounterSnapshot snapshot(
         std::chrono::system_clock::time_point now,
         std::string_view active_character) const;
 
   private:
     struct Participant {
+        struct Ability {
+            std::string name;
+            DamageKind kind{DamageKind::melee};
+            std::uint64_t damage{};
+            std::uint32_t hits{};
+        };
+
         std::uint64_t damage{};
         std::uint32_t hits{};
         std::chrono::system_clock::time_point first;
         std::chrono::system_clock::time_point last;
         std::array<std::uint64_t, 4> kind_damage{};
+        std::unordered_map<std::string, Ability> abilities;
+    };
+
+    struct Healer {
+        std::uint64_t healing{};
+        std::uint32_t casts{};
+    };
+
+    struct TimelineBucket {
+        std::uint64_t damage{};
+        std::uint64_t healing{};
     };
 
     std::unordered_map<std::string, Participant> participants_;
+    std::unordered_map<std::string, Healer> healers_;
+    std::unordered_map<std::uint32_t, TimelineBucket> timeline_;
     std::string target_;
+    std::string zone_;
     std::uint64_t total_damage_{};
+    std::uint64_t total_healing_{};
+    std::size_t total_abilities_{};
     std::chrono::system_clock::time_point first_;
     std::chrono::system_clock::time_point last_;
+    std::optional<CombatEncounterSnapshot> completed_;
+    bool active_{false};
 };
 
 enum class CombatLogError {
@@ -70,7 +118,7 @@ enum class CombatLogError {
 };
 
 struct CombatLogRefresh {
-    CombatEncounterSnapshot snapshot;
+    CombatAnalyticsSnapshot snapshot;
     CombatLogError error{CombatLogError::none};
 };
 
@@ -81,6 +129,7 @@ class CombatLogTailer {
     static constexpr std::size_t maximum_lines_per_refresh = 4096U;
     static constexpr std::size_t maximum_log_entries = 4096U;
     static constexpr std::size_t boundary_bytes = 64U;
+    static constexpr auto history_retry_delay = std::chrono::seconds(1);
 
     struct FileIdentity {
         std::uint64_t device{};
@@ -89,14 +138,29 @@ class CombatLogTailer {
         bool operator==(const FileIdentity&) const = default;
     };
 
-    explicit CombatLogTailer(bool start_at_end = true)
-        : start_at_end_(start_at_end) {}
+    explicit CombatLogTailer(
+        bool start_at_end = true,
+        std::filesystem::path state_root =
+            CombatHistoryStore::default_state_root(),
+        bool history_enabled = false)
+        : start_at_end_(start_at_end),
+          history_store_(std::move(state_root)),
+          history_enabled_(history_enabled) {}
+
+    void set_history_enabled(bool enabled);
 
     [[nodiscard]] CombatLogRefresh refresh(
         const std::filesystem::path& game_directory,
         std::string_view active_character,
+        std::string_view zone = "Unknown",
         std::chrono::system_clock::time_point now =
             std::chrono::system_clock::now());
+    [[nodiscard]] CombatLogRefresh refresh(
+        const std::filesystem::path& game_directory,
+        std::string_view active_character,
+        std::chrono::system_clock::time_point now) {
+        return refresh(game_directory, active_character, "Unknown", now);
+    }
     void clear();
 
   private:
@@ -108,7 +172,16 @@ class CombatLogTailer {
         std::string_view active_character,
         CombatLogError& error) const;
     [[nodiscard]] bool consume(char byte,
-                               std::string_view active_character);
+                               std::string_view active_character,
+                               std::string_view zone);
+    [[nodiscard]] bool select_history(
+        std::string_view active_character,
+        const std::filesystem::path& log_path);
+    void retain_completed();
+    void finalize_current();
+    void retain_encounter(const CombatEncounterSnapshot& encounter);
+    void maintain_history();
+    void maintain_history_store();
 
     bool start_at_end_;
     std::string character_;
@@ -123,6 +196,16 @@ class CombatLogTailer {
     std::string boundary_;
     bool reopen_from_start_{false};
     CombatAccumulator accumulator_;
+    CombatHistoryStore history_store_;
+    std::string history_key_;
+    std::vector<CombatEncounterSnapshot> history_;
+    std::string history_zone_;
+    bool history_enabled_{false};
+    bool history_visible_{false};
+    bool history_load_compatible_{true};
+    bool history_persisted_{true};
+    std::chrono::steady_clock::time_point history_retry_after_{};
+    std::chrono::system_clock::time_point history_sweep_after_{};
 };
 
 }  // namespace plazmic

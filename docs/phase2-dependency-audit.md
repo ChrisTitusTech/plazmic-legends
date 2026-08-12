@@ -44,6 +44,15 @@ Qt companion still links directly to libX11 for its stable X11 class and DWM
 placement. Historical sections above retain the Phase 2 package observations
 as captured evidence.
 
+## Phase 8 update
+
+The combat-history store links `plazmic_core` to the Qt Core module already
+required by the product. It uses Qt's JSON, SHA-256, file-permission, and atomic
+save APIs. The applicable `qt6-qtbase` license remains LGPL-3.0-only or
+GPL-3.0-only with the Qt exception, and the package continues to use the system
+shared library. Removing Qt Core now also requires replacing the bounded
+history serializer, privacy-key derivation, and atomic persistence layer.
+
 ## ShowEQ provenance boundary
 
 The ShowEQ 6.4.25 checkout was used only to identify useful product concepts:

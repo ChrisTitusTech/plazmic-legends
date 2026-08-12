@@ -188,6 +188,7 @@ std::optional<UiState> UiSettings::load() const {
         window,
         map,
         spawns,
+        combat,
     };
     Section section = Section::other;
     std::optional<QString> client_directory;
@@ -204,6 +205,7 @@ std::optional<UiState> UiSettings::load() const {
     bool player_spawns_visible = true;
     bool npc_spawns_visible = true;
     bool other_spawns_visible = true;
+    bool combat_history_enabled = false;
     QString spawn_filter;
     int spawn_type_filter = -1;
     int spawn_sort_column = 3;
@@ -223,6 +225,8 @@ std::optional<UiState> UiSettings::load() const {
                 section = Section::map;
             } else if (line == "[spawns]") {
                 section = Section::spawns;
+            } else if (line == "[combat]") {
+                section = Section::combat;
             } else {
                 section = Section::other;
             }
@@ -330,6 +334,14 @@ std::optional<UiState> UiSettings::load() const {
                 }
                 other_spawns_visible = *value == "true";
             }
+        } else if (section == Section::combat) {
+            if (line.startsWith("retain_history")) {
+                const auto value = scalar_value(line, "retain_history");
+                if (!value || (*value != "true" && *value != "false")) {
+                    return std::nullopt;
+                }
+                combat_history_enabled = *value == "true";
+            }
         } else if (section == Section::spawns) {
             if (line.startsWith("filter")) {
                 const auto value = quoted_value(line, "filter");
@@ -408,6 +420,7 @@ std::optional<UiState> UiSettings::load() const {
         .player_spawns_visible = player_spawns_visible,
         .npc_spawns_visible = npc_spawns_visible,
         .other_spawns_visible = other_spawns_visible,
+        .combat_history_enabled = combat_history_enabled,
         .spawn_filter = spawn_filter,
         .spawn_type_filter = spawn_type_filter,
         .spawn_sort_column = spawn_sort_column,
@@ -505,6 +518,9 @@ bool UiSettings::save(const UiState& state) const {
                 (state.npc_spawns_visible ? "true\n" : "false\n");
     contents += QByteArray("other_spawns_visible = ") +
                 (state.other_spawns_visible ? "true\n" : "false\n");
+    contents += "\n[combat]\n";
+    contents += QByteArray("retain_history = ") +
+                (state.combat_history_enabled ? "true\n" : "false\n");
     contents += "\n[spawns]\n";
     contents += "filter = \"" +
                 state.spawn_filter.toUtf8().toBase64() + "\"\n";

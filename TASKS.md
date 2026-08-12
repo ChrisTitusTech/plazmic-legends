@@ -96,9 +96,9 @@ review. It does not authorize merging or releasing the pull requests.
 
 ### Phase 8: Combat analytics and overview
 
-- [ ] Add bounded fight/zone history, drill-down, timelines, healing, and
+- [x] Add bounded fight/zone history, drill-down, timelines, healing, and
   overview summaries under `AC-20`.
-- [ ] Partition persisted history by a stable privacy-preserving local
+- [x] Partition persisted history by a stable privacy-preserving local
   character key and test switch-away, switch-back, and restart restoration.
 - [ ] Complete focused, full, privacy, performance, installed, review, CI, and
   thread-resolution gates in a separate pull request.

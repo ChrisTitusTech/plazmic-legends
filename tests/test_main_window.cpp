@@ -1,3 +1,4 @@
+#include "game/combat_history_store.h"
 #include "map/map_parser.h"
 #include "map/map_view_model.h"
 #include "model/player_snapshot.h"
@@ -139,6 +140,8 @@ int main(int argc, char** argv) {
             window.findChild<QAction*>("ui-file-install-action");
         QAction* export_inventory_action =
             window.findChild<QAction*>("export-inventory-action");
+        QAction* retain_history_action =
+            window.findChild<QAction*>("retain-combat-history-action");
         require(
             menu_bar->actions().contains(user_menu->menuAction()) &&
                 menu_bar->actions().contains(views_menu->menuAction()) &&
@@ -148,8 +151,28 @@ int main(int argc, char** argv) {
                 export_inventory_action != nullptr &&
                 user_menu->actions().contains(export_inventory_action) &&
                 export_inventory_action->text() == "Export Inventory..." &&
-                !export_inventory_action->isEnabled(),
+                !export_inventory_action->isEnabled() &&
+                retain_history_action != nullptr &&
+                user_menu->actions().contains(retain_history_action) &&
+                retain_history_action->isCheckable() &&
+                !retain_history_action->isChecked() &&
+                !window.combat_history_enabled(),
             "User actions or Views menu hierarchy is incomplete");
+        retain_history_action->trigger();
+        require(retain_history_action->isChecked() &&
+                    window.combat_history_enabled(),
+                "retention action did not update the window state");
+        auto immediate_retention =
+            plazmic::UiSettings(settings_path).load();
+        require(immediate_retention &&
+                    immediate_retention->combat_history_enabled,
+                "retention opt-in was not persisted immediately");
+        retain_history_action->trigger();
+        immediate_retention = plazmic::UiSettings(settings_path).load();
+        require(immediate_retention &&
+                    !immediate_retention->combat_history_enabled,
+                "retention opt-out was not persisted immediately");
+        retain_history_action->trigger();
         QWidget* window_controls =
             menu_bar->cornerWidget(Qt::TopRightCorner);
         require(window_controls != nullptr &&
@@ -307,6 +330,14 @@ int main(int argc, char** argv) {
                         .dps = 300.0,
                         .percentage = 75.0,
                         .active_seconds = 3.0,
+                        .abilities = {
+                            {
+                                .name = "Synthetic Bolt",
+                                .category = "Spell",
+                                .damage = 900,
+                                .hits = 3,
+                            },
+                        },
                     },
                     {
                         .name = "synthetic_ally",
@@ -315,9 +346,15 @@ int main(int argc, char** argv) {
                         .dps = 100.0,
                         .percentage = 25.0,
                         .active_seconds = 3.0,
+                        .abilities = {},
                     },
                 },
+            .healers = {},
+            .timeline = {},
+            .zone = "synthetic_zone",
+            .started_unix_seconds = 1,
             .total_damage = 1200,
+            .total_healing = 0,
             .duration_seconds = 3.0,
             .active_character_dps = 300.0,
             .detail = "Current encounter",
@@ -383,6 +420,101 @@ int main(int argc, char** argv) {
                         ->text()
                         .contains("synthetic_target"),
                 "parse dock did not render the encounter summary");
+        plazmic::CombatEncounterSnapshot retained_combat = combat;
+        retained_combat.state = plazmic::CombatEncounterState::complete;
+        retained_combat.target = "retained_target";
+        retained_combat.started_unix_seconds = 2;
+        retained_combat.total_damage = 77;
+        retained_combat.participants.resize(1);
+        retained_combat.participants.front().damage = 77;
+        retained_combat.participants.front().abilities.clear();
+        retained_combat.detail = "Retained encounter";
+        plazmic::CombatAnalyticsSnapshot analytics{
+            .encounter = combat,
+            .history = {retained_combat},
+            .zone_damage = 1200,
+            .zone_healing = 0,
+            .zone_encounters = 1,
+            .history_retention_enabled = true,
+            .history_persisted = true,
+            .history_detail = {},
+        };
+        analytics.encounter.healers.push_back({
+            .name = "synthetic_healer",
+            .healing = 250,
+            .casts = 2,
+            .hps = 83.3,
+            .percentage = 100.0,
+        });
+        analytics.encounter.total_healing = 250;
+        analytics.encounter.timeline.push_back({
+            .elapsed_seconds = 1,
+            .damage = 1200,
+            .healing = 250,
+        });
+        window.update_combat_snapshot(analytics);
+        require(window.findChild<QTableWidget*>("combat-healing")
+                        ->rowCount() == 1 &&
+                    window.findChild<QTableWidget*>("combat-timeline")
+                        ->rowCount() == 1 &&
+                    window.findChild<QTableWidget*>("combat-history")
+                        ->rowCount() == 1 &&
+                    window.findChild<QTableWidget*>("combat-abilities")
+                        ->rowCount() == 1 &&
+                    window.findChild<QLabel*>("combat-overview")
+                        ->text()
+                        .contains("1 completed"),
+                "combat analytics tabs did not render history and healing");
+        auto* history_table =
+            window.findChild<QTableWidget*>("combat-history");
+        require(history_table->selectionMode() ==
+                    QAbstractItemView::SingleSelection,
+                "combat history did not enforce single-row selection");
+        history_table->selectRow(0);
+        process_events();
+        require(window.findChild<QLabel*>("parse-state")
+                        ->text()
+                        .contains("retained_target") &&
+                    window.findChild<QTableWidget*>("parse-table")
+                        ->rowCount() == 1 &&
+                    window.findChild<QTableWidget*>("combat-abilities")
+                            ->rowCount() == 0 &&
+                    window.findChild<QLabel*>("character-dps")->text() ==
+                        "Current DPS: 300.0",
+                "retained history selection did not drive drill-down tabs");
+        auto unavailable_analytics = analytics;
+        unavailable_analytics.encounter = {
+            .state = plazmic::CombatEncounterState::unavailable,
+            .target = {},
+            .participants = {},
+            .healers = {},
+            .timeline = {},
+            .zone = {},
+            .started_unix_seconds = 0,
+            .total_damage = 0,
+            .total_healing = 0,
+            .duration_seconds = 0.0,
+            .active_character_dps = 0.0,
+            .detail = "Combat log unavailable",
+        };
+        window.update_combat_snapshot(unavailable_analytics);
+        require(window.findChild<QLabel*>("parse-state")->text() ==
+                    "Combat log unavailable" &&
+                    window.findChild<QTableWidget*>("parse-table")
+                            ->rowCount() == 1,
+                "retained selection masked the current parser failure");
+        window.update_combat_snapshot(analytics);
+        history_table->clearSelection();
+        process_events();
+        require(window.findChild<QLabel*>("parse-state")
+                        ->text()
+                        .contains("synthetic_target") &&
+                    window.findChild<QTableWidget*>("parse-table")
+                            ->rowCount() == 2 &&
+                    window.findChild<QTableWidget*>("combat-abilities")
+                            ->rowCount() == 1,
+                "cleared history selection did not restore the current "
+                "encounter");
         plazmic::CombatEncounterSnapshot completed = combat;
         completed.state = plazmic::CombatEncounterState::complete;
         completed.detail = "Most recent encounter";
@@ -405,20 +537,35 @@ int main(int argc, char** argv) {
             .state = plazmic::CombatEncounterState::active,
             .target = "synthetic_target",
             .participants = {},
+            .healers = {},
+            .timeline = {},
+            .zone = "synthetic_zone",
+            .started_unix_seconds = 1,
             .total_damage = 256,
+            .total_healing = 0,
             .duration_seconds = 10.0,
             .active_character_dps = 1.0,
             .detail = "Current encounter",
         };
         for (std::size_t index = 0U; index < 256U; ++index) {
-            large_combat.participants.push_back({
+            plazmic::CombatParticipantSnapshot participant{
                 .name = "synthetic_" + std::to_string(index),
                 .damage = 1,
                 .hits = 1,
                 .dps = 1.0,
                 .percentage = 100.0 / 256.0,
                 .active_seconds = 1.0,
-            });
+                .abilities = {},
+            };
+            for (std::size_t ability = 0U; ability < 128U; ++ability) {
+                participant.abilities.push_back({
+                    .name = "ability_" + std::to_string(ability),
+                    .category = "Melee",
+                    .damage = 1,
+                    .hits = 1,
+                });
+            }
+            large_combat.participants.push_back(std::move(participant));
         }
         const auto ui_start = std::chrono::steady_clock::now();
         for (std::size_t update = 0U; update < 10U; ++update) {
@@ -432,6 +579,11 @@ int main(int argc, char** argv) {
         require(average_ui_ms < 250.0,
                 "bounded parse UI exceeded the update budget: " +
                     std::to_string(average_ui_ms) + " ms");
+        require(window.findChild<QTableWidget*>("combat-abilities")
+                        ->rowCount() ==
+                    static_cast<int>(
+                        plazmic::CombatHistoryStore::maximum_total_abilities),
+                "combat ability table exceeded its aggregate row bound");
 
         const plazmic::ZoneMap map{
             .zone = "synthetic",
@@ -926,6 +1078,8 @@ int main(int argc, char** argv) {
                 "close did not persist the map height filter state");
         require(saved_state->player_follow_enabled,
                 "close did not persist player-follow state");
+        require(saved_state->combat_history_enabled,
+                "close did not persist combat-history retention consent");
         require(saved_state->named_spawn_labels_visible &&
                     saved_state->player_labels_visible &&
                     saved_state->npc_labels_visible &&
@@ -1003,6 +1157,8 @@ int main(int argc, char** argv) {
                 "saved map height filter state was not restored");
         require(restored.map_canvas()->player_follow_enabled(),
                 "saved player-follow state was not restored");
+        require(restored.combat_history_enabled(),
+                "saved combat-history retention consent was not restored");
         require(restored.map_canvas()->named_spawn_labels_visible() &&
                     restored.map_canvas()->player_labels_visible() &&
                     restored.map_canvas()->npc_labels_visible() &&

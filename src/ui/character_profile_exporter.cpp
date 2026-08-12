@@ -198,6 +198,17 @@ CharacterProfileExport build_character_profile_export(
     };
 }
 
+bool character_profile_export_is_current(
+    const CharacterSnapshot& initial_snapshot,
+    const CharacterSnapshot& current_snapshot) {
+    if (!initial_snapshot.available() || !current_snapshot.available()) {
+        return false;
+    }
+    const QString initial_name = checked_utf8(initial_snapshot.name);
+    const QString current_name = checked_utf8(current_snapshot.name);
+    return !initial_name.isEmpty() && initial_name == current_name;
+}
+
 CharacterProfileSaveResult save_character_profile_export(
     const QString& path,
     const CharacterSnapshot& snapshot) {
@@ -237,13 +248,24 @@ CharacterProfileSaveResult save_character_profile_export(
         QFileDevice::ReadGroup | QFileDevice::WriteGroup |
         QFileDevice::ExeGroup | QFileDevice::ReadOther |
         QFileDevice::WriteOther | QFileDevice::ExeOther;
-    if (((QFile::permissions(path) & shared_permissions) != 0 &&
-         !QFile::setPermissions(path, owner_only)) ||
-        (QFile::permissions(path) & shared_permissions) != 0) {
+    QFileDevice::Permissions verified_permissions = QFile::permissions(path);
+    if ((verified_permissions & owner_only) != owner_only ||
+        (verified_permissions & shared_permissions) != 0) {
+        QFile::setPermissions(path, owner_only);
+        verified_permissions = QFile::permissions(path);
+    }
+    if ((verified_permissions & owner_only) != owner_only ||
+        (verified_permissions & shared_permissions) != 0) {
+        const bool removed = QFile::remove(path);
         return {
             .saved = false,
             .equipped_items = profile.equipped_items,
-            .detail = "The inventory profile backup is not owner-only.",
+            .detail =
+                removed
+                    ? "Owner-only permissions could not be enforced; the "
+                      "inventory profile backup was removed."
+                    : "Owner-only permissions could not be enforced and the "
+                      "inventory profile backup could not be removed.",
         };
     }
     return {

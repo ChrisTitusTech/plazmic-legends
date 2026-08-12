@@ -109,12 +109,11 @@ before publishing another version.
   fail-closed, privacy, lifecycle, and package boundaries remain unchanged.
 - Validation: fresh configure and warnings-as-errors build, repository checks,
   8 Python tests, all 18 CTest cases, exact-client fingerprint, package
-  metadata and staged-install inventory, privacy and whitespace scans, and an
-  iterative CodeRabbit review with zero final findings passed. The deployed
-  EQ Legends Tools v1 backup parser and item-ID normalization contract were
-  inspected on 2026-08-09 without adding a runtime network dependency. Exact
-  head `9f4de39` was installed at `/usr/local/bin/plazmic-legends`; the build
-  and installed SHA-256 both matched
+  metadata and staged-install inventory, and privacy and whitespace scans
+  passed. The deployed EQ Legends Tools v1 backup parser and item-ID
+  normalization contract were inspected on 2026-08-09 without adding a
+  runtime network dependency. Exact head `9f4de39` was installed at
+  `/usr/local/bin/plazmic-legends`; the build and installed SHA-256 both matched
   `7bf954207f82fc4d0a6bb316ea98d57ef7580d29330336eb2b2958cc1e2c06af`,
   and the installed-command Xvfb smoke test passed.
 

@@ -347,8 +347,16 @@ void MainWindow::open_inventory_export() {
     if (destination.isEmpty()) {
         return;
     }
+    if (!character_profile_export_is_current(snapshot_for_export,
+                                             character_snapshot_)) {
+        QMessageBox::warning(
+            this, "Export Inventory",
+            "Character information changed while selecting the export file. "
+            "Open Export Inventory again with a current snapshot.");
+        return;
+    }
     const CharacterProfileSaveResult result =
-        save_character_profile_export(destination, snapshot_for_export);
+        save_character_profile_export(destination, character_snapshot_);
     if (!result) {
         QMessageBox::critical(this, "Export Inventory", result.detail);
         return;

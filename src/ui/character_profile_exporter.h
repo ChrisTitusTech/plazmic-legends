@@ -31,6 +31,10 @@ struct CharacterProfileSaveResult {
 [[nodiscard]] CharacterProfileExport build_character_profile_export(
     const CharacterSnapshot& snapshot);
 
+[[nodiscard]] bool character_profile_export_is_current(
+    const CharacterSnapshot& initial_snapshot,
+    const CharacterSnapshot& current_snapshot);
+
 [[nodiscard]] CharacterProfileSaveResult save_character_profile_export(
     const QString& path,
     const CharacterSnapshot& snapshot);

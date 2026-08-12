@@ -151,6 +151,24 @@ int main() {
         unavailable.state = plazmic::PlayerSnapshotState::zoning;
         require(!plazmic::build_character_profile_export(unavailable),
                 "an unavailable snapshot was exported");
+        require(
+            !plazmic::character_profile_export_is_current(complete,
+                                                          unavailable),
+            "a snapshot invalidated during destination selection stayed current");
+
+        plazmic::CharacterSnapshot changed_character = complete;
+        changed_character.name = "Different Synthetic Character";
+        require(
+            !plazmic::character_profile_export_is_current(
+                complete, changed_character),
+            "a character change during destination selection stayed current");
+
+        plazmic::CharacterSnapshot refreshed_inventory = complete;
+        refreshed_inventory.equipment.clear();
+        require(
+            plazmic::character_profile_export_is_current(
+                complete, refreshed_inventory),
+            "a current snapshot for the same character was rejected");
 
         plazmic::CharacterSnapshot duplicate = available_snapshot();
         duplicate.equipment = {
@@ -196,10 +214,13 @@ int main() {
         const QFileDevice::Permissions permissions =
             QFileInfo(output_path).permissions();
         require(
-            (permissions &
-             (QFileDevice::ReadGroup | QFileDevice::WriteGroup |
-              QFileDevice::ExeGroup | QFileDevice::ReadOther |
-              QFileDevice::WriteOther | QFileDevice::ExeOther)) == 0,
+            (permissions & (QFileDevice::ReadOwner |
+                            QFileDevice::WriteOwner)) ==
+                    (QFileDevice::ReadOwner | QFileDevice::WriteOwner) &&
+                (permissions &
+                 (QFileDevice::ReadGroup | QFileDevice::WriteGroup |
+                  QFileDevice::ExeGroup | QFileDevice::ReadOther |
+                  QFileDevice::WriteOther | QFileDevice::ExeOther)) == 0,
             "saved inventory backup is not owner-only");
 
         const QString replacement_path =

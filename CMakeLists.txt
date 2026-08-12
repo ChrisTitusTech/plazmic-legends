@@ -76,6 +76,7 @@ target_include_directories(
 add_executable(
     plazmic-legends
     src/ui/main.cpp
+    src/ui/character_profile_exporter.cpp
     src/ui/map_canvas.cpp
     src/ui/main_window.cpp
     src/ui/spawn_table_model.cpp
@@ -262,6 +263,40 @@ if(BUILD_TESTING)
     target_link_libraries(character_reader_test PRIVATE plazmic_core)
     add_dependencies(check character_reader_test)
     add_test(NAME character_reader.unit COMMAND character_reader_test)
+
+    add_executable(
+        character_profile_exporter_test
+        tests/test_character_profile_exporter.cpp
+        src/ui/character_profile_exporter.cpp
+    )
+    target_compile_features(
+        character_profile_exporter_test PRIVATE cxx_std_20
+    )
+    target_compile_options(
+        character_profile_exporter_test
+        PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+    )
+    target_include_directories(
+        character_profile_exporter_test
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    )
+    target_link_libraries(
+        character_profile_exporter_test
+        PRIVATE
+            Qt6::Core
+    )
+    add_dependencies(check character_profile_exporter_test)
+    add_test(
+        NAME character_profile_exporter.unit
+        COMMAND character_profile_exporter_test
+    )
 
     add_executable(client_selection_test tests/test_client_selection.cpp)
     target_compile_features(client_selection_test PRIVATE cxx_std_20)
@@ -459,6 +494,7 @@ if(BUILD_TESTING)
         add_executable(
             main_window_test
             tests/test_main_window.cpp
+            src/ui/character_profile_exporter.cpp
             src/ui/map_canvas.cpp
             src/ui/main_window.cpp
             src/ui/spawn_table_model.cpp

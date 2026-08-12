@@ -81,6 +81,42 @@ before publishing another version.
 
 ## Post-release maintenance
 
+### M-09: Export inventory for EQ Legends Tools
+
+- [x] Add `Export Inventory...` to the User dropdown and enable it only for an
+  available immutable character snapshot.
+- [x] Serialize the character name and equipped item names into the current EQ
+  Legends Tools profile-backup slot and item-ID contract without adding a
+  network request or bundled item database.
+- [x] Save the JSON atomically with owner-only permissions and reject
+  unavailable, duplicate-slot, unknown-slot, or malformed item data.
+- [x] Document that race, tri-class, favored stats, Alternate Advancement, and
+  Exaltations must be verified after `Import Profile Backup` because Plazmic
+  Legends does not read or invent those fields.
+- [x] Cover all 23 slot mappings, item-name normalization, upgrade suffixes,
+  empty equipment, rejection paths, button lifecycle, and file permissions
+  with synthetic tests and run the complete repository and package gate.
+- [x] Install the exact validated build with rollback and verify its installed
+  hash, ownership, mode, and isolated Xvfb startup. The installed User-menu
+  action and private EQ Legends Tools import were not observed because no live
+  client or companion process was available.
+- Merge exception: on 2026-08-11, the owner explicitly authorized merging all
+  open pull requests with necessary updates. This authorizes merging M-09 with
+  the missing live click-through retained as residual compatibility risk; it
+  does not count that check as passed or authorize a release until an exported
+  private file is successfully imported through EQ Legends Tools.
+- Acceptance criteria: `AC-18` passes while the existing read-only,
+  fail-closed, privacy, lifecycle, and package boundaries remain unchanged.
+- Validation: fresh configure and warnings-as-errors build, repository checks,
+  8 Python tests, all 18 CTest cases, exact-client fingerprint, package
+  metadata and staged-install inventory, and privacy and whitespace scans
+  passed. The deployed EQ Legends Tools v1 backup parser and item-ID
+  normalization contract were inspected on 2026-08-09 without adding a
+  runtime network dependency. Exact head `9f4de39` was installed at
+  `/usr/local/bin/plazmic-legends`; the build and installed SHA-256 both matched
+  `7bf954207f82fc4d0a6bb316ea98d57ef7580d29330336eb2b2958cc1e2c06af`,
+  and the installed-command Xvfb smoke test passed.
+
 ### M-08: Complete HP/MP gauges and restore consider-color visibility
 
 - [x] Add a bounded exact-profile maximum-HP field, revalidate it with the

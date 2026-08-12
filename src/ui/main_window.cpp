@@ -1,5 +1,6 @@
 #include "ui/main_window.h"
 
+#include "ui/character_profile_exporter.h"
 #include "ui/map_canvas.h"
 #include "ui/spawn_presentation.h"
 #include "ui/spawn_table_model.h"
@@ -19,6 +20,7 @@
 #include <QCoreApplication>
 #include <QDialog>
 #include <QDialogButtonBox>
+#include <QDir>
 #include <QDockWidget>
 #include <QEvent>
 #include <QFileDialog>
@@ -329,6 +331,47 @@ void MainWindow::build_ui() {
     statusBar()->addPermanentWidget(detail_value_, 1);
 }
 
+void MainWindow::open_inventory_export() {
+    const CharacterSnapshot snapshot_for_export = character_snapshot_;
+    const CharacterProfileExport profile =
+        build_character_profile_export(snapshot_for_export);
+    if (!profile) {
+        QMessageBox::warning(this, "Export Inventory", profile.detail);
+        return;
+    }
+
+    const QString destination = QFileDialog::getSaveFileName(
+        this, "Export Inventory for EQ Legends Tools",
+        QDir::home().filePath(profile.suggested_file_name),
+        "JSON profile backup (*.json)");
+    if (destination.isEmpty()) {
+        return;
+    }
+    if (!character_profile_export_is_current(snapshot_for_export,
+                                             character_snapshot_)) {
+        QMessageBox::warning(
+            this, "Export Inventory",
+            "Character information changed while selecting the export file. "
+            "Open Export Inventory again with a current snapshot.");
+        return;
+    }
+    const CharacterProfileSaveResult result =
+        save_character_profile_export(destination, character_snapshot_);
+    if (!result) {
+        QMessageBox::critical(this, "Export Inventory", result.detail);
+        return;
+    }
+    QMessageBox::information(
+        this, "Export Inventory",
+        QString(
+            "Saved %1 equipped item(s).\n\n"
+            "At eqlegendstools.com/char-sheet/, choose Import Profile "
+            "Backup and select the JSON file. Verify race, tri-class, "
+            "favored stats, Alternate Advancement, upgrades, and "
+            "Exaltations after import.")
+            .arg(result.equipped_items));
+}
+
 void MainWindow::build_menu_bar(QDockWidget* character_dock,
                                 QDockWidget* parse_dock,
                                 QDockWidget* spawn_dock,
@@ -339,6 +382,11 @@ void MainWindow::build_menu_bar(QDockWidget* character_dock,
 
     QMenu* user_menu = bar->addMenu("&User");
     user_menu->setObjectName("user-menu");
+    export_inventory_action_ = user_menu->addAction("Export Inventory...");
+    export_inventory_action_->setObjectName("export-inventory-action");
+    export_inventory_action_->setEnabled(false);
+    connect(export_inventory_action_, &QAction::triggered,
+            this, &MainWindow::open_inventory_export);
     QAction* ui_install_action =
         user_menu->addAction("UI File Install...");
     ui_install_action->setObjectName("ui-file-install-action");
@@ -570,6 +618,8 @@ void MainWindow::update_player_snapshot(const PlayerSnapshot& snapshot) {
 
 void MainWindow::update_character_snapshot(
     const CharacterSnapshot& snapshot) {
+    character_snapshot_ = snapshot;
+    export_inventory_action_->setEnabled(snapshot.available());
     equipment_table_->setRowCount(0);
     if (!snapshot.available()) {
         character_name_->setText(

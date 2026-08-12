@@ -137,13 +137,19 @@ int main(int argc, char** argv) {
                 "embedded top, User, or Views menu is missing");
         QAction* ui_install_action =
             window.findChild<QAction*>("ui-file-install-action");
+        QAction* export_inventory_action =
+            window.findChild<QAction*>("export-inventory-action");
         require(
             menu_bar->actions().contains(user_menu->menuAction()) &&
                 menu_bar->actions().contains(views_menu->menuAction()) &&
                 ui_install_action != nullptr &&
                 user_menu->actions().contains(ui_install_action) &&
-                ui_install_action->text() == "UI File Install...",
-            "User/UI File Install or Views menu hierarchy is incomplete");
+                ui_install_action->text() == "UI File Install..." &&
+                export_inventory_action != nullptr &&
+                user_menu->actions().contains(export_inventory_action) &&
+                export_inventory_action->text() == "Export Inventory..." &&
+                !export_inventory_action->isEnabled(),
+            "User actions or Views menu hierarchy is incomplete");
         QWidget* window_controls =
             menu_bar->cornerWidget(Qt::TopRightCorner);
         require(window_controls != nullptr &&
@@ -287,6 +293,8 @@ int main(int argc, char** argv) {
             .detail = "Synthetic character snapshot",
         };
         window.update_character_snapshot(character);
+        require(export_inventory_action->isEnabled(),
+                "available character data did not enable inventory export");
         const plazmic::CombatEncounterSnapshot combat{
             .state = plazmic::CombatEncounterState::active,
             .target = "synthetic_target",
@@ -385,6 +393,8 @@ int main(int argc, char** argv) {
                             ->rowCount() == 2,
                 "completed encounter did not clear current DPS or retain parse");
         window.update_character_snapshot({});
+        require(!export_inventory_action->isEnabled(),
+                "unavailable character data left inventory export enabled");
         require(window.findChild<QProgressBar*>("character-health")->text() ==
                     "HP unavailable" &&
                     window.findChild<QProgressBar*>("character-mana")->text() ==

@@ -146,48 +146,55 @@ int main() {
             plazmic::select_client_profile(kCurrentDigest);
         require(current_profile != nullptr,
                 "current profile was unavailable to the identity test");
+        constexpr std::uintptr_t kMappedImageBase =
+            0x6ffffaf70000ULL;
         const plazmic::RemotePeIdentity exact_identity{
             .machine = current_profile->machine,
             .timestamp = current_profile->timestamp,
             .optional_magic = current_profile->optional_magic,
-            .image_base = 0x140000000ULL,
+            .image_base = kMappedImageBase,
             .image_size = current_profile->image_size,
         };
         require(
             plazmic::matches_client_profile_identity(
-                *current_profile, exact_identity),
+                *current_profile, exact_identity, kMappedImageBase),
             "exact mapped PE identity did not match the current profile");
 
         auto remapped_identity = exact_identity;
         remapped_identity.timestamp ^= 1U;
         require(
             !plazmic::matches_client_profile_identity(
-                *current_profile, remapped_identity),
+                *current_profile, remapped_identity,
+                kMappedImageBase),
             "same-PID remap with a changed PE timestamp was accepted");
         remapped_identity = exact_identity;
         remapped_identity.machine ^= 1U;
         require(
             !plazmic::matches_client_profile_identity(
-                *current_profile, remapped_identity),
+                *current_profile, remapped_identity,
+                kMappedImageBase),
             "same-PID remap with a changed PE machine was accepted");
         remapped_identity = exact_identity;
         remapped_identity.optional_magic ^= 1U;
         require(
             !plazmic::matches_client_profile_identity(
-                *current_profile, remapped_identity),
+                *current_profile, remapped_identity,
+                kMappedImageBase),
             "same-PID remap with a changed PE format was accepted");
         remapped_identity = exact_identity;
         remapped_identity.image_size ^= 1U;
         require(
             !plazmic::matches_client_profile_identity(
-                *current_profile, remapped_identity),
+                *current_profile, remapped_identity,
+                kMappedImageBase),
             "same-PID remap with a changed PE image size was accepted");
         remapped_identity = exact_identity;
         remapped_identity.image_base ^= 0x10000ULL;
         require(
             !plazmic::matches_client_profile_identity(
-                *current_profile, remapped_identity),
-            "same-PID remap with a changed preferred ImageBase was accepted");
+                *current_profile, remapped_identity,
+                kMappedImageBase),
+            "same-PID remap with a mismatched live ImageBase was accepted");
 
         Fixture fixture;
         const plazmic::GameStateReadResult result =

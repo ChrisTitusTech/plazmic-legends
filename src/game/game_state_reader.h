@@ -45,7 +45,8 @@ struct GameStateReadResult {
 
 [[nodiscard]] bool matches_client_profile_identity(
     const ClientProfile& profile,
-    const RemotePeIdentity& identity);
+    const RemotePeIdentity& identity,
+    std::uintptr_t mapped_image_base);
 
 [[nodiscard]] GameStateReadResult read_game_state(
     const ClientProcess& process,

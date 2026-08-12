@@ -11,7 +11,6 @@ constexpr ClientProfile kLegendsReferenceProfile{
     .timestamp = 0x6a6a2851U,
     .optional_magic = 0x20bU,
     .image_size = 0x16c1000U,
-    .preferred_image_base = 0x140000000ULL,
     .character_snapshot_supported = true,
     .game_state =
         {
@@ -88,7 +87,6 @@ constexpr ClientProfile kLegendsAugustThirdProfile{
     .timestamp = 0x6a711da7U,
     .optional_magic = 0x20bU,
     .image_size = 0x16c0000U,
-    .preferred_image_base = 0x140000000ULL,
     .character_snapshot_supported = false,
     .game_state =
         {
@@ -132,7 +130,6 @@ constexpr ClientProfile kLegendsAugustFourthProfile{
     .timestamp = 0x6a725275U,
     .optional_magic = 0x20bU,
     .image_size = 0x16bf000U,
-    .preferred_image_base = 0x140000000ULL,
     .character_snapshot_supported = true,
     .game_state =
         {
@@ -209,7 +206,6 @@ constexpr ClientProfile kLegendsAugustSixthProfile{
     .timestamp = 0x6a74f50aU,
     .optional_magic = 0x20bU,
     .image_size = 0x16c0000U,
-    .preferred_image_base = 0x140000000ULL,
     .character_snapshot_supported = true,
     .game_state =
         {

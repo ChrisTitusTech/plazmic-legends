@@ -321,12 +321,13 @@ GameStateReadResult read_game_state_impl(
 
 bool matches_client_profile_identity(
     const ClientProfile& profile,
-    const RemotePeIdentity& identity) {
+    const RemotePeIdentity& identity,
+    std::uintptr_t mapped_image_base) {
     return identity.machine == profile.machine &&
            identity.timestamp == profile.timestamp &&
            identity.optional_magic == profile.optional_magic &&
            identity.image_size == profile.image_size &&
-           identity.image_base == profile.preferred_image_base;
+           identity.image_base == mapped_image_base;
 }
 
 GameStateReadResult read_game_state(
@@ -415,7 +416,8 @@ GameStateReadResult LiveGameStateProbe::refresh() {
                 GameStateReadError::read_failed,
                 last_discovery_detail_);
         }
-        if (!matches_client_profile_identity(*profile_, identity)) {
+        if (!matches_client_profile_identity(
+                *profile_, identity, discovery.process.image_base)) {
             process_.reset();
             last_discovery_detail_ =
                 "live client identity does not match the exact profile";

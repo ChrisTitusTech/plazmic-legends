@@ -182,6 +182,12 @@ int main() {
             !plazmic::matches_client_profile_identity(
                 *current_profile, remapped_identity),
             "same-PID remap with a changed PE image size was accepted");
+        remapped_identity = exact_identity;
+        remapped_identity.image_base ^= 0x10000ULL;
+        require(
+            !plazmic::matches_client_profile_identity(
+                *current_profile, remapped_identity),
+            "same-PID remap with a changed preferred ImageBase was accepted");
 
         Fixture fixture;
         const plazmic::GameStateReadResult result =

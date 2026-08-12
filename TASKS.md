@@ -81,6 +81,31 @@ before publishing another version.
 
 ## Post-release maintenance
 
+### M-10: Support the 2026-08-03 Legends client
+
+- [x] Add a separate immutable profile for exact SHA-256
+  `f8af4e704746118f8dd94b688e585bc5c37c3d085da620136bcacad5486145ac`
+  without modifying or weakening any newer or prior profile.
+- [x] Retain the exact-client player, zone, and spawn fields established from
+  static evidence and bounded privacy-safe probes.
+- [x] Fail closed for the Character snapshot because this historical profile
+  predates the required independently validated maximum-HP field. Do not guess
+  that field or expose vitals, equipment, combat identity, or inventory export
+  for this client.
+- [x] Cover exact selection of all known profiles, rejection of unknown
+  digests, and the disabled Character capability in the synthetic repository
+  gate.
+- [ ] Complete a second zone, second equipment configuration, character select,
+  camping, game exit, process reacquisition, DWM placement, and game-invariance
+  checks on the exact historical executable.
+- Merge exception: on 2026-08-11, the owner explicitly authorized updating and
+  merging every open pull request. This authorizes merging M-10 with the
+  incomplete manual lifecycle checks and unavailable Character capability
+  retained as residual risk; it does not authorize a release.
+- Acceptance criteria: only the exact file and live PE identity select the
+  profile; approved player, zone, and spawn fields remain bounded; unavailable
+  Character data stays fail-closed; and no private artifact enters the tree.
+
 ### M-09: Export inventory for EQ Legends Tools
 
 - [x] Add `Export Inventory...` to the User dropdown and enable it only for an

@@ -76,6 +76,28 @@ int main() {
         const auto& profile = plazmic::legends_reference_profile();
         require(plazmic::select_client_profile(profile.sha256) == &profile,
                 "reference profile did not select by exact digest");
+        constexpr std::string_view kAugustThirdDigest =
+            "f8af4e704746118f8dd94b688e585bc5c37c3d085da620136bcacad5486145ac";
+        const auto* august_third =
+            plazmic::select_client_profile(kAugustThirdDigest);
+        require(
+            august_third != nullptr && august_third != &profile &&
+                august_third->id == "legends-2026-08-03" &&
+                august_third->sha256 == kAugustThirdDigest &&
+                august_third->machine == 0x8664U &&
+                august_third->timestamp == 0x6a711da7U &&
+                august_third->optional_magic == 0x20bU &&
+                august_third->image_size == 0x16c0000U &&
+                august_third->preferred_image_base == 0x140000000ULL &&
+                !august_third->character_snapshot_supported &&
+                august_third->game_state.local_player_pointer_rva ==
+                    0x00f05ff8U &&
+                august_third->game_state.world_data_pointer_rva ==
+                    0x00f05fe8U &&
+                august_third->game_state.player_zone_id_offset == 0x4a0U &&
+                august_third->spawns.level_offset == 0x620U &&
+                august_third->spawns.record_bytes == 0x621U,
+            "August 3 profile did not preserve its exact supported boundary");
         constexpr std::string_view kAugustFourthDigest =
             "d9784a58bb03cb70177d6a494fa71bca2b13ab3c5b8b9d6c26e45bae01597e51";
         const auto* august_fourth =
@@ -88,6 +110,7 @@ int main() {
                 august_fourth->timestamp == 0x6a725275U &&
                 august_fourth->optional_magic == 0x20bU &&
                 august_fourth->image_size == 0x16bf000U &&
+                august_fourth->character_snapshot_supported &&
                 august_fourth->game_state.local_player_pointer_rva ==
                     0x00f04ff8U &&
                 august_fourth->game_state.world_data_pointer_rva ==
@@ -114,6 +137,7 @@ int main() {
                 august_sixth->timestamp == 0x6a74f50aU &&
                 august_sixth->optional_magic == 0x20bU &&
                 august_sixth->image_size == 0x16c0000U &&
+                august_sixth->character_snapshot_supported &&
                 august_sixth->game_state.local_player_pointer_rva ==
                     0x00f05ff8U &&
                 august_sixth->game_state.world_data_pointer_rva ==

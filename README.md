@@ -1,12 +1,12 @@
 <!-- markdownlint-disable-next-line MD033 -->
 # <img src="packaging/plazmic-legends.png" alt="Plazmic Legends icon" width="52"> Plazmic Legends
 
-Plazmic Legends is a feature-complete, native Linux companion for the 64-bit
-EverQuest Legends client running under Wine. It provides a dedicated map and
-spawn window without drawing over the game or injecting code. Its sole
-Wine-prefix write path is the UI-file installer, which may back up and replace
-only selected skin and INI files, including while EverQuest is running for a
-live UI reload.
+Plazmic Legends is an extensible, native Linux companion for the 64-bit
+EverQuest Legends client running under Wine. The latest tagged release,
+`v0.2.0`, provides a dedicated map and spawn window, character status, and
+local combat parsing. The current `main` branch additionally provides
+user-directed file tools and is expanding through separate capability-scoped
+feature phases.
 
 [Download the latest release](https://github.com/ChrisTitusTech/plazmic-legends/releases/latest)
 
@@ -14,6 +14,9 @@ live UI reload.
 ![Plazmic Legends map, spawn list, and details](https://github.com/user-attachments/assets/2409ad54-0612-40ec-944e-7c0f158f29c8)
 
 ## Features
+
+The list below describes the current `main` branch; features added after
+`v0.2.0` are not yet present in the downloadable release.
 
 - Displays locally installed zone maps with pan, zoom, geometry-aware fit, and
   optional player follow.
@@ -29,8 +32,8 @@ live UI reload.
 - Handles zoning, camping, character select, process exit, and client changes
   without leaving stale data visible.
 - Follows the active system light or dark theme.
-- Keeps all processing local with no telemetry, updater, account service, or
-  bundled game content.
+- Keeps current-main processing local with no telemetry, updater, account
+  service, or bundled game content.
 
 ## Requirements
 
@@ -160,11 +163,14 @@ endorsed by Daybreak Game Company. It performs external, read-only process
 inspection. The project owner knowingly accepts that this may conflict with
 Daybreak's EULA and published rules. Use it at your own risk.
 
-The project does not write game state, inject code, automate gameplay, or
-bypass client protections. Its UI-file installer may back up and replace only
-explicitly selected skin and INI files. The user can then reload the live UI
-by selecting `UI_plazmic_1440p.ini` through `/copylayout`, followed by
-`/loadskin plazmic-ui 1`.
+The current `main` branch does not modify gameplay state, inject code, or
+automate gameplay. Its UI-file installer may back up and replace explicitly
+selected skin and INI files plus the allowlisted `UI_plazmic_1440p.ini`
+live-layout source. All replaced targets are covered by transactional rollback.
+The user can then reload the live UI by selecting that source through
+`/copylayout`, followed by `/loadskin plazmic-ui 1`. Future capabilities
+require their own approval and safeguards. Client protection bypass remains
+outside the project boundary.
 
 ## Development
 

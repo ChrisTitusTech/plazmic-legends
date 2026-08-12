@@ -1,5 +1,5 @@
 name: Feature request
-description: Propose a focused improvement within the read-only product boundary
+description: Propose a focused improvement or a major new capability
 title: "[Feature]: "
 labels:
   - enhancement
@@ -7,8 +7,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        Plazmic Legends is feature complete. New work must remain external,
-        local, read-only, and narrowly aligned with the existing companion.
+        Plazmic Legends has an extensible native Linux foundation. New trust
+        boundaries require an explicit capability phase with provenance,
+        consent, privacy, security, lifecycle, validation, and rollback gates.
 
   - type: textarea
     id: problem
@@ -37,9 +38,9 @@ body:
     attributes:
       label: Scope confirmation
       options:
-        - label: This remains external and read-only.
+        - label: I identified new inputs, outputs, side effects, privileges, and retained data.
           required: true
-        - label: This does not add automation, injection, scripting, or remote control.
+        - label: This proposal does not bypass authentication, integrity, anti-cheat, or client protections.
           required: true
-        - label: This does not require redistributing game content or private data.
+        - label: This does not require unconsented or bundled redistribution of game content or private data.
           required: true

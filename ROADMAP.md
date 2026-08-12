@@ -85,7 +85,8 @@ conflict.
 Runtime evidence proves that one native Linux process can observe the
 Wine-hosted client with bounded same-user access. The separate X11 overlay
 experiment also established that the reference DWM raises true-fullscreen
-clients above override windows, so an overlay is not the product UI.
+clients above override windows, so that experiment was not selected as the
+primary product UI.
 
 ### Included work
 
@@ -474,3 +475,234 @@ The prior immutable compatibility behavior remains available from `main`.
 Do not release or merge profile values that lack the required static and two
 observation live evidence. Keep the PR in draft until automated, live,
 privacy, performance, and independent-review gates are complete.
+
+## Phase 7: Extensible product foundation
+
+Status: Authorized on 2026-08-12. Deliver as the first expansion pull request.
+
+### Outcome
+
+Replace permanent product-category prohibitions with capability-scoped gates
+and record a provenance-safe native feature-parity plan.
+
+### Included work
+
+- Reconcile `SPEC.md`, `ROADMAP.md`, `TASKS.md`, and `AGENTS.md` around an
+  extensible Linux-first product.
+- Inventory public behavior from `jmoyers/everquest-companion` at an exact
+  upstream revision without copying its FSL-licensed implementation, data,
+  assets, fixtures, or generated content.
+- Define the following major phases and their stacked pull-request merge order.
+
+### Exit criteria and validation
+
+- Every planned capability maps to acceptance, provenance, privacy, security,
+  lifecycle, bounds, validation, and rollback requirements.
+- Documentation lint, repository checks, iterative Codex review, independent
+  review, exact-head CI, and unresolved-thread checks pass.
+
+### Rollback and pause point
+
+Revert the documentation pull request. Do not start a feature PR until this
+foundation is reviewable, and do not merge or release any PR without separate
+owner authorization.
+
+## Phase 8: Combat analytics and overview
+
+Status: Planned as a separate pull request stacked on Phase 7.
+
+### Outcome and included work
+
+Extend the local parser with capped encounter and zone history, attack/spell
+and damage/healing drill-down, a timeline, current-target context, and overview
+cards for the current fight and recent encounters.
+
+### Risks, exit criteria, and validation
+
+- Private log content remains local; diagnostics and tests use synthetic names.
+- Histories have explicit count, byte, age, and persistence bounds. They are
+  partitioned by a stable privacy-preserving local character key, survive
+  append, truncation, rotation, zoning, and restart, and restore only the newly
+  selected character's partition after a switch.
+- Focused parser/model/UI tests, full gates, performance limits, privacy audit,
+  character-switch/restart restoration tests, review loops, exact-head CI, and
+  manual installed-log validation pass.
+
+### Rollback and pause point
+
+Remove the history/overview store and views while retaining the Phase 6 parser.
+Pause if supported log variants cannot be categorized deterministically.
+
+## Phase 9: Progression, loot, inventory, and class activity
+
+Status: Planned as a separate pull request stacked on Phase 8.
+
+### Outcome and included work
+
+Add per-character XP and AA history, leveling rates and ETA, loot history,
+inventory reconciliation, class-combination summaries, proc analytics, upgrade
+observations, and celebration events from validated local observations. Add
+recent-drop and XP/AA rate/ETA cards to the overview using those Phase 9 data
+contracts.
+
+Phase 9 inputs are bounded lines from the active character's local log, the
+existing immutable text-equipment snapshot, and an explicitly selected local
+EverQuest inventory-output file. Class, proc, and upgrade conclusions carry
+their evidence/confidence instead of being guessed. Raid-target
+classification is not part of this phase because these inputs provide no
+authoritative roster. No new process-memory field, network source, or bundled
+game database is approved by this phase; one requires a separately documented
+input checkpoint before implementation.
+
+### Risks, exit criteria, and validation
+
+- Character separation uses a privacy-preserving stable local key and never
+  writes names to diagnostics.
+- Stored activity is schema-versioned, capped, recoverable, and exportable or
+  deletable by the user.
+- Synthetic activity, migration, corruption, lifecycle, UI, performance,
+  package, review, CI, and installed validation pass.
+
+### Rollback and pause point
+
+Disable or remove the activity store and views without changing raw inputs.
+Pause rather than infer an ambiguous character, loot, XP, AA, class, or proc
+event.
+
+## Phase 10: Buffs, timers, alerts, and audio
+
+Status: Planned as a separate pull request stacked on Phase 9.
+
+### Outcome and included work
+
+Add bounded buff duration and respawn timers, local text rules, rank-upgrade and
+custom kill alerts, visible notifications, optional sound/voice packs,
+configurable rate limits, and independent enable/disable controls.
+
+Phase 10 inputs are bounded cast, landing, fade, kill, and user-rule matches
+from the active local log; Phase 9 kill/activity snapshots; user-configured
+timer values; and schema/provenance-validated user-imported duration and audio
+packs. Observed durations and imported reference durations remain visibly
+distinct. No new process-memory or network source is approved by this phase.
+
+### Risks, exit criteria, and validation
+
+- Alert matching and timer recovery are deterministic across clock changes,
+  zoning, character changes, and restart.
+- Audio is optional, user-selectable, rate-limited, and testable with a fake
+  sink; packs require compatible provenance.
+- Rule, timer, lifecycle, accessibility, performance, privacy, review, CI, and
+  installed notification/audio validation pass.
+
+### Rollback and pause point
+
+Disable dispatch and remove the alert/timer views while preserving user data
+for migration. Pause on noisy, unbounded, or privacy-unsafe matching.
+
+## Phase 11: Map workflows
+
+Status: Planned as a separate pull request stacked on Phase 10.
+
+### Outcome and included work
+
+Add point-of-interest search, label decluttering, floor slicing, pinned-zone
+viewing, typed `/loc` navigation, and local user annotations without copying
+third-party maps or databases.
+
+### Risks, exit criteria, and validation
+
+- Zone and coordinate inputs remain path-safe and bounded; annotations are
+  local, versioned, and recoverable.
+- Renderer, search, transform, declutter, floor, persistence, accessibility,
+  performance, review, CI, and installed map validation pass.
+
+### Rollback and pause point
+
+Remove new controls and annotation storage while retaining the existing map
+renderer. Pause if a feature requires redistributing unlicensed map content.
+
+## Phase 12: Knowledge packs, raid history, and planners
+
+Status: Planned as a separate pull request stacked on Phase 11.
+
+### Outcome and included work
+
+Add a versioned import format and native views for item/loot knowledge, quest
+turn-ins, recipes, Plane of Sky class tests, Exaltation planning, have/need
+tracking, raid-target classification and kill history, statistics, sorting, and
+search. Raid observations come from bounded local kill events, but they are
+classified only against a schema-validated, provenance-compatible roster in an
+explicitly selected pack.
+
+### Risks, exit criteria, and validation
+
+- The repository and packages contain no copied upstream database, image,
+  FSL-licensed content, or proprietary game asset.
+- Packs require schema, version, size, path, integrity, and provenance checks;
+  failures are atomic and existing data remains recoverable.
+- Import, corruption, migration, query, planner, UI, performance, license,
+  review, CI, and installed user-pack validation pass.
+
+### Rollback and pause point
+
+Remove the importer/views and leave user-owned packs untouched. Pause until a
+legally compatible data source or user-supplied pack is available.
+
+## Phase 13: Detached and overlay presentation
+
+Status: Planned as a separate pull request stacked on Phase 12.
+
+### Outcome and included work
+
+Add user-enabled floating damage, healing, progression, buff, and timer windows
+with fight/zone scope, geometry persistence, lock, topmost, and click-through
+controls where the Linux window manager supports them.
+
+### Risks, exit criteria, and validation
+
+- Overlay roles remain separate native windows, show their active state, never
+  steal focus, and degrade safely when true fullscreen or the window manager
+  prevents requested stacking/input behavior.
+- Synthetic UI, Xvfb, real DWM focus/input/stacking, lifecycle, accessibility,
+  performance, review, CI, and installed game-invariance validation pass.
+
+### Rollback and pause point
+
+Disable overlays and restore docked views without losing settings. Pause if a
+role changes game input, focus, opacity, geometry, or active tags unexpectedly.
+
+## Phase 14: Profiles, sharing, and optional services
+
+Status: Planned as a separate pull request stacked on Phase 13.
+
+### Outcome and included work
+
+Add per-character switching, settings/alert import and export, and an isolated
+service boundary for separately enabled updates, feedback, sharing, or
+telemetry when concrete endpoints and retention policies exist.
+
+### Risks, exit criteria, and validation
+
+- Local import/export lands first and is atomic, bounded, versioned, previewed,
+  and owner-only.
+- Each online service is independently disabled by default, displays its exact
+  endpoint and payload, requires consent, minimizes retention, and provides
+  disable/delete behavior. Package-manager updates remain supported.
+- Schema, migration, corruption, network-failure, TLS, consent, redaction,
+  deletion, privacy, security, review, CI, and installed offline-mode gates
+  pass before any service is enabled.
+
+### Rollback and pause point
+
+Disable and remove a service client without affecting the offline product.
+Pause until the endpoint, operator, retention, deletion, and threat model are
+documented; never invent or silently select a service.
+
+## Expansion pull-request order
+
+Phases 7 through 14 are one major pull request each and merge in numeric order.
+While stacked, every PR targets its immediate predecessor and identifies both
+its base and final merge target. A successor may be developed while its base is
+open, but it is not merge-ready until its base is merged or the successor is
+rebased onto the resulting exact `main` head. Passing review or CI never grants
+permission to merge or release.

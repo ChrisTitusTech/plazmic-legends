@@ -1,9 +1,9 @@
 # Contributing to Plazmic Legends
 
-Thank you for helping improve Plazmic Legends. The application is feature
-complete, so changes should preserve its focused, read-only product boundary
-and favor fixes, compatibility maintenance, accessibility, documentation, and
-carefully justified refinements.
+Thank you for helping improve Plazmic Legends. The application has a validated
+native Linux foundation and an expansion roadmap. Contributions may propose
+major new capabilities as well as fixes, compatibility maintenance,
+accessibility, documentation, and focused refinements.
 
 ## Before opening an issue
 
@@ -22,10 +22,15 @@ reporting instructions in [.github/SECURITY.md](.github/SECURITY.md).
 
 ## Project scope
 
-Contributions must keep Plazmic Legends external, local, and read-only. Changes
-that add memory writes, injection, client patching, protection bypass, gameplay
-automation, synthesized input, scripting, plugins, multibox control, remote
-control, telemetry, or proprietary game content are out of scope.
+Every new capability must follow the phase, acceptance, provenance, privacy,
+security, lifecycle, validation, and rollback contracts in `SPEC.md` and
+`ROADMAP.md`. A capability with writes, input, automation, injection, plugins,
+remote access, telemetry, or another new trust boundary needs explicit owner
+approval for its own phase; approval of one capability does not approve another.
+
+Protection bypass, silent private-data collection, guessed client offsets, and
+incompatible or proprietary third-party content remain outside the project
+boundary.
 
 An unknown or changed client must continue to fail closed. Never weaken the
 fingerprint match or reuse unvalidated offsets to make a patched client appear

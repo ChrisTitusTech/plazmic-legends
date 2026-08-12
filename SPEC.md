@@ -2,18 +2,19 @@
 
 ## Problem
 
-The imported codebase is a broad MacroQuest platform designed for traditional
-EverQuest clients and Windows development. EverQuest Legends uses a different
-`eqgame.exe`, the target environment is Linux with Wine, and most inherited
-scripting, plugin, login, data-model, Windows build, and service code is outside
-this project's purpose.
+The imported codebase was a broad MacroQuest platform designed for traditional
+EverQuest clients and Windows development. Phase 0 removed that inherited
+implementation so Plazmic Legends could establish a native Linux foundation
+for the EverQuest Legends client running under Wine.
 
-Plazmic Legends will be a small Linux-built companion application that shows
-selected read-only information from the Legends client in an independent
-window. It also provides a scoped installer for a user-owned UI skin and INI
-settings bundle. It does not draw over or inside the game. Client-version knowledge
-must be isolated, lifecycle transitions must be safe, and unknown builds must
-be rejected instead of risking invalid memory access.
+Plazmic Legends is now an extensible companion rather than a permanently
+minimal viewer. The current release provides read-only client observations,
+local combat-log parsing, maps, and user-directed file tools. Future phases may
+add history, analytics, planners, alerts, audio, overlays, sharing, optional
+services, extensions, and other useful capabilities. Each capability must have
+an explicit contract for provenance, consent, privacy, security, lifecycle,
+resource bounds, compatibility, validation, and rollback. Unknown client builds
+remain unsupported instead of being paired with guessed memory layouts.
 
 ## Users
 
@@ -26,18 +27,66 @@ support tier.
 
 ## Product principles
 
-- Read-only gameplay integration: observe and present; never control gameplay.
+- Capability-scoped: every new source, sink, side effect, and privilege is
+  independently specified and reviewable.
 - Linux-first: configure, build, test, and package on Linux.
-- Minimal: retain only code and dependencies used by the approved window and
-  lifecycle.
+- Extensible: the current architecture is a foundation, not a permanent limit
+  on product surfaces or integration techniques.
 - Version-aware: client-specific knowledge belongs to an explicit
   compatibility profile.
 - Fail closed: an unrecognized or ambiguous build is unsupported.
 - Recoverable: failure must not corrupt game state or require editing the game
   installation to recover.
-- Offline: no telemetry, account, web service, or updater is required.
+- Privacy by default: local/offline behavior is the baseline; transfers and
+  remote services are optional, disclosed, and explicitly enabled.
+- Provenance safe: incompatible code, data, assets, fixtures, and generated
+  content are not copied into the project.
 
 ## Required behavior
+
+### Expansion capability model
+
+- Existing capabilities retain their validated behavior unless a later phase
+  explicitly supersedes it with migration and rollback instructions.
+- A major capability is delivered in its own pull request. Stacked work must
+  state its base, merge order, and independent validation surface.
+- Every capability documents input sources, outputs and side effects, retained
+  data, resource bounds, lifecycle invalidation, privacy behavior, optional
+  dependencies, license provenance, failure states, and removal path.
+- Client memory, log files, user-imported packs, local files, audio devices,
+  and network services are distinct trust boundaries. Approval of one does not
+  imply approval of another.
+- Capabilities that write files, communicate over a network, display overlays,
+  emit audio, automate work, control input, or modify a process are disabled by
+  default until the user enables that exact behavior.
+- No capability may bypass authentication, integrity checks, anti-cheat, or
+  other client protections. Encountering such a protection is a stop condition
+  for that design.
+
+### Planned product surfaces
+
+- Combat and overview: bounded encounter and zone history, attack and spell
+  drill-down, damage and healing timelines, current-target context, recent
+  activity, and rate/ETA summaries.
+- Progression and activity: per-character XP and AA history, loot history,
+  inventory reconciliation, class-combination summaries, proc analytics, and
+  upgrade observations derived from bounded active-log events, existing
+  immutable equipment, and explicit local inventory imports.
+- Buffs, timers, and alerts: bounded buff state, duration and respawn timers,
+  local rule matching, visible notifications, optional sounds or voice packs,
+  and celebration events derived from bounded local log/activity events, user
+  timer values, and provenance-validated imported duration or audio packs.
+- Map workflows: point-of-interest search, label decluttering, floor slicing,
+  pinned zones, typed `/loc` navigation, and user-owned annotations.
+- Presentation: normal, detached, and overlay-style Linux windows for damage,
+  healing, progression, buffs, and timers, with explicit stacking,
+  click-through, lock, focus, and privacy controls.
+- Knowledge and planning: schema-validated, versioned user-imported or
+  license-compatible packs for item, quest, recipe, Plane of Sky, Exaltation,
+  raid-target identity and history, and related planning views.
+- Profiles and services: per-character switching, settings and alert
+  import/export, and separately consented update, feedback, sharing, or
+  telemetry services when a phase demonstrates their value and safeguards.
 
 ### Target selection and compatibility
 
@@ -132,9 +181,10 @@ Missing, disabled, ambiguous, malformed, oversized, or unavailable logs show
 an explicit unavailable state without affecting memory-backed character data.
 
 The parser is an independent implementation informed only by public product
-behavior. It does not copy Loadout Legends code or assets and does not add its
-uploads, accounts, leaderboards, saved history, timers, proc tools, resist
-tools, database, or network services.
+behavior. It does not copy third-party code, data, fixtures, or assets. Later
+phases may build bounded histories, timers, proc or resist analytics,
+knowledge stores, sharing, and optional services on top of this parser under
+the expansion capability model.
 
 The User menu can export the current immutable character name and text-only
 equipment snapshot as an offline JSON profile backup compatible with the EQ
@@ -147,9 +197,9 @@ after importing the inventory-only backup.
 
 ### Window and map interaction
 
-- The application is a normal independent Linux window and does not require a
-  relationship with the game window, its focus, its fullscreen state, or its
-  render surface.
+- The default application is a normal independent Linux window. Approved
+  presentation phases may add independent overlay-style Linux windows without
+  drawing inside the game process.
 - The main window contains a central map canvas and dockable spawn and detail
   views inspired conceptually by ShowEQ.
 - The default left dock area contains the Character dock above the Parse dock;
@@ -163,9 +213,10 @@ after importing the inventory-only backup.
 - The main window and any detached Plazmic tool windows expose
   `WM_CLASS(STRING) = "plazmic-legends", "PlazmicLegends"` so DWM can place
   them predictably.
-- On the reference two-monitor DWM session, all Plazmic windows open on tag 5,
-  owned by monitor 1 (HDMI-0). They do not request `alwaysontop`, activate the
-  game tag, or change game focus.
+- On the reference two-monitor DWM session, normal Plazmic windows open on tag
+  5, owned by monitor 1 (HDMI-0). Overlay roles may request topmost and
+  click-through behavior only when explicitly enabled; no Plazmic role may
+  activate a game tag or steal game focus.
 - The reference DWM rule is
   `{ class="PlazmicLegends", tags=5, monitor=1, noswallow=1 }`.
 - The map supports pan, zoom, player-follow, layer visibility, selection, and
@@ -256,8 +307,9 @@ pointers.
 
 Configuration and logs use the XDG base-directory conventions. Runtime
 observation leaves the game installation and Wine prefix unmodified. The
-private UI-file installer is the only approved exception and is constrained by
-its allowlist, confirmation, backup, and rollback contract.
+private UI-file installer is the currently implemented write capability and is
+constrained by its allowlist, confirmation, backup, and rollback contract.
+Future side effects use similarly explicit capability contracts.
 
 ## Security, privacy, and compliance
 
@@ -266,16 +318,21 @@ its allowlist, confirmation, backup, and rollback contract.
 - Do not require root, setuid, broad ptrace-policy changes, or disabled system
   security controls. If the design requires one, reject it and revisit the
   architecture.
-- Do not inject a PE DLL, add a Wine DLL override, hook DirectX inside the
-  client, or patch the Wine prefix.
-- Do not add a network listener, remote command channel, telemetry, automatic
-  updater, or credential store.
+- The current release does not inject a PE DLL, add a Wine DLL override, hook
+  DirectX, or patch the Wine prefix. A future integration mechanism must be
+  isolated in a dedicated phase and cannot bypass a client protection.
+- Network listeners, remote commands, telemetry, updates, feedback, accounts,
+  and credential storage require separate threat models. They are disabled by
+  default, disclose endpoints and payloads, minimize retention, and provide a
+  local disable and deletion path.
 - Do not bundle or redistribute `eqgame.exe`, Daybreak libraries, data files,
   symbols, or other proprietary content.
 - Do not bypass authentication, integrity checks, anti-cheat, or client
   protections.
-- Memory access is limited to approved panel fields. Gameplay state writes and
-  synthesized gameplay input are prohibited.
+- Memory access is limited to fields approved by exact compatibility profiles.
+  A write, input, automation, or control capability requires explicit user
+  authorization, a dedicated phase, a least-privilege boundary, visible state,
+  an immediate disable path, and failure-isolation evidence.
 - Retained MacroQuest-derived code remains subject to GPLv2 notices.
   Original Plazmic Legends code is licensed under GPL-3.0-only.
   Third-party dependencies require a documented license and provenance audit.
@@ -365,26 +422,29 @@ its allowlist, confirmation, backup, and rollback contract.
   replaced INI and `uifiles/plazmic-ui` target is restored from rollback before
   failure is reported. A normal failure may not leave a mixed old/new state;
   an independently failed rollback is reported as a critical recovery error.
-- This file-write exception is limited to the confirmed skin and INI targets.
-  It does not permit process-memory or gameplay-state writes, injection,
-  automation, input synthesis, Wine overrides, or protection bypass.
+- This capability is limited to the confirmed skin and INI targets. It does
+  not implicitly authorize any other write, automation, input, integration, or
+  control capability.
 
-## Non-goals
+## Current exclusions
 
-- Macro, scripting, command, or plugin platforms.
-- Automated input, combat, movement, inventory, login, or multibox features.
-- Alerts, chat processing, remote control, or web services.
-- Map editing, route finding, spawn alerts, audio alerts, or command execution.
-- Support for traditional EverQuest live, test, beta, or emulator clients.
-- Native Windows builds, Visual Studio solutions, MSVC, or Windows-hosted CI.
-- Windows-format project artifacts, MinGW builds, Wine DLL injection, or
-  DirectX hooks.
-- Wayland support in the MVP.
-- A general-purpose memory editor or debugger.
-- General-purpose modification or repackaging of the EverQuest Legends
-  installation outside the scoped private UI-file installer.
-- Preserving source or API compatibility with MacroQuest plugins.
-- An in-app updater or crash-report upload service.
+These exclusions protect the project rather than permanently limit its product
+categories:
+
+- bypassing authentication, integrity checks, anti-cheat, or client
+  protections;
+- silently collecting, retaining, uploading, or sharing private user data;
+- copying incompatible or unverified third-party code, databases, assets,
+  fixtures, generated content, or proprietary game files;
+- guessing client offsets or weakening exact-profile failure rules;
+- unbounded work, hidden side effects, or capabilities without a disable and
+  rollback path; and
+- claiming support for an unvalidated platform, client build, or integration.
+
+Native Windows, Wayland, scripting, extensions, automation, remote control,
+alternate clients, injection, update services, and other new product areas are
+not implemented by the current release. They may be proposed through the
+expansion capability model; none is implicitly approved by this roadmap.
 
 ## Acceptance criteria
 
@@ -434,7 +494,7 @@ its allowlist, confirmation, backup, and rollback contract.
   2560x1440 bundle without tracking private data, and `User > UI File
   Install...` asks which layout and character INIs to replace, optionally
   replaces `eqclient.ini`, installs a dedicated `/copylayout` source for live
-  activation, preserves a private rollback, and never expands into
+  activation, preserves a private rollback, and does not implicitly authorize
   gameplay-state modification.
 - AC-17: Local manual or live-client evidence for a changed build uses the
   atomically replaced shell-resolved local installation, whose hash matches the
@@ -447,6 +507,34 @@ its allowlist, confirmation, backup, and rollback contract.
   deterministically, empty slots are omitted, unavailable or malformed
   snapshots fail closed, and the export adds no network access, game-state
   write, private logging, or bundled item database.
+- AC-19: Every expansion feature has an independently reviewable pull request
+  and a recorded source, side-effect, privacy, license, lifecycle, resource,
+  validation, and rollback contract.
+- AC-20: Combat and overview histories are immutable, bounded, deterministic,
+  lifecycle-aware, partitioned by a stable privacy-preserving local character
+  key, and testable with synthetic logs. Character switching and restart
+  restore only that character's history, and diagnostics retain no private
+  names.
+- AC-21: Progression, loot, inventory, class, proc, upgrade, and
+  celebration activity is scoped per character, bounded on disk and in memory,
+  and reset or restored predictably across log rotation, zoning, character
+  changes, and restart.
+- AC-22: Buffs, timers, alerts, and audio are user-configurable, disabled
+  independently, rate-limited, privacy-safe, lifecycle-aware, and testable
+  without a live client or sound device.
+- AC-23: POI search, label decluttering, floor slicing, pinned zones, typed
+  locations, and annotations are bounded, path-safe, deterministic, local,
+  recoverable, and testable without a live client.
+- AC-24: A knowledge pack is accepted only after schema, version, size,
+  integrity, path, and provenance validation. Raid-target classification and
+  history require a validated roster from such a pack. The package and
+  repository do not embed incompatible upstream databases or assets.
+- AC-25: Overlay windows preserve focus and input unless the user explicitly
+  chooses interaction, expose their active state, and degrade safely when the
+  window manager cannot provide requested stacking or click-through behavior.
+- AC-26: Imports, exports, feedback, sharing, updates, and telemetry preview or
+  document their exact payload and destination, require capability-specific
+  consent, fail closed, and provide disable, deletion, and rollback behavior.
 
 ## Resolved Phase 1 decisions
 
@@ -460,9 +548,9 @@ its allowlist, confirmation, backup, and rollback contract.
   dependency.
 - Package publication is authorized.
 - Record that the owner knowingly accepts development contrary to the Daybreak
-  EULA. This permits read-only research and the later approved, scoped UI-file
-  installer, but does not authorize gameplay-state writes, injection,
-  automation, input synthesis, or protection bypass.
+  EULA. This authorizes the capabilities accepted in their individual phases;
+  it never authorizes protection bypass or silently expands one capability's
+  scope into another.
 - Use plain F11 for the proof toggle.
 - Reserve `$XDG_CONFIG_HOME/plazmic-legends/config.toml` for configuration and
   `$XDG_STATE_HOME/plazmic-legends/plazmic-legends.log` for logs, with standard
@@ -470,9 +558,12 @@ its allowlist, confirmation, backup, and rollback contract.
 
 ## Post-Phase 1 UI decision
 
-- The external X11 overlay experiment is not the product UI. On the reference
-  DWM, true-fullscreen clients intentionally stack above override windows, and
-  removing fullscreen changed the game's focus presentation and opacity.
+- The Phase 1 external X11 overlay experiment was not suitable as the primary
+  UI. On the reference DWM, true-fullscreen clients intentionally stack above
+  override windows, and removing fullscreen changed the game's focus
+  presentation and opacity. This is a historical constraint of that
+  experiment, not a permanent ban on independent overlays for windowed or
+  borderless use.
 - Phase 2 uses a normal independent Qt 6 Widgets application inspired by
   ShowEQ's map/spawn layout but independently implemented.
 - The application uses one dock-based main window by default and places every

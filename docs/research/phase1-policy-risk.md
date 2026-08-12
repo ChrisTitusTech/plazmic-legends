@@ -1,7 +1,8 @@
 # Phase 1 EULA-risk decision
 
-Reviewed on 2026-07-29. This is a conservative project-scope decision, not
-legal advice.
+Originally reviewed on 2026-07-29. Revised on 2026-08-12 only to reference the
+later Phase 7 capability model; the decision documented here remains a Phase 1
+decision. This is a project-scope decision, not legal advice.
 
 ## Official sources
 
@@ -28,17 +29,16 @@ EULA and related published rules. That statement records accepted development
 risk; it does not grant permission, waive Daybreak's rights, prevent account
 action, or provide legal advice.
 
-Development may continue with external, read-only process inspection,
-including client symbols and the approved MVP state. The project remains
-unaffiliated with and unsupported by Daybreak.
+Phase 1 approved external, read-only process inspection, including client
+symbols and the MVP state. On 2026-08-12, the owner replaced Phase 1's
+product-category limits with the capability-scoped expansion model in
+`SPEC.md`. A later write, injection, input, automation, scripting, remote, or
+service capability requires explicit approval and validation under its own
+numbered phase; this historical Phase 1 decision does not approve or reject it.
 
-The following boundaries remain mandatory:
-
-- no game-memory or client-file writes;
-- no code injection, DLL override, DirectX hook, or client patch;
-- no authentication, integrity, anti-cheat, or protection bypass;
-- no gameplay input, automation, macros, scripting, or remote control;
-- no credentials, chat, memory dumps, or account data in logs or fixtures.
+Protection bypass remains outside the project boundary. Credentials, private
+chat, memory dumps, and account data remain excluded from logs and fixtures.
+The project remains unaffiliated with and unsupported by Daybreak.
 
 Package publication is authorized. Phase 2 is technically permitted after
 Phase 1 proves a bounded reusable memory-reader boundary and reaches its normal

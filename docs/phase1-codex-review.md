@@ -91,5 +91,6 @@ host configuration was changed for an optional review check.
 
 No unresolved critical or major implementation finding remains in the Phase 1
 proof. The owner explicitly accepted the documented EULA conflict for
-read-only development. That decision does not authorize writes, injection,
-automation, or protection bypass.
+read-only development. That decision approved only Phase 1. The Phase 7
+capability model governs later proposals; protection bypass remains outside the
+project boundary.

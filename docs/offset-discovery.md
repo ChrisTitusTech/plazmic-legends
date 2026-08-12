@@ -7,13 +7,13 @@ new client build: keep every existing profile immutable and treat every old
 RVA, field offset, bound, and structure assumption as an untrusted hypothesis
 until it passes this workflow again.
 
-This workflow is limited to the approved read-only fields: local-player and
+This workflow approves only the current read-only fields: local-player and
 world state, zone identity and short name, player position and heading, the
-bounded spawn collection, character identity, current HP, current and maximum
-mana, and bounded equipped slot and item-name values. It does not authorize
-memory writes, injection, hooks, input synthesis, protection bypass, client patching,
-packet capture, combat-log content capture, or a general-purpose memory
-scanner.
+bounded spawn collection, character identity, current and maximum HP, current
+and maximum mana, and bounded equipped slot and item-name values. A different
+read or integration technique requires its own capability phase and discovery
+procedure; this document neither approves nor permanently prohibits it.
+Protection bypass remains outside the project boundary.
 
 ## Discovery map
 

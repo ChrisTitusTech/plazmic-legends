@@ -22,12 +22,26 @@ fingerprint. Write "Not applicable" when no manual test is needed.
 
 ## Safety and scope
 
-- [ ] The change remains external and read-only.
+Capability phase and task (required):
+<!-- Link the numbered ROADMAP/TASKS contract. -->
+
+Owner approval (required):
+<!-- Link or quote the approval and include its date. -->
+
+Capability contract (required):
+<!-- Link inputs, outputs, side effects, privacy, lifecycle, validation, and rollback. -->
+
+- [ ] The change maps to an approved task and capability phase.
 - [ ] Unknown or changed clients still fail closed.
 - [ ] No game files, maps, Wine-prefix content, credentials, memory captures,
       personal paths, or private runtime data are included.
-- [ ] No injection, memory writes, automation, protection bypass, telemetry,
-      scripting, plugins, or remote control were added.
+- [ ] Every new source, sink, side effect, privilege, retained-data path, or
+      service has documented consent, privacy, security, lifecycle, bounds,
+      validation, and rollback behavior.
+- [ ] The change does not bypass authentication, integrity, anti-cheat, or
+      another client protection.
+- [ ] Network access, uploads, sharing, and update checks remain disabled by
+      default unless this approved capability explicitly enables them.
 - [ ] New dependencies include license, purpose, and removal-impact notes.
 - [ ] Package inventory and user documentation were updated when applicable.
 

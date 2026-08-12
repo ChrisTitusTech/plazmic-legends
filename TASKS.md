@@ -96,10 +96,15 @@ before publishing another version.
 - [x] Cover all 23 slot mappings, item-name normalization, upgrade suffixes,
   empty equipment, rejection paths, button lifecycle, and file permissions
   with synthetic tests and run the complete repository and package gate.
-- [ ] Install the exact validated build with rollback, visually exercise the
-  User-menu action against a live immutable snapshot, and import its private
-  output with EQ Legends Tools. This remains a manual draft-PR gate because
-  local installation was not authorized in this task.
+- [x] Install the exact validated build with rollback and verify its installed
+  hash, ownership, mode, and isolated Xvfb startup. The installed User-menu
+  action and private EQ Legends Tools import were not observed because no live
+  client or companion process was available.
+- Merge exception: on 2026-08-11, the owner explicitly authorized merging all
+  open pull requests with necessary updates. This authorizes merging M-09 with
+  the missing live click-through retained as residual compatibility risk; it
+  does not count that check as passed or authorize a release until an exported
+  private file is successfully imported through EQ Legends Tools.
 - Acceptance criteria: `AC-18` passes while the existing read-only,
   fail-closed, privacy, lifecycle, and package boundaries remain unchanged.
 - Validation: fresh configure and warnings-as-errors build, repository checks,
@@ -107,7 +112,11 @@ before publishing another version.
   metadata and staged-install inventory, privacy and whitespace scans, and an
   iterative CodeRabbit review with zero final findings passed. The deployed
   EQ Legends Tools v1 backup parser and item-ID normalization contract were
-  inspected on 2026-08-09 without adding a runtime network dependency.
+  inspected on 2026-08-09 without adding a runtime network dependency. Exact
+  head `9f4de39` was installed at `/usr/local/bin/plazmic-legends`; the build
+  and installed SHA-256 both matched
+  `7bf954207f82fc4d0a6bb316ea98d57ef7580d29330336eb2b2958cc1e2c06af`,
+  and the installed-command Xvfb smoke test passed.
 
 ### M-08: Complete HP/MP gauges and restore consider-color visibility
 

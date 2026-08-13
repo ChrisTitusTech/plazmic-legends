@@ -547,7 +547,11 @@ Add per-character XP and AA history, leveling rates and ETA, loot history,
 inventory reconciliation, class-combination summaries, proc analytics, upgrade
 observations, and celebration events from validated local observations. Add
 recent-drop and XP/AA rate/ETA cards to the overview using those Phase 9 data
-contracts.
+contracts. Consolidate live text equipment and imported reconciliation in the
+Activity Inventory tab instead of duplicating inventory content in the
+Character dock. Present DPS, XP, AA, and latest activity in one full-width
+summary above Details instead of consuming space inside Character or Activity,
+with each summary column independently resizable.
 
 Phase 9 inputs are bounded lines from the active character's local log, the
 existing immutable text-equipment snapshot, the exact-profile optional AA

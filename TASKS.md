@@ -107,6 +107,12 @@ review. It does not authorize merging or releasing the pull requests.
 
 - [x] Add per-character XP/AA history, loot/inventory reconciliation,
   equipment-change observations, bounded derived rates, and celebrations.
+- [x] Consolidate live equipment and imported reconciliation in the Activity
+  Inventory tab; keep the Character dock focused on identity and vitals.
+- [x] Move DPS, XP, AA, and latest activity into a full-width summary above
+  Details while retaining the Activity pane and its tabs.
+- [x] Make all four summary columns independently resizable and allocate enough
+  initial width to keep the compact XP and AA values readable.
 - [ ] Add class-combination, proc, and upgrade insights only after their
   validated catalogs and evidence rules are implemented under `AC-21`.
 - [x] Limit Phase 9 inputs to bounded active-log events, existing immutable

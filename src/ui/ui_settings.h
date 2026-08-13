@@ -25,6 +25,7 @@ struct UiState {
     bool other_spawns_visible{true};
     bool combat_history_enabled{false};
     bool activity_history_enabled{false};
+    std::array<int, 4> activity_summary_widths{100, 240, 300, 260};
     QString spawn_filter;
     int spawn_type_filter{-1};
     int spawn_sort_column{3};

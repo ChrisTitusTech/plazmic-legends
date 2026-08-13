@@ -23,8 +23,8 @@ The list below describes the current `main` branch; features added after
 - Shows live player position, heading, and configurable elevation filtering.
 - Presents a sortable and filterable spawn list with synchronized map markers
   and selection details, including distinct named-spawn and Other markers.
-- Shows bounded live character HP, mana, and text-only equipped items in a
-  left Character dock.
+- Shows bounded live character HP and mana in the left Character dock, with
+  text-only equipped items consolidated into Activity's Inventory tab.
 - Exports the current character name and equipped items as an offline JSON
   backup for EQ Legends Tools' character sheet.
 - Condenses newly appended local combat-log damage into a current or
@@ -34,6 +34,8 @@ The list below describes the current `main` branch; features added after
 - Adds current-`main` bounded XP/AA pace, loot and equipment-change activity,
   observed ability evidence, and explicit inventory-output reconciliation in a
   separate Activity dock.
+- Consolidates DPS, XP, AA, and latest activity in a full-width summary above
+  the Details content with individually resizable columns.
 - Handles zoning, camping, character select, process exit, and client changes
   without leaving stale data visible.
 - Follows the active system light or dark theme.

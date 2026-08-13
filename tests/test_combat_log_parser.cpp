@@ -743,6 +743,8 @@ int main() {
             .name = std::string(kCharacter),
             .health = {},
             .mana = {},
+            .alternate_advancement_percent = std::nullopt,
+            .alternate_advancement_points = std::nullopt,
             .equipment = {{.slot = "Head", .item = "Synthetic Cap"}},
             .detail = {},
         };

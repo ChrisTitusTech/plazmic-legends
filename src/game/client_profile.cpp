@@ -76,6 +76,9 @@ constexpr ClientProfile kLegendsReferenceProfile{
             .inventory_maximum_slots = 36U,
             .item_name_pointer_offset = 0x80U,
             .item_name_bytes = 64U,
+            .progression_cache_rva = 0U,
+            .alternate_advancement_percent_offset = 0U,
+            .alternate_advancement_points_offset = 0U,
         },
 };
 
@@ -195,6 +198,9 @@ constexpr ClientProfile kLegendsAugustFourthProfile{
             .inventory_maximum_slots = 36U,
             .item_name_pointer_offset = 0x60U,
             .item_name_bytes = 64U,
+            .progression_cache_rva = 0U,
+            .alternate_advancement_percent_offset = 0U,
+            .alternate_advancement_points_offset = 0U,
         },
 };
 
@@ -271,6 +277,9 @@ constexpr ClientProfile kLegendsAugustSixthProfile{
             .inventory_maximum_slots = 36U,
             .item_name_pointer_offset = 0x60U,
             .item_name_bytes = 64U,
+            .progression_cache_rva = 0x00fa43d0U,
+            .alternate_advancement_percent_offset = 0x24cU,
+            .alternate_advancement_points_offset = 0x250U,
         },
 };
 

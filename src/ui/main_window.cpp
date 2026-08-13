@@ -1140,6 +1140,13 @@ void MainWindow::update_activity_snapshot(
                                  ? QString::number(
                                        *analytics.alternate_advancement_points)
                                  : QString("unavailable");
+    const QString aa_progress = analytics.alternate_advancement_percent
+                                    ? QString::number(
+                                          *analytics.alternate_advancement_percent,
+                                          'f',
+                                          3) +
+                                          "%"
+                                    : QString("unavailable");
     const QString level_pace = analytics.level_pace_hours
                                    ? QString::number(
                                          *analytics.level_pace_hours, 'f', 1) +
@@ -1152,11 +1159,13 @@ void MainWindow::update_activity_snapshot(
                                      " h"
                                : QString("collecting");
     QString overview =
-        QString("XP: %1% observed | %2%/h | pace %3 | AA total: %4 | "
-                "%5 points/h | next pace %6 | recent loot: %7%8")
+        QString("XP: %1% observed | %2%/h | pace %3 | AA: %4 | "
+                "banked: %5 | %6 points/h | next pace %7 | "
+                "recent loot: %8%9")
             .arg(analytics.experience_percent, 0, 'f', 3)
             .arg(analytics.experience_percent_per_hour, 0, 'f', 3)
             .arg(level_pace)
+            .arg(aa_progress)
             .arg(aa_total)
             .arg(analytics.alternate_advancement_points_per_hour, 0, 'f', 2)
             .arg(aa_eta)
@@ -1193,6 +1202,13 @@ void MainWindow::update_activity_snapshot(
         QString label = QString::fromStdString(event.label);
         if (event.kind == ActivityEventKind::experience) {
             label += QString(" (%1%)").arg(event.amount, 0, 'f', 3);
+        } else if (event.kind ==
+                       ActivityEventKind::alternate_advancement &&
+                   event.total) {
+            label += QString(" (%1 %2; total %3)")
+                         .arg(event.amount, 0, 'f', 0)
+                         .arg(event.amount == 1.0 ? "point" : "points")
+                         .arg(*event.total);
         } else if (event.total) {
             label += QString(" (total %1)").arg(*event.total);
         }

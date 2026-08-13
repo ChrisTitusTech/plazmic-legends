@@ -36,6 +36,8 @@ struct CharacterSnapshot {
     std::string name;
     VitalSnapshot health;
     VitalSnapshot mana;
+    std::optional<double> alternate_advancement_percent;
+    std::optional<std::uint32_t> alternate_advancement_points;
     std::vector<EquipmentSlotSnapshot> equipment;
     std::string detail{"Character information unavailable"};
 

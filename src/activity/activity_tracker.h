@@ -106,6 +106,8 @@ class ActivityTracker {
     std::vector<ActivityEventSnapshot> events_;
     std::unordered_map<std::string, AbilityAggregate> abilities_;
     std::vector<EquipmentSlotSnapshot> equipment_;
+    std::optional<double> current_alternate_advancement_percent_;
+    std::optional<std::uint32_t> current_alternate_advancement_points_;
     std::string character_;
     std::filesystem::path state_root_;
     std::string key_;

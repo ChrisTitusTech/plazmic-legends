@@ -42,6 +42,7 @@ constexpr std::uintmax_t kMaximumActivityBytes = 2U * 1024U * 1024U;
 constexpr qsizetype kMaximumActivityFiles = 1024;
 constexpr std::size_t kMaximumStreamFingerprints = 4096U;
 constexpr std::size_t kMaximumReplaySources = 4096U;
+constexpr std::uint32_t kMaximumAaPointsPerEvent = 1000U;
 
 std::string lowercase(std::string_view value) {
     std::string result(value);
@@ -466,7 +467,10 @@ std::optional<ActivityEventSnapshot> event_from_json(
                 return amount > 0.0 &&
                        amount <= kMaximumExperiencePercent && !total;
             case ActivityEventKind::alternate_advancement:
-                return amount == 1.0 && total.has_value();
+                return amount >= 1.0 &&
+                       amount <=
+                           static_cast<double>(kMaximumAaPointsPerEvent) &&
+                       std::floor(amount) == amount && total.has_value();
             case ActivityEventKind::loot:
             case ActivityEventKind::equipment_change:
             case ActivityEventKind::celebration:
@@ -633,10 +637,43 @@ std::optional<ActivityEventSnapshot> parse_activity_line(
         };
     }
 
-    constexpr std::string_view kAaPrefix =
-        "You have gained an ability point!  You now have ";
+    constexpr std::string_view kAaPrefix = "You have gained ";
+    constexpr std::string_view kAaPoint = " ability point";
+    constexpr std::string_view kAaTotalPrefix = "You now have ";
     if (payload.starts_with(kAaPrefix)) {
         std::string_view remainder = payload.substr(kAaPrefix.size());
+        const std::size_t point = remainder.find(kAaPoint);
+        if (point == std::string_view::npos) {
+            return std::nullopt;
+        }
+        const std::string_view amount_text = remainder.substr(0U, point);
+        std::uint32_t amount = 1U;
+        if (amount_text != "an") {
+            const auto parsed_amount = parse_integer<std::uint32_t>(
+                amount_text);
+            if (!parsed_amount || *parsed_amount == 0U ||
+                *parsed_amount > kMaximumAaPointsPerEvent) {
+                return std::nullopt;
+            }
+            amount = *parsed_amount;
+        }
+        remainder.remove_prefix(point + kAaPoint.size());
+        const std::string_view gain_suffix =
+            amount_text == "an" ? "!" : "(s)!";
+        if (!remainder.starts_with(gain_suffix)) {
+            return std::nullopt;
+        }
+        remainder.remove_prefix(gain_suffix.size());
+        std::size_t spaces = 0U;
+        while (remainder.starts_with(' ') && spaces < 3U) {
+            remainder.remove_prefix(1U);
+            ++spaces;
+        }
+        if (spaces == 0U || spaces > 2U ||
+            !remainder.starts_with(kAaTotalPrefix)) {
+            return std::nullopt;
+        }
+        remainder.remove_prefix(kAaTotalPrefix.size());
         const std::size_t space = remainder.find(' ');
         if (space == std::string_view::npos) {
             return std::nullopt;
@@ -646,15 +683,18 @@ std::optional<ActivityEventSnapshot> parse_activity_line(
         const std::string_view suffix = remainder.substr(space);
         if (!total || *total > 10'000'000U ||
             (suffix != " ability point." &&
-             suffix != " ability points.")) {
+             suffix != " ability points." &&
+             suffix != " ability point(s).")) {
             return std::nullopt;
         }
         return ActivityEventSnapshot{
             .kind = ActivityEventKind::alternate_advancement,
             .timestamp_unix_seconds = seconds,
             .zone = std::string(zone),
-            .label = "Alternate Advancement point gained",
-            .amount = 1.0,
+            .label = amount == 1U
+                         ? "Alternate Advancement point gained"
+                         : "Alternate Advancement points gained",
+            .amount = static_cast<double>(amount),
             .total = *total,
             .evidence = "Exact local log total",
             .source_id = {},
@@ -688,6 +728,8 @@ void ActivityTracker::clear() {
     events_.clear();
     abilities_.clear();
     equipment_.clear();
+    current_alternate_advancement_percent_.reset();
+    current_alternate_advancement_points_.reset();
     character_.clear();
     dirty_ = false;
     persisted_ = true;
@@ -716,6 +758,8 @@ bool ActivityTracker::select(std::string key) {
     events_.clear();
     abilities_.clear();
     equipment_.clear();
+    current_alternate_advancement_percent_.reset();
+    current_alternate_advancement_points_.reset();
     character_.clear();
     key_ = std::move(key);
     dirty_ = false;
@@ -1037,6 +1081,8 @@ void ActivityTracker::reset_transient_observations() {
 
 void ActivityTracker::break_equipment_baseline() {
     equipment_.clear();
+    current_alternate_advancement_percent_.reset();
+    current_alternate_advancement_points_.reset();
     character_.clear();
 }
 
@@ -1210,12 +1256,20 @@ void ActivityTracker::observe_character(
         !valid_text(character.name, 128U) ||
         !valid_text(zone, 128U)) {
         equipment_.clear();
+        current_alternate_advancement_percent_.reset();
+        current_alternate_advancement_points_.reset();
         return;
     }
     if (!character_.empty() && !ci_equal(character_, character.name)) {
+        current_alternate_advancement_percent_.reset();
+        current_alternate_advancement_points_.reset();
         return;
     }
     character_ = character.name;
+    current_alternate_advancement_percent_ =
+        character.alternate_advancement_percent;
+    current_alternate_advancement_points_ =
+        character.alternate_advancement_points;
     if (equipment_.empty()) {
         equipment_ = character.equipment;
         return;
@@ -1806,6 +1860,8 @@ ActivityAnalyticsSnapshot ActivityTracker::snapshot(
         .experience_percent = 0.0,
         .experience_percent_per_hour = 0.0,
         .level_pace_hours = std::nullopt,
+        .alternate_advancement_percent =
+            current_alternate_advancement_percent_,
         .alternate_advancement_points = std::nullopt,
         .alternate_advancement_points_per_hour = 0.0,
         .next_alternate_advancement_hours = std::nullopt,
@@ -1827,7 +1883,7 @@ ActivityAnalyticsSnapshot ActivityTracker::snapshot(
     std::int64_t first_alternate_advancement = 0;
     std::int64_t latest_aa = 0;
     double recent_experience = 0.0;
-    std::uint32_t aa_gains = 0U;
+    double aa_gains = 0.0;
     std::int64_t latest_celebration = 0;
     for (const auto& event : events_) {
         if (event.kind == ActivityEventKind::experience) {
@@ -1855,7 +1911,7 @@ ActivityAnalyticsSnapshot ActivityTracker::snapshot(
         if (event.kind == ActivityEventKind::alternate_advancement &&
             event.timestamp_unix_seconds >= rate_cutoff &&
             event.timestamp_unix_seconds <= now_seconds) {
-            ++aa_gains;
+            aa_gains += event.amount;
             if (first_alternate_advancement == 0 ||
                 event.timestamp_unix_seconds <
                     first_alternate_advancement) {
@@ -1874,8 +1930,7 @@ ActivityAnalyticsSnapshot ActivityTracker::snapshot(
                     result.recent_celebration = "Experience gained";
                     break;
                 case ActivityEventKind::alternate_advancement:
-                    result.recent_celebration =
-                        "Alternate Advancement point gained";
+                    result.recent_celebration = event.label;
                     break;
                 case ActivityEventKind::loot:
                     result.recent_celebration = "Loot: " + event.label;
@@ -1907,7 +1962,7 @@ ActivityAnalyticsSnapshot ActivityTracker::snapshot(
                                 first_alternate_advancement) /
             3600.0;
         result.alternate_advancement_points_per_hour =
-            static_cast<double>(aa_gains) / hours;
+            aa_gains / hours;
         if (result.alternate_advancement_points_per_hour > 0.0) {
             result.next_alternate_advancement_hours =
                 1.0 / result.alternate_advancement_points_per_hour;
@@ -1949,6 +2004,10 @@ ActivityAnalyticsSnapshot ActivityTracker::snapshot(
         std::to_string(equipped) + " equipped slot(s), " +
         std::to_string(result.abilities.size()) +
         " observed ability source(s); class combination unconfirmed";
+    if (current_alternate_advancement_points_) {
+        result.alternate_advancement_points =
+            current_alternate_advancement_points_;
+    }
     if (!events_.empty() || !abilities_.empty()) {
         result.detail = compatible_
                             ? "Local observations only; ambiguous class and "

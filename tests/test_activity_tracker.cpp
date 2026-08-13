@@ -76,6 +76,25 @@ int main() {
                         plazmic::ActivityEventKind::alternate_advancement &&
                     aa->total == 42U,
                 "AA point total was not parsed");
+        const auto multi_point_aa = plazmic::parse_activity_line(
+            "[Mon Aug 03 12:31:00 2026] You have gained 2 ability point(s)! "
+            "You now have 44 ability point(s).",
+            kCharacter, "synthetic_zone");
+        require(multi_point_aa && multi_point_aa->amount == 2.0 &&
+                    multi_point_aa->total == 44U,
+                "multi-point AA gain was not parsed");
+        plazmic::ActivityTracker multi_point_celebration;
+        multi_point_celebration.consume(
+            "[Mon Aug 03 12:31:00 2026] You have gained 2 ability point(s)! "
+            "You now have 44 ability point(s).",
+            kCharacter, "synthetic_zone");
+        require(multi_point_celebration.snapshot(
+                    std::chrono::system_clock::time_point{
+                        std::chrono::seconds(
+                            multi_point_aa->timestamp_unix_seconds)})
+                        .recent_celebration ==
+                    "Alternate Advancement points gained",
+                "multi-point AA celebration used singular wording");
         const auto loot = plazmic::parse_activity_line(
             "[Mon Aug 03 12:45:00 2026] --You have looted Synthetic Gem.--",
             kCharacter, "synthetic_zone");
@@ -156,6 +175,8 @@ int main() {
             .name = std::string(kCharacter),
             .health = {},
             .mana = {},
+            .alternate_advancement_percent = 66.48,
+            .alternate_advancement_points = 0U,
             .equipment = {{.slot = "Head", .item = "Synthetic Cap"}},
             .detail = {},
         };
@@ -171,7 +192,8 @@ int main() {
                 std::chrono::seconds(loot->timestamp_unix_seconds + 900)});
         require(analytics.events.size() == 4U &&
                     analytics.experience_percent == 0.125 &&
-                    analytics.alternate_advancement_points == 42U &&
+                    analytics.alternate_advancement_percent == 66.48 &&
+                    analytics.alternate_advancement_points == 0U &&
                     analytics.recent_loot_count == 1U &&
                     analytics.experience_percent_per_hour > 0.0 &&
                     analytics.level_pace_hours &&
@@ -201,8 +223,8 @@ int main() {
         plazmic::ActivityTracker independent_rates;
         independent_rates.consume(
             timestamped(rate_now - std::chrono::minutes(59),
-                        "You have gained an ability point!  You now have 1 "
-                        "ability points."),
+                        "You have gained 2 ability point(s)!  You now have 2 "
+                        "ability point(s)."),
             kCharacter, "synthetic_zone");
         independent_rates.consume(
             timestamped(rate_now - std::chrono::minutes(5),
@@ -212,9 +234,9 @@ int main() {
         require(rate_snapshot.experience_percent_per_hour > 11.9 &&
                     rate_snapshot.experience_percent_per_hour < 12.1 &&
                     rate_snapshot.alternate_advancement_points_per_hour >
-                        1.0 &&
+                        2.0 &&
                     rate_snapshot.alternate_advancement_points_per_hour <
-                        1.1,
+                        2.1,
                 "XP and AA analytics did not use independent rate windows");
 
         plazmic::ActivityTracker future_events;
@@ -619,9 +641,14 @@ int main() {
             timestamped(persistence_event + std::chrono::seconds(1),
                         "You gain experience! (0.250%)"),
             kCharacter, "synthetic_zone");
+        persisted.consume(
+            timestamped(persistence_event + std::chrono::seconds(2),
+                        "You have gained 2 ability point(s)!  You now have 2 "
+                        "ability point(s)."),
+            kCharacter, "synthetic_zone");
         persisted.observe_damage(
             plazmic::DamageEvent{
-                .timestamp = persistence_event + std::chrono::seconds(2),
+                .timestamp = persistence_event + std::chrono::seconds(3),
                 .attacker = std::string(kCharacter),
                 .defender = "Synthetic Target",
                 .damage = 45U,
@@ -640,7 +667,12 @@ int main() {
         restored.set_retention_enabled(true);
         require(restored.select(activity_key) &&
                     restored.snapshot(persistence_now)
-                            .events.size() == 2U &&
+                            .events.size() == 3U &&
+                    restored.snapshot(persistence_now)
+                            .events.back().kind ==
+                        plazmic::ActivityEventKind::alternate_advancement &&
+                    restored.snapshot(persistence_now)
+                            .events.back().amount == 2.0 &&
                     restored.snapshot(persistence_now)
                             .abilities.size() == 1U &&
                     restored.snapshot(persistence_now)
@@ -1472,6 +1504,11 @@ int main() {
         targeted_delete.set_retention_enabled(true);
         require(targeted_delete.select(first_key),
                 "first deletion fixture could not be selected");
+        targeted_delete.observe_character(
+            initial, "synthetic_zone", persistence_event);
+        require(targeted_delete.snapshot(persistence_now)
+                        .alternate_advancement_points == 0U,
+                "live AA cache fixture was not observed");
         targeted_delete.consume(
             timestamped(persistence_event,
                         "You gain experience! (0.125%)"),
@@ -1479,6 +1516,11 @@ int main() {
         (void)targeted_delete.snapshot(persistence_now);
         require(targeted_delete.select(second_key),
                 "second deletion fixture could not be selected");
+        require(!targeted_delete.snapshot(persistence_now)
+                     .alternate_advancement_percent &&
+                    !targeted_delete.snapshot(persistence_now)
+                         .alternate_advancement_points,
+                "partition switch retained transient AA cache values");
         targeted_delete.consume(
             timestamped(persistence_event + std::chrono::seconds(1),
                         "You gain experience! (0.250%)"),

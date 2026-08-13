@@ -196,6 +196,15 @@ hour of retained progress observations; the level pace is the time to earn
 100% at that rate, not a claim about the character's current level position.
 Recent loot means the latest 24 hours.
 
+For the exact `legends-2026-08-06` client only, the immutable character
+snapshot may additionally publish bounded current AA progress and banked
+points from the client's read-only progression cache. These optional fields
+are read twice, validated as 0-100 percent and at most 10,000,000 points, and
+discarded for the frame if unavailable, invalid, or inconsistent. They are
+never inferred for another profile, persisted in activity history, exported,
+logged, or sent over the network. The Activity dock prefers this current
+snapshot over an older log total while retaining exact log events for rates.
+
 Activity retention is independently opt-in and partitioned by the same stable
 opaque character-and-selected-log key. The selected log filename must contain a
 bounded validated server-identity suffix and separates same-named characters on
@@ -233,9 +242,10 @@ equipment snapshot as an offline JSON profile backup compatible with the EQ
 Legends Tools character sheet. The export derives the site's stable
 item identifiers from bounded item names, writes only to a user-selected local
 file, and performs no upload or network request. Race, tri-class, favored
-stats, Alternate Advancement, and Exaltations are not read by Plazmic Legends
-and are therefore not invented in the export; users must verify those values
-after importing the inventory-only backup.
+stats, and Exaltations are not read by Plazmic Legends. The optional live AA
+snapshot is intentionally outside this inventory-only export. Those fields are
+therefore not invented in the export; users must verify them after importing
+the backup.
 
 ### Window and map interaction
 

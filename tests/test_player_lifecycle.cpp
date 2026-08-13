@@ -54,6 +54,8 @@ plazmic::GameStateReadResult live_state(std::string zone) {
             .name = "synthetic_character",
             .health = {.current = 90, .maximum = 100},
             .mana = {.current = 40, .maximum = 50},
+            .alternate_advancement_percent = std::nullopt,
+            .alternate_advancement_points = std::nullopt,
             .equipment = {},
             .detail = "Live synthetic character",
         },

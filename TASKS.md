@@ -110,8 +110,10 @@ review. It does not authorize merging or releasing the pull requests.
 - [ ] Add class-combination, proc, and upgrade insights only after their
   validated catalogs and evidence rules are implemented under `AC-21`.
 - [x] Limit Phase 9 inputs to bounded active-log events, existing immutable
-  equipment, and an explicitly selected local inventory-output file; record a
-  separate checkpoint before adding any other source.
+  equipment, the exact-profile optional AA snapshot approved in
+  `docs/research/phase9-aa-memory-checkpoint.md`, and an explicitly selected
+  local inventory-output file; record a separate checkpoint before adding any
+  other source.
 - [ ] Complete schema, lifecycle, migration, privacy, installed, review, CI,
   and thread-resolution gates in a separate pull request under `AC-21`.
 

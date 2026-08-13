@@ -5,9 +5,11 @@
 Phase 9 may extend the existing bounded active-character log stream with exact
 XP-percentage, AA-point-total, and loot observations. It may combine those
 events only with consecutive immutable text-equipment snapshots and an
-explicitly selected local EverQuest inventory-output file. No new process
-offset, network service, bundled item database, class catalog, or upstream
-asset is part of this checkpoint.
+explicitly selected local EverQuest inventory-output file. The later
+owner-approved optional AA memory input is scoped separately in
+`phase9-aa-memory-checkpoint.md`. No other process offset, network service,
+bundled item database, class catalog, or upstream asset is part of this
+checkpoint.
 
 The public behavior inventory at
 `docs/research/everquest-companion-feature-parity.md` remains clean-room input.

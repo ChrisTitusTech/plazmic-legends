@@ -62,6 +62,7 @@ struct ActivityAnalyticsSnapshot {
     double experience_percent{};
     double experience_percent_per_hour{};
     std::optional<double> level_pace_hours;
+    std::optional<double> alternate_advancement_percent;
     std::optional<std::uint32_t> alternate_advancement_points;
     double alternate_advancement_points_per_hour{};
     std::optional<double> next_alternate_advancement_hours;

@@ -363,6 +363,8 @@ int main(int argc, char** argv) {
             .name = "synthetic_character",
             .health = {.current = 90, .maximum = 100},
             .mana = {.current = 40, .maximum = 50},
+            .alternate_advancement_percent = std::nullopt,
+            .alternate_advancement_points = std::nullopt,
             .equipment =
                 {
                     {.slot = "Head", .item = "Synthetic Helm"},
@@ -543,6 +545,16 @@ int main(int argc, char** argv) {
             .evidence = "Synthetic exact loot line",
             .source_id = {},
         });
+        activity.events.push_back({
+            .kind = plazmic::ActivityEventKind::alternate_advancement,
+            .timestamp_unix_seconds = 3,
+            .zone = "synthetic_zone",
+            .label = "Alternate Advancement points gained",
+            .amount = 2.0,
+            .total = 42U,
+            .evidence = "Synthetic exact AA total",
+            .source_id = {},
+        });
         activity.abilities.push_back({
             .name = "Synthetic Burst",
             .category = "Spell",
@@ -553,6 +565,7 @@ int main(int argc, char** argv) {
         activity.experience_percent = 0.125;
         activity.experience_percent_per_hour = 0.25;
         activity.level_pace_hours = 400.0;
+        activity.alternate_advancement_percent = 66.48;
         activity.alternate_advancement_points = 42;
         activity.alternate_advancement_points_per_hour = 1.0;
         activity.next_alternate_advancement_hours = 1.0;
@@ -574,9 +587,16 @@ int main(int argc, char** argv) {
                 "derived activity fields invalidated an unchanged export");
         window.update_activity_snapshot(activity);
         require(window.findChild<QTableWidget*>("activity-events")
-                            ->rowCount() == 2 &&
+                            ->rowCount() == 3 &&
+                    window.findChild<QTableWidget*>("activity-events")
+                            ->item(0, 2)
+                            ->text()
+                            .contains("(2 points; total 42)") &&
                     window.findChild<QTableWidget*>("activity-abilities")
                             ->rowCount() == 1 &&
+                    window.findChild<QLabel*>("activity-overview")
+                            ->text()
+                            .contains("AA: 66.480% | banked: 42") &&
                     window.findChild<QLabel*>("activity-overview")
                             ->text()
                             .contains("recent loot: 1") &&
@@ -620,12 +640,13 @@ int main(int argc, char** argv) {
                         "deletion is unavailable"),
                 "missing deletion callback changed retention or queued work");
         auto unknown_aa_activity = activity;
+        unknown_aa_activity.alternate_advancement_percent.reset();
         unknown_aa_activity.alternate_advancement_points.reset();
         window.update_activity_snapshot(unknown_aa_activity);
         require(window.findChild<QLabel*>("activity-overview")
                     ->text()
-                    .contains("AA total: unavailable"),
-                "unknown AA total was rendered as a real zero");
+                    .contains("AA: unavailable | banked: unavailable"),
+                "unknown AA state was rendered as a real zero");
         auto incompatible_activity = activity;
         incompatible_activity.events.clear();
         incompatible_activity.abilities.clear();
@@ -650,7 +671,7 @@ int main(int argc, char** argv) {
                 "unavailable lifecycle state retained stale activity");
         window.update_activity_snapshot(activity);
         require(window.findChild<QTableWidget*>("activity-events")
-                            ->rowCount() == 2 &&
+                            ->rowCount() == 3 &&
                     export_activity_action->isEnabled(),
                 "recovered lifecycle state did not republish activity");
         std::vector<std::string> deleted_activity_keys;

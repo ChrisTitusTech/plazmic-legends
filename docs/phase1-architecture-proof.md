@@ -110,7 +110,7 @@ The X11 lifecycle test runs three real child-owned target windows through exit.
 The existing Python suite continues to cover PE parsing and client fingerprint
 behavior. All C++ targets compile with GCC, C++20, and warnings as errors.
 
-## Current decisions
+## Phase 1 decisions
 
 - Process read: same-user `process_vm_readv`, restricted by a single-mapping
   readable-range gate behind the Linux integration boundary.
@@ -130,9 +130,10 @@ behavior. All C++ targets compile with GCC, C++20, and warnings as errors.
   in `docs/research/phase1-symbol-plan.md`; no offset or signature was found or
   read.
 - Distribution: package publication is authorized.
-- EULA risk: the owner explicitly directed read-only development to
-  proceed despite the published restrictions. Writes, injection, automation,
-  and protection bypass remain prohibited. See
+- EULA risk: the owner explicitly directed read-only development to proceed
+  despite the published restrictions. Writes, injection, and automation were
+  outside Phase 1 scope. The Phase 7 capability model now governs later
+  proposals; protection bypass remains outside the project boundary. See
   `docs/research/phase1-policy-risk.md`.
 
 ## Live interaction conclusion
@@ -147,6 +148,7 @@ The live game remained running after repeated proof shutdown. Exact executable
 inspection found no remaining proof process. No prefix, game installation, or
 host-security setting changed.
 
-Phase 2 has not started. It requires the normal explicit phase approval and
-must use the bounded reader without adding writes, injection, automation, or
-protection bypass.
+At the time of this report, Phase 2 had not started and required its normal
+explicit approval. Later completed phases and the Phase 7 expansion model are
+recorded in `ROADMAP.md`; this report remains evidence only for the Phase 1
+implementation.

@@ -2,16 +2,17 @@
 
 ## Purpose
 
-Plazmic Legends is a minimal companion application for the 64-bit EverQuest
-Legends `eqgame.exe` running under Wine on Linux. Its gameplay integration is
-read-only, and it uses an
-independent Linux window for maps, spawns, and status; it does not draw over or
-inside the game. The repository began as a MacroQuest-derived source import,
-but the intended product is not a scripting or plugin platform.
+Plazmic Legends is an extensible native Linux companion for the 64-bit
+EverQuest Legends `eqgame.exe` running under Wine. Its current client
+integration is read-only and its current UI is an independent Qt window, but
+those implementation choices are a validated foundation rather than a
+permanent limit on future product capabilities. New capabilities must be
+introduced through an explicit phase with requirements, provenance, privacy,
+security, lifecycle, validation, and rollback gates.
 
 ## Read before changing code
 
-1. Read `SPEC.md` for requirements, non-goals, and acceptance criteria.
+1. Read `SPEC.md` for requirements, current exclusions, and acceptance criteria.
 2. Read `ROADMAP.md` for phase order, exit criteria, rollback, and approval
    checkpoints.
 3. Read `TASKS.md` for the current authorized task and validation status.
@@ -20,6 +21,9 @@ but the intended product is not a scripting or plugin platform.
    renderer, process integration, offsets, or compatibility profiles.
 6. Read `docs/research/showeq-ui-review.md` before work on the companion
    window, map, spawn model, or Qt dependency.
+7. Read `docs/research/everquest-companion-feature-parity.md` before work on
+   combat analytics, activity history, alerts, timers, overlays, knowledge
+   packs, sharing, or optional online services.
 
 If these documents conflict, stop and reconcile them with the user before
 implementing the conflicting behavior.
@@ -33,7 +37,8 @@ implementing the conflicting behavior.
   fingerprint and select the client, perform bounded read-only process-memory
   access, and validate the live PE identity. Its external X11 overlay
   experiment is retained only as research: the reference DWM raises true
-  fullscreen above override windows, so the overlay is not the product UI.
+  fullscreen above override windows, so that experiment was not selected as
+  the primary UI.
 - Phase 2 is complete. The Qt 6 product shell, client status boundary, saved
   dock layout, live DWM tag 5 rule, and game-invariance gate passed.
 - Phase 3 is complete. Bounded installed maps, exact-profile zone/player
@@ -50,6 +55,9 @@ implementing the conflicting behavior.
   in two stacked left docks. The owner explicitly authorized release without
   repeating the final manual live lifecycle gate on the merged head; that
   skipped check remains a documented residual risk.
+- Phase 7 defines the expansion framework and feature-parity roadmap. Phase 7
+  and every later major capability are delivered as separate, independently
+  reviewable pull requests in the numeric merge order recorded in `ROADMAP.md`.
 - No inherited implementation or third-party source is retained.
 - The local reference client is a Windows x86-64 PE executable running through
   GE-Proton11-3 in an X11 session.
@@ -64,12 +72,14 @@ review, license review, and comparison against a native replacement.
 - Build system: Linux-native CMake and Ninja unless Phase 1 evidence supports a
   smaller Linux-native alternative.
 - Compiler: GCC or Clang for native Linux code.
-- Native Windows and Visual Studio builds are non-goals.
-- Project artifacts are native Linux ELF binaries and data only. Do not add a
-  PE DLL, MinGW toolchain, Wine DLL override, or Windows injection path.
-- The product observes the Wine-hosted process externally and renders a normal
-  independent Linux application window. Keep process access behind a narrow
-  Linux interface.
+- The currently supported build and runtime are native Linux. A new platform,
+  artifact format, or integration mechanism requires its own approved phase
+  and must not weaken the Linux release.
+- The current product observes the Wine-hosted process externally. Keep every
+  process-access mechanism behind a narrow, capability-scoped interface.
+- UI surfaces may be docked, detached, or overlay-style independent Linux
+  windows. Each window role must declare its focus, stacking, input, privacy,
+  persistence, and lifecycle behavior.
 
 ## Source boundaries
 
@@ -82,6 +92,14 @@ review, license review, and comparison against a native replacement.
 - `src/map`: map geometry, transforms, and renderer-independent map state.
 - `src/ui`: Qt 6 main window, map canvas, spawn table, status, and preferences.
 - `src/common`: narrow configuration, logging, and shared utilities.
+- Planned `src/activity`: bounded progression, loot, raid, buff, timer, and other
+  user-owned activity histories.
+- Planned `src/alerts`: local alert rules, notification dispatch, and optional
+  audio.
+- Planned `src/knowledge`: validated user-imported or license-compatible knowledge
+  packs and planners.
+- Planned `src/services`: explicitly enabled network, update, feedback, and sharing
+  clients with documented payloads and endpoints.
 - `tests`: profile, state-conversion, configuration, and lifecycle tests that
   do not require a live account.
 
@@ -90,19 +108,17 @@ requirement justifies a focused change.
 
 ## Working boundaries
 
-- Phase 0 through Phase 5 are complete on `main`. The current release is
-  `v0.2.0`. Preserve the validated product boundary, lifecycle behavior,
-  exact-profile failure rules, privacy guarantees, and package inventory in
-  maintenance work.
+- Phase 0 through Phase 6 are complete on `main`. The current release is
+  `v0.2.0`. Preserve validated lifecycle behavior, exact-profile failure
+  rules, privacy guarantees, and package inventory while extending them for
+  each new capability.
 - RPM, COPR, AppImage, and other package publication are authorized.
 - The owner explicitly accepts that this development project operates
   against the Daybreak EULA. Read-only symbol and gameplay-state research may
   proceed after the normal phase checkpoints. The approved UI-file installer
   may replace only validated, user-selected skin and INI files after explicit
   confirmation and a private backup. It may run while the game is active so
-  the user can invoke its supported UI reload command. This exception does not
-  authorize process-memory or gameplay-state writes,
-  injection, automation, input synthesis, or protection bypass. See
+  the user can invoke its supported UI reload command. See
   `docs/research/phase1-policy-risk.md`.
 - Preserve the imported tree in a recoverable baseline commit before deleting
   files.
@@ -119,10 +135,12 @@ requirement justifies a focused change.
 - Do not bypass anti-cheat, integrity checks, authentication, or client
   protections. If one blocks the proposed integration, stop and surface it as
   a product decision.
-- Do not inject code, load a DLL into Wine, hook DirectX, or install a Wine DLL
-  override.
-- Do not write gameplay state, synthesize gameplay input, automate actions, or
-  add scripting, macros, plugins, multibox control, or remote control.
+- The current implementation has no injection, gameplay-state write, input
+  synthesis, automation, scripting, multibox, plugin-host, or remote-control
+  capability. Adding any such capability requires a dedicated approved phase,
+  an updated threat model, clear user control, failure isolation, and evidence
+  that it does not bypass a client protection. Authorization for one
+  capability does not authorize another.
 - Centralize client-specific addresses and signatures in versioned
   compatibility profiles. Do not scatter raw offsets through UI or lifecycle
   code.
@@ -131,12 +149,22 @@ requirement justifies a focused change.
 - Keep the game-data reader separate from rendering so recorded or synthetic
   snapshots can be tested without launching the game.
 - Use `plazmic-legends` as the X11 instance and `PlazmicLegends` as the class
-  for every Plazmic top-level window. The reference DWM places that class on
-  tag 5, monitor 1, with `noswallow=1`; do not request `alwaysontop` or activate
+  for every Plazmic top-level window. Normal windows use the reference DWM tag
+  5 rule. An approved overlay role may request topmost or input-transparent
+  behavior only when enabled by the user and must not steal focus or activate
   the game tag.
 - Treat the ShowEQ 6.4.25 source as conceptual guidance only. Do not copy its
   GPL implementation, packet decoder, generated data, maps, or mutable
   pointer-based object model. See `docs/research/showeq-ui-review.md`.
+- Treat `jmoyers/everquest-companion` as behavior and product research only.
+  Its FSL-1.1-MIT code, bundled data, assets, tests, and generated content are
+  not copied into this GPL project. See
+  `docs/research/everquest-companion-feature-parity.md`.
+- Network access, uploads, sharing, and update checks are disabled by default.
+  An approved service must disclose its endpoint and payload, require explicit
+  user consent, provide a local disable/delete path, and exclude private names,
+  paths, logs, and game data unless the user previews and authorizes that exact
+  transfer.
 - Add a dependency only when an approved feature requires it. Document the
   license and removal impact in the same phase.
 

@@ -24,6 +24,140 @@ unfinished manual checks retained as documented residual risk. This override
 does not authorize a release; the remaining profile-refresh gates must pass
 before publishing another version.
 
+On 2026-08-12, the owner authorized removing permanent product-category
+prohibitions, researching useful feature parity with
+`jmoyers/everquest-companion`, and delivering each major capability as a
+separate pull request. This authorizes implementation and publication for
+review. It does not authorize merging or releasing the pull requests.
+
+## Phase 7: Extensible product foundation
+
+### P7-01: Record the parity and provenance boundary
+
+- [x] Inventory the upstream public behavior at an exact revision and license.
+- [x] Map existing, planned, adapted, and intentionally omitted behavior
+  without copying upstream code, data, assets, fixtures, or generated content.
+- Acceptance criteria: the research record identifies the source revision,
+  provenance constraints, native replacement strategy, and phase for each
+  selected capability.
+
+### P7-02: Replace permanent prohibitions with capability gates
+
+- [x] Reconcile product purpose, principles, architecture, security, privacy,
+  integration, overlays, services, extensions, automation, and platform scope.
+- [x] Preserve exact-profile failure, protection-bypass, provenance, consent,
+  lifecycle, privacy, resource, validation, and rollback boundaries.
+- [x] Keep network access, uploads, sharing, and update checks disabled by
+  default unless an approved capability explicitly enables them.
+- Acceptance criteria: product categories are not permanently forbidden, but
+  no feature gains implicit authority beyond its approved capability contract.
+
+### P7-03: Establish the expansion pull-request roadmap
+
+- [x] Define one major pull request each for combat/overview, activity,
+  alerts/timers/audio, maps, knowledge/planners, overlays, and profiles/services.
+- [x] Record dependencies, merge order, exit criteria, validation, rollback,
+  and stop conditions for every phase.
+- Acceptance criteria: every selected upstream behavior has one clear native
+  destination or a documented reason for omission.
+
+### P7-04: Complete the Phase 7 gate
+
+- [x] Run documentation/repository gates and inspect the complete final diff.
+- [x] Record executed commands, observable results, skipped checks, and residual
+  risks as validation evidence independent of agent review reports.
+- [x] Run iterative Codex review and independent review until there are no
+  verified actionable findings.
+- [ ] Publish the exact reviewed head, require green exact-head CI, verify
+  mergeability, and resolve every actionable review thread.
+- Acceptance criteria: `AC-19` is satisfied and the foundation pull request is
+  mergeable without granting permission to merge it.
+- Validation evidence:
+  - `cmake --build --preset check -j2` passed Markdown lint, Ruff, Python
+    compilation, and all 8 Python tests on 2026-08-12.
+  - `ctest --preset dev --output-on-failure` passed all 18 tests, including the
+    X11 and performance suites, on 2026-08-12.
+  - `git diff --check` passed after the complete documentation rewrite.
+  - Manual installed-game and lifecycle checks are skipped because Phase 7
+    changes only planning, contribution, and policy documentation. Every
+    runtime expansion remains unimplemented and is residual work for its
+    separately gated pull request.
+  - Network access, upload, sharing, and update checks are not applicable to
+    this documentation-only phase; the diff adds no runtime path for them and
+    records that they remain disabled by default. Their future implementation
+    and verification remain residual risk in Phase 14.
+- Review status: iterative Codex and independent CodeRabbit review reached zero
+  findings before publication. Exact-head CI, mergeability, and thread state
+  are recorded on PR #20 rather than self-certified by a commit that would
+  immediately make that evidence stale. Mark the publication task complete
+  after merge in the next planning update.
+
+## Expansion phase backlog
+
+### Phase 8: Combat analytics and overview
+
+- [ ] Add bounded fight/zone history, drill-down, timelines, healing, and
+  overview summaries under `AC-20`.
+- [ ] Partition persisted history by a stable privacy-preserving local
+  character key and test switch-away, switch-back, and restart restoration.
+- [ ] Complete focused, full, privacy, performance, installed, review, CI, and
+  thread-resolution gates in a separate pull request.
+
+### Phase 9: Progression, loot, inventory, and class activity
+
+- [ ] Add per-character XP/AA history, loot/inventory reconciliation,
+  class-combination/proc/upgrade insights, and celebrations.
+- [ ] Limit Phase 9 inputs to bounded active-log events, existing immutable
+  equipment, and an explicitly selected local inventory-output file; record a
+  separate checkpoint before adding any other source.
+- [ ] Complete schema, lifecycle, migration, privacy, installed, review, CI,
+  and thread-resolution gates in a separate pull request under `AC-21`.
+
+### Phase 10: Buffs, timers, alerts, and audio
+
+- [ ] Add bounded buff/respawn timers, local alert rules, visible notifications,
+  and optional rate-limited sound/voice packs under `AC-22`.
+- [ ] Limit Phase 10 inputs to bounded local log/activity events,
+  user-configured timers, and validated imported duration/audio packs; keep
+  observed and reference durations visibly distinct.
+- [ ] Complete fake-sink, lifecycle, accessibility, installed, review, CI, and
+  thread-resolution gates in a separate pull request.
+
+### Phase 11: Map workflows
+
+- [ ] Add POI search, label declutter, floor slicing, pinned zones, typed
+  `/loc`, and local annotations under `AC-23`.
+- [ ] Complete parser/renderer/persistence/performance/installed/review/CI gates
+  in a separate pull request.
+
+### Phase 12: Knowledge packs, raid history, and planners
+
+- [ ] Add a validated user-imported or license-compatible pack format and
+  item, quest, recipe, Plane of Sky, Exaltation, and raid-history views under
+  `AC-24`; classify raid kills only against a validated roster from that pack.
+- [ ] Complete provenance, schema, integrity, migration, installed, review, CI,
+  and thread-resolution gates in a separate pull request.
+
+### Phase 13: Detached and overlay presentation
+
+- [ ] Add user-enabled damage/healing/progression/buff/timer windows with lock,
+  topmost, click-through, scope, and focus-neutral behavior under `AC-25`.
+- [ ] Complete Xvfb and real-DWM focus/input/stacking/game-invariance gates,
+  review, CI, and thread resolution in a separate pull request.
+
+### Phase 14: Profiles, sharing, and optional services
+
+- [ ] Add per-character switching, previewed additive alert import that never
+  replaces existing rules, and atomic settings import/export.
+- [ ] Add only concretely specified, separately consented services whose
+  endpoint, payload, retention, deletion, offline, and threat model gates pass
+  under `AC-26`.
+- [ ] Keep network access, uploads, sharing, and update checks disabled by
+  default; enable each independently only after its approved contract and
+  consent gate pass.
+- [ ] Complete security/privacy/network-failure/installed/review/CI gates in a
+  separate pull request.
+
 ## Phase 6: Character and combat column
 
 ### P6-01: Establish the character-field evidence boundary
@@ -545,9 +679,10 @@ before publishing another version.
   `docs/research/phase1-symbol-plan.md`,
   `docs/research/phase1-policy-risk.md`, and
   `docs/phase1-codex-review.md`.
-- Decision update: read-only memory research is approved despite the recorded
-  EULA conflict. Writes, injection, automation, and protection bypass remain
-  prohibited.
+- Decision update: this phase approved read-only memory research despite the
+  recorded EULA conflict. Each later capability requires approval under its own
+  numbered expansion phase; protection bypass remains outside the project
+  boundary.
 - Acceptance criteria: every unresolved Phase 1 decision in `SPEC.md` is
   answered or explicitly deferred outside MVP.
 - Validation: independent Codex review, official-policy review, dependency

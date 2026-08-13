@@ -7,24 +7,29 @@ history, validation, and research evidence.
 For the contribution workflow, issue expectations, and pull request checklist,
 see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Product boundary
+## Product foundation and expansion boundary
 
-Plazmic Legends is a native Linux Qt 6 application that observes the supported
-64-bit EverQuest Legends client externally through bounded, read-only process
-access. It renders a normal independent window and does not inject a DLL, hook
-DirectX, install a Wine override, write game state, synthesize input, or
-automate gameplay. The only installation write path is the confirmed private
+The current Plazmic Legends `main` branch is a native Linux Qt 6 application that
+observes the supported 64-bit EverQuest Legends client externally through
+bounded, read-only process access. It renders a normal independent window. Its
+currently implemented game-installation write path is the confirmed private
 UI-file installer described below.
 
-The product is intentionally narrow:
+The current `main` branch provides:
 
 - one exact compatibility profile at a time;
 - locally installed maps only;
 - immutable player, zone, spawn, character, and encounter snapshots;
 - an independent map, spawn table, details view, character panel, and compact
   local combat-log parser;
-- Linux, Wine, and X11/XWayland only; and
-- no scripting, plugins, remote control, telemetry, or updater.
+- Linux, Wine, and X11/XWayland support.
+
+This implementation is a foundation, not a permanent product-category limit.
+`SPEC.md` and `ROADMAP.md` define capability-scoped phases for analytics,
+activity, alerts, audio, maps, knowledge packs, overlays, profiles, sharing,
+services, and future integration approaches. Each new trust boundary requires
+its own approval, validation, privacy, security, provenance, and rollback
+contract.
 
 An unknown or partially matched executable must fail closed. Client-specific
 addresses and signatures belong only in versioned compatibility profiles.
@@ -196,7 +201,8 @@ to make a patched client appear supported.
 
 ## Project documentation
 
-- [Specification](SPEC.md) defines behavior, non-goals, and acceptance criteria.
+- [Specification](SPEC.md) defines behavior, current exclusions, and acceptance
+  criteria.
 - [Roadmap](ROADMAP.md) records the phase order, exit criteria, and rollback.
 - [Tasks](TASKS.md) records implementation and validation status.
 - [Agent instructions](AGENTS.md) define repository working boundaries.
@@ -239,9 +245,11 @@ published rules. The owner explicitly accepts that risk. This decision does not
 grant permission, prevent account action, or imply affiliation with Daybreak.
 
 Read-only symbol and gameplay-state research may proceed within the documented
-project scope. Memory writes, injection, automation, protection bypass,
-authentication bypass, client patching, game-content redistribution, and
-credential handling remain prohibited.
+project scope. Later write, injection, automation, service, or control
+capabilities require explicit approval under their own numbered phase.
+Protection bypass, authentication bypass, guessed offsets, silent private-data
+collection, and incompatible or proprietary content remain outside the project
+boundary.
 
 ## License
 

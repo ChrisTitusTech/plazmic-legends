@@ -43,6 +43,8 @@
 #include <QPushButton>
 #include <QScreen>
 #include <QSignalBlocker>
+#include <QSizePolicy>
+#include <QSplitter>
 #include <QStatusBar>
 #include <QStyle>
 #include <QTableWidget>
@@ -206,22 +208,7 @@ void MainWindow::build_ui() {
         "QProgressBar { text-align: center; } "
         "QProgressBar::chunk { background-color: #1976d2; }");
     character_layout->addWidget(mana_bar_);
-    current_dps_ = new QLabel("Current DPS: 0.0");
-    current_dps_->setObjectName("character-dps");
-    character_layout->addWidget(current_dps_);
-    equipment_table_ = new QTableWidget;
-    equipment_table_->setObjectName("equipment-table");
-    equipment_table_->setColumnCount(2);
-    equipment_table_->setHorizontalHeaderLabels({"Slot", "Item"});
-    equipment_table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    equipment_table_->setSelectionMode(QAbstractItemView::NoSelection);
-    equipment_table_->setAlternatingRowColors(true);
-    equipment_table_->verticalHeader()->setVisible(false);
-    equipment_table_->horizontalHeader()->setSectionResizeMode(
-        0, QHeaderView::ResizeToContents);
-    equipment_table_->horizontalHeader()->setSectionResizeMode(
-        1, QHeaderView::Stretch);
-    character_layout->addWidget(equipment_table_, 1);
+    character_layout->addStretch(1);
     auto* character_dock = create_dock(
         "Character", "character-dock", character_container, this);
     character_dock->setMinimumWidth(300);
@@ -358,12 +345,12 @@ void MainWindow::build_ui() {
     auto* activity_container = new QWidget;
     auto* activity_layout = new QVBoxLayout(activity_container);
     activity_layout->setContentsMargins(6, 6, 6, 6);
-    activity_overview_ = new QLabel(
-        "Waiting for progression or activity events");
-    activity_overview_->setObjectName("activity-overview");
-    activity_overview_->setTextFormat(Qt::PlainText);
-    activity_overview_->setWordWrap(true);
-    activity_layout->addWidget(activity_overview_);
+    activity_state_ = new QLabel;
+    activity_state_->setObjectName("activity-state");
+    activity_state_->setTextFormat(Qt::PlainText);
+    activity_state_->setWordWrap(true);
+    activity_state_->hide();
+    activity_layout->addWidget(activity_state_);
     auto* activity_tabs = new QTabWidget;
     activity_tabs->setObjectName("activity-tabs");
 
@@ -406,8 +393,34 @@ void MainWindow::build_ui() {
     activity_tabs->addTab(activity_abilities_, "Class / Proc Evidence");
 
     auto* inventory_container = new QWidget;
+    inventory_container->setObjectName("activity-inventory");
     auto* inventory_layout = new QVBoxLayout(inventory_container);
     inventory_layout->setContentsMargins(0, 0, 0, 0);
+    auto* equipment_heading = new QLabel("Equipped Items");
+    equipment_heading->setObjectName("inventory-equipment-heading");
+    inventory_layout->addWidget(equipment_heading);
+    equipment_state_ = new QLabel("Character information unavailable");
+    equipment_state_->setObjectName("inventory-equipment-state");
+    equipment_state_->setTextFormat(Qt::PlainText);
+    equipment_state_->setWordWrap(true);
+    inventory_layout->addWidget(equipment_state_);
+    equipment_table_ = new QTableWidget;
+    equipment_table_->setObjectName("equipment-table");
+    equipment_table_->setColumnCount(2);
+    equipment_table_->setHorizontalHeaderLabels({"Slot", "Item"});
+    equipment_table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    equipment_table_->setSelectionMode(QAbstractItemView::NoSelection);
+    equipment_table_->setAlternatingRowColors(true);
+    equipment_table_->verticalHeader()->setVisible(false);
+    equipment_table_->horizontalHeader()->setSectionResizeMode(
+        0, QHeaderView::ResizeToContents);
+    equipment_table_->horizontalHeader()->setSectionResizeMode(
+        1, QHeaderView::Stretch);
+    inventory_layout->addWidget(equipment_table_, 1);
+    auto* reconciliation_heading = new QLabel("Imported Inventory Output");
+    reconciliation_heading->setObjectName(
+        "inventory-reconciliation-heading");
+    inventory_layout->addWidget(reconciliation_heading);
     inventory_state_ = new QLabel(
         "Select User > Import Inventory Output to reconcile a local file");
     inventory_state_->setObjectName("inventory-reconciliation-state");
@@ -429,7 +442,7 @@ void MainWindow::build_ui() {
         1, QHeaderView::Stretch);
     inventory_reconciliation_->horizontalHeader()->setSectionResizeMode(
         2, QHeaderView::ResizeToContents);
-    inventory_layout->addWidget(inventory_reconciliation_);
+    inventory_layout->addWidget(inventory_reconciliation_, 1);
     activity_tabs->addTab(inventory_container, "Inventory");
     activity_layout->addWidget(activity_tabs, 1);
     auto* activity_dock = create_dock(
@@ -479,12 +492,67 @@ void MainWindow::build_ui() {
         "Spawns", "spawn-dock", spawn_container, this);
     addDockWidget(Qt::RightDockWidgetArea, spawn_dock);
 
+    auto* details_container = new QWidget;
+    details_container->setObjectName("details-content");
+    auto* details_layout = new QVBoxLayout(details_container);
+    details_layout->setContentsMargins(0, 0, 0, 0);
+    details_layout->setSpacing(0);
+
+    auto* activity_summary_bar = new QWidget;
+    activity_summary_bar->setObjectName("activity-summary-bar");
+    activity_summary_bar->setStyleSheet(
+        "#activity-summary-bar { border-bottom: 1px solid palette(mid); }");
+    auto* activity_summary_layout = new QHBoxLayout(activity_summary_bar);
+    activity_summary_layout->setContentsMargins(0, 4, 0, 4);
+    activity_summary_layout->setSpacing(0);
+    activity_summary_splitter_ =
+        new QSplitter(Qt::Horizontal, activity_summary_bar);
+    activity_summary_splitter_->setObjectName("activity-summary-splitter");
+    activity_summary_splitter_->setChildrenCollapsible(false);
+    activity_summary_splitter_->setHandleWidth(6);
+    current_dps_ = new QLabel("DPS: 0.0");
+    current_dps_->setObjectName("activity-summary-dps");
+    activity_xp_summary_ = new QLabel("XP: waiting");
+    activity_xp_summary_->setObjectName("activity-summary-xp");
+    activity_aa_summary_ = new QLabel("AA: waiting");
+    activity_aa_summary_->setObjectName("activity-summary-aa");
+    activity_latest_summary_ = new QLabel("Latest: waiting");
+    activity_latest_summary_->setObjectName("activity-summary-latest");
+    const std::array<QLabel*, 4> summary_labels{
+        current_dps_, activity_xp_summary_, activity_aa_summary_,
+        activity_latest_summary_};
+    for (QLabel* label : summary_labels) {
+        label->setTextFormat(Qt::PlainText);
+        label->setMinimumWidth(0);
+        label->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+        label->setContentsMargins(8, 0, 8, 0);
+        label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        activity_summary_splitter_->addWidget(label);
+    }
+    activity_summary_splitter_->setStretchFactor(0, 1);
+    activity_summary_splitter_->setStretchFactor(1, 2);
+    activity_summary_splitter_->setStretchFactor(2, 3);
+    activity_summary_splitter_->setStretchFactor(3, 3);
+    activity_summary_splitter_->setSizes({100, 240, 300, 260});
+    connect(
+        activity_summary_splitter_, &QSplitter::splitterMoved, this,
+        [this]() {
+            const QList<int> sizes = activity_summary_splitter_->sizes();
+            if (sizes.size() == 4) {
+                activity_summary_widths_ =
+                    {sizes[0], sizes[1], sizes[2], sizes[3]};
+            }
+        });
+    activity_summary_layout->addWidget(activity_summary_splitter_);
+    details_layout->addWidget(activity_summary_bar);
+
     selection_detail_ = new QLabel("No spawn selected.");
     selection_detail_->setObjectName("selection-detail");
     selection_detail_->setAlignment(Qt::AlignCenter);
     selection_detail_->setWordWrap(true);
+    details_layout->addWidget(selection_detail_, 1);
     auto* detail_dock = create_dock(
-        "Details", "detail-dock", selection_detail_, this);
+        "Details", "detail-dock", details_container, this);
     addDockWidget(Qt::BottomDockWidgetArea, detail_dock);
     setCorner(Qt::BottomLeftCorner, Qt::LeftDockWidgetArea);
     setCorner(Qt::BottomRightCorner, Qt::BottomDockWidgetArea);
@@ -1050,8 +1118,12 @@ void MainWindow::update_character_snapshot(
     export_inventory_action_->setEnabled(snapshot.available());
     equipment_table_->setRowCount(0);
     if (!snapshot.available()) {
+        const QString detail = QString::fromStdString(snapshot.detail);
         character_name_->setText(
-            QString::fromStdString(snapshot.detail));
+            detail);
+        equipment_state_->setText(
+            detail.isEmpty() ? "Character information unavailable" : detail);
+        equipment_state_->show();
         set_vital_unavailable(health_bar_, "HP");
         set_vital_unavailable(mana_bar_, "MP");
         if (inventory_reconcile_changed) {
@@ -1063,6 +1135,13 @@ void MainWindow::update_character_snapshot(
         return;
     }
     character_name_->setText(QString::fromStdString(snapshot.name));
+    if (snapshot.equipment.empty()) {
+        equipment_state_->setText("No equipped items reported");
+        equipment_state_->show();
+    } else {
+        equipment_state_->clear();
+        equipment_state_->hide();
+    }
     update_vital_bar(health_bar_, "HP", snapshot.health);
     update_vital_bar(mana_bar_, "MP", snapshot.mana);
     equipment_table_->setRowCount(
@@ -1129,7 +1208,19 @@ void MainWindow::update_activity_snapshot(
     delete_activity_action_->setEnabled(
         !analytics.storage_key.empty());
     if (!analytics.available) {
-        activity_overview_->setText(QString::fromStdString(analytics.detail));
+        const QString detail = QString::fromStdString(analytics.detail);
+        activity_state_->setText(
+            detail.isEmpty() ? "Activity unavailable" : detail);
+        activity_state_->show();
+        activity_xp_summary_->setText("XP: unavailable");
+        activity_aa_summary_->setText("AA: unavailable");
+        activity_latest_summary_->setText(
+            detail.isEmpty() ? "Latest: unavailable"
+                             : QString("Latest: %1").arg(detail));
+        activity_xp_summary_->setToolTip(activity_xp_summary_->text());
+        activity_aa_summary_->setToolTip(activity_aa_summary_->text());
+        activity_latest_summary_->setToolTip(
+            activity_latest_summary_->text());
         if (payload_changed) {
             activity_events_->setRowCount(0);
             activity_abilities_->setRowCount(0);
@@ -1150,39 +1241,52 @@ void MainWindow::update_activity_snapshot(
     const QString level_pace = analytics.level_pace_hours
                                    ? QString::number(
                                          *analytics.level_pace_hours, 'f', 1) +
-                                         " h / 100%"
+                                         "h/100%"
                                    : QString("collecting");
     const QString aa_eta = analytics.next_alternate_advancement_hours
                                ? QString::number(
                                      *analytics.next_alternate_advancement_hours,
                                      'f', 1) +
-                                     " h"
+                                     "h"
                                : QString("collecting");
-    QString overview =
-        QString("XP: %1% observed | %2%/h | pace %3 | AA: %4 | "
-                "banked: %5 | %6 points/h | next pace %7 | "
-                "recent loot: %8%9")
+    const QString xp_summary =
+        QString("XP: %1% | %2%/h | pace %3")
             .arg(analytics.experience_percent, 0, 'f', 3)
             .arg(analytics.experience_percent_per_hour, 0, 'f', 3)
-            .arg(level_pace)
+            .arg(level_pace);
+    const QString aa_summary =
+        QString("AA: %1 | banked: %2 | %3/h | next: %4")
             .arg(aa_progress)
             .arg(aa_total)
             .arg(analytics.alternate_advancement_points_per_hour, 0, 'f', 2)
-            .arg(aa_eta)
-            .arg(analytics.recent_loot_count)
-            .arg(analytics.detail.empty()
-                     ? QString{}
-                     : QString(" | %1").arg(
-                           QString::fromStdString(analytics.detail)));
+            .arg(aa_eta);
+    QString latest = analytics.events.empty()
+                         ? QString("No recent activity")
+                         : QString::fromStdString(analytics.events.back().label);
+    if (analytics.recent_celebration) {
+        latest = QString::fromStdString(*analytics.recent_celebration);
+    }
+    QString latest_summary = QString("Latest: %1").arg(latest);
+    if (!analytics.persisted) {
+        latest_summary += " | Activity storage error";
+        const QString detail = QString::fromStdString(analytics.detail);
+        activity_state_->setText(
+            detail.isEmpty() ? "Activity storage error" : detail);
+        activity_state_->show();
+    } else {
+        activity_state_->clear();
+        activity_state_->hide();
+    }
     if (!analytics.class_activity_summary.empty()) {
-        overview += QString(" | %1").arg(QString::fromStdString(
+        latest_summary += QString(" | %1").arg(QString::fromStdString(
             analytics.class_activity_summary));
     }
-    if (analytics.recent_celebration) {
-        overview += QString(" | Latest: %1").arg(
-            QString::fromStdString(*analytics.recent_celebration));
-    }
-    activity_overview_->setText(overview);
+    activity_xp_summary_->setText(xp_summary);
+    activity_xp_summary_->setToolTip(xp_summary);
+    activity_aa_summary_->setText(aa_summary);
+    activity_aa_summary_->setToolTip(aa_summary);
+    activity_latest_summary_->setText(latest_summary);
+    activity_latest_summary_->setToolTip(latest_summary);
 
     if (!payload_changed) {
         return;
@@ -1353,7 +1457,7 @@ void MainWindow::update_combat_snapshot(
             ? analytics.encounter.active_character_dps
             : 0.0;
     current_dps_->setText(
-        QString("Current DPS: %1").arg(current_dps, 0, 'f', 1));
+        QString("DPS: %1").arg(current_dps, 0, 'f', 1));
     updating_combat_history_ = true;
     combat_history_->setRowCount(
         static_cast<int>(combat_analytics_.history.size()));
@@ -1497,6 +1601,7 @@ void MainWindow::clear_zone_map(const QString& detail) {
 }
 
 void MainWindow::restore_ui_state() {
+    std::optional<std::array<int, 4>> activity_summary_widths;
     if (const auto state = settings_.load()) {
         if (client_directory_.isEmpty()) {
             client_directory_ = state->client_directory;
@@ -1556,8 +1661,21 @@ void MainWindow::restore_ui_state() {
             state->combat_history_enabled);
         retain_activity_history_action_->setChecked(
             state->activity_history_enabled);
+        activity_summary_widths = state->activity_summary_widths;
+        activity_summary_widths_ = state->activity_summary_widths;
     }
-    QTimer::singleShot(0, this, [this]() { ensure_on_screen(); });
+    QTimer::singleShot(
+        0, this, [this, activity_summary_widths]() {
+            ensure_on_screen();
+            if (activity_summary_widths) {
+                activity_summary_splitter_->setSizes(
+                    {(*activity_summary_widths)[0],
+                     (*activity_summary_widths)[1],
+                     (*activity_summary_widths)[2],
+                     (*activity_summary_widths)[3]});
+                activity_summary_widths_ = *activity_summary_widths;
+            }
+        });
 }
 
 void MainWindow::ensure_on_screen() {
@@ -1592,6 +1710,14 @@ bool MainWindow::save_ui_state() {
             ->itemData(spawn_type_filter_->currentIndex())
             .toInt();
     const QHeaderView* header = spawn_table_->horizontalHeader();
+    if (activity_summary_splitter_->isVisible()) {
+        const QList<int> summary_sizes = activity_summary_splitter_->sizes();
+        if (summary_sizes.size() == 4) {
+            activity_summary_widths_ =
+                {summary_sizes[0], summary_sizes[1],
+                 summary_sizes[2], summary_sizes[3]};
+        }
+    }
     const UiState state{
         .client_directory = client_directory_,
         .geometry = saveGeometry(),
@@ -1620,6 +1746,7 @@ bool MainWindow::save_ui_state() {
             map_canvas_->other_spawns_visible(),
         .combat_history_enabled = combat_history_enabled(),
         .activity_history_enabled = activity_history_enabled(),
+        .activity_summary_widths = activity_summary_widths_,
         .spawn_filter = spawn_filter_->text(),
         .spawn_type_filter = type_filter,
         .spawn_sort_column = header->sortIndicatorSection(),

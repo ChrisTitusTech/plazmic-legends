@@ -46,6 +46,7 @@ int main() {
             .other_spawns_visible = false,
             .combat_history_enabled = true,
             .activity_history_enabled = true,
+            .activity_summary_widths = {0, 210, 280, 240},
             .spawn_filter = "guard",
             .spawn_type_filter = 1,
             .spawn_sort_column = 0,
@@ -92,6 +93,8 @@ int main() {
                         expected.combat_history_enabled &&
                     loaded->activity_history_enabled ==
                         expected.activity_history_enabled &&
+                    loaded->activity_summary_widths ==
+                        expected.activity_summary_widths &&
                     loaded->spawn_filter == expected.spawn_filter &&
                     loaded->spawn_type_filter ==
                         expected.spawn_type_filter &&

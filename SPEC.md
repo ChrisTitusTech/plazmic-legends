@@ -162,17 +162,27 @@ the default left column:
 
 - a Character dock showing the active character name, current and maximum HP,
   rounded whole HP percentage, current and maximum MP, rounded whole MP
-  percentage, text-only equipped
-  slot and item names, and the
-  character's current encounter DPS; and
+  percentage;
 - a Parse dock showing one condensed current or most-recent encounter with
   participant, total damage, average DPS, percentage, and active duration.
+
+A full-width summary bar above the Details content shows current encounter DPS,
+XP rate and pace, current AA state and rate, and the latest bounded activity.
+Its four columns are independently resizable and initially allocate extra width
+to XP and AA so those values remain readable.
+The Activity dock retains its progression, evidence, and inventory tabs without
+duplicating this summary.
+
+The Activity dock's Inventory tab consolidates the text-only equipped slot and
+item names with explicitly imported inventory-output reconciliation. The
+Character dock does not duplicate the equipment table.
 
 HP, mana, character identity, and equipped item values come only from bounded
 exact-profile, same-user process reads. Each field requires independent static
 evidence, two controlled live observations, explicit bounds, and lifecycle
-invalidation before it may be displayed. Equipment uses slot labels and text
-only; the project does not copy or package game icons, item data, or assets.
+invalidation before it may be displayed. Equipment in the Activity Inventory
+tab uses slot labels and text only; the project does not copy or package game
+icons, item data, or assets.
 
 DPS is derived locally from the user's EverQuest combat log, not from client
 memory. The parser follows only the active character's bounded log file,
@@ -257,7 +267,8 @@ the backup.
 - The default left dock area contains Character above tabified Parse and
   Activity docks. They retain movable, closable, floatable, saved-layout, and
   X11 class behavior. Details spans below the central map and right-side Spawns
-  dock.
+  dock, with the DPS, XP, AA, and latest-activity summary fixed directly above
+  its content at the same width.
 - An embedded top menu bar exposes checkable Views actions for Character,
   Parse, Activity, Spawns, and Details, plus minimize, maximize/restore, and
   close controls aligned at the top right.

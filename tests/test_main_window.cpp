@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <chrono>
 #include <iostream>
+#include <numeric>
 #include <stdexcept>
 #include <string>
 
@@ -27,6 +28,7 @@
 #include <QMenuBar>
 #include <QMouseEvent>
 #include <QProgressBar>
+#include <QSplitter>
 #include <QStatusBar>
 #include <QTableWidget>
 #include <QTableView>
@@ -251,9 +253,18 @@ int main(int argc, char** argv) {
             window.findChild<QDockWidget*>("activity-dock");
         auto* spawn_dock = window.findChild<QDockWidget*>("spawn-dock");
         auto* detail_dock = window.findChild<QDockWidget*>("detail-dock");
+        auto* activity_summary_bar =
+            window.findChild<QWidget*>("activity-summary-bar");
+        auto* activity_summary_splitter =
+            window.findChild<QSplitter*>("activity-summary-splitter");
+        auto* selection_detail =
+            window.findChild<QLabel*>("selection-detail");
         require(character_dock != nullptr && parse_dock != nullptr &&
                     activity_dock != nullptr &&
                     spawn_dock != nullptr && detail_dock != nullptr &&
+                    activity_summary_bar != nullptr &&
+                    activity_summary_splitter != nullptr &&
+                    selection_detail != nullptr &&
                     window.dockWidgetArea(character_dock) ==
                         Qt::LeftDockWidgetArea &&
                     window.dockWidgetArea(parse_dock) ==
@@ -281,9 +292,22 @@ int main(int argc, char** argv) {
                 parse_dock->geometry().bottom() >
                     detail_dock->geometry().top() &&
                 spawn_dock->geometry().bottom() <
-                    detail_dock->geometry().top(),
+                    detail_dock->geometry().top() &&
+                detail_dock->isAncestorOf(activity_summary_bar) &&
+                activity_summary_bar->geometry().left() ==
+                    selection_detail->geometry().left() &&
+                activity_summary_bar->width() == selection_detail->width() &&
+                activity_summary_splitter->count() == 4 &&
+                activity_summary_splitter->handleWidth() == 6 &&
+                activity_summary_splitter->sizes()[1] >
+                    activity_summary_splitter->sizes()[0] &&
+                activity_summary_splitter->sizes()[2] >
+                    activity_summary_splitter->sizes()[0] &&
+                !activity_dock->isAncestorOf(activity_summary_bar) &&
+                character_dock->findChild<QLabel*>(
+                    "activity-summary-dps") == nullptr,
             "Details is not below the map and Spawns with a full-height "
-            "Character/Parse column");
+            "Character/Parse column and full-width activity summary");
         const std::array<std::pair<const char*, QDockWidget*>, 5>
             view_actions{
                 std::pair{"view-character-action", character_dock},
@@ -418,6 +442,12 @@ int main(int argc, char** argv) {
         };
         window.update_combat_snapshot(combat);
         process_events();
+        auto* activity_inventory =
+            window.findChild<QWidget*>("activity-inventory");
+        auto* equipment_table =
+            window.findChild<QTableWidget*>("equipment-table");
+        auto* equipment_state =
+            window.findChild<QLabel*>("inventory-equipment-state");
         require(window.findChild<QLabel*>("character-name")->text() ==
                     "synthetic_character" &&
                     window.findChild<QProgressBar*>("character-health")
@@ -444,9 +474,16 @@ int main(int argc, char** argv) {
                             32 &&
                     window.findChild<QProgressBar*>("character-mana")
                         ->styleSheet().contains("#1976d2") &&
-                    window.findChild<QTableWidget*>("equipment-table")
-                        ->rowCount() == 2,
-                "character dock did not render vitals and equipment");
+                    equipment_table != nullptr &&
+                    equipment_table->rowCount() == 2 &&
+                    equipment_state != nullptr &&
+                    equipment_state->isHidden() &&
+                    activity_inventory != nullptr &&
+                    activity_inventory->isAncestorOf(equipment_table) &&
+                    character_dock != nullptr &&
+                    !character_dock->isAncestorOf(equipment_table),
+                "character vitals or Activity inventory equipment did not "
+                "render in the expected panel");
 
         plazmic::CharacterSnapshot fractional_mana = character;
         fractional_mana.mana = {.current = 2, .maximum = 3};
@@ -468,9 +505,9 @@ int main(int argc, char** argv) {
                 "MP 0 / 0 (0%)",
             "zero mana gauge did not display maximum and percentage");
         window.update_character_snapshot(character);
-        require(window.findChild<QLabel*>("character-dps")
+        require(window.findChild<QLabel*>("activity-summary-dps")
                         ->text()
-                        .contains("300.0") &&
+                        .contains("DPS: 300.0") &&
                     window.findChild<QTableWidget*>("parse-table")
                         ->rowCount() == 2 &&
                     window.findChild<QLabel*>("parse-state")
@@ -594,22 +631,63 @@ int main(int argc, char** argv) {
                             .contains("(2 points; total 42)") &&
                     window.findChild<QTableWidget*>("activity-abilities")
                             ->rowCount() == 1 &&
-                    window.findChild<QLabel*>("activity-overview")
+                    window.findChild<QLabel*>("activity-summary-aa")
                             ->text()
-                            .contains("AA: 66.480% | banked: 42") &&
-                    window.findChild<QLabel*>("activity-overview")
+                            .contains("AA: 66.480% | banked: 42 | 1.00/h") &&
+                    window.findChild<QLabel*>("activity-summary-latest")
                             ->text()
-                            .contains("recent loot: 1") &&
+                            .contains(
+                                "Latest: Alternate Advancement points gained") &&
+                    !window.findChild<QLabel*>("activity-summary-latest")
+                         ->text()
+                         .contains("recent loot:") &&
+                    !window.findChild<QLabel*>("activity-summary-latest")
+                         ->text()
+                         .contains("Synthetic activity") &&
                     export_activity_action->isEnabled() &&
                     delete_activity_action->isEnabled() &&
                     window.findChild<QTableWidget*>(
                                "inventory-reconciliation") != nullptr &&
-                    window.findChild<QLabel*>("activity-overview")
+                    window.findChild<QLabel*>("activity-summary-xp")
                             ->textFormat() == Qt::PlainText &&
                     window.findChild<QLabel*>(
                                "inventory-reconciliation-state")
                             ->textFormat() == Qt::PlainText,
                 "progression, activity, or inventory views did not render");
+        auto unsaved_activity = activity;
+        unsaved_activity.persisted = false;
+        unsaved_activity.detail =
+            "Local observations only; activity history could not be saved";
+        window.update_activity_snapshot(unsaved_activity);
+        auto* activity_state =
+            window.findChild<QLabel*>("activity-state");
+        require(activity_state != nullptr && activity_state->isVisible() &&
+                    activity_state->text().contains(
+                        "Local observations only") &&
+                    window.findChild<QLabel*>("activity-summary-latest")
+                        ->text()
+                        .contains("Activity storage error") &&
+                    !window.findChild<QLabel*>("activity-summary-latest")
+                         ->text()
+                         .contains("Local observations only") &&
+                    !window.findChild<QLabel*>("activity-summary-latest")
+                         ->text()
+                         .contains("activity history could not be saved"),
+                "activity persistence failure was hidden or verbose detail "
+                "leaked into the summary");
+        window.update_activity_snapshot(activity);
+        require(!activity_state->isVisible(),
+                "resolved activity failure remained visible");
+        window.report_activity_deletion_result(activity.storage_key, false);
+        require(window.findChild<QLabel*>("activity-summary-latest")
+                        ->text()
+                        .contains("Activity storage error") &&
+                    window.statusBar()->currentMessage().contains(
+                        "deletion failed"),
+                "failed activity deletion displayed a misleading storage "
+                "state");
+        window.statusBar()->clearMessage();
+        window.update_activity_snapshot(activity);
         auto* activity_events =
             window.findChild<QTableWidget*>("activity-events");
         auto* activity_abilities =
@@ -619,7 +697,7 @@ int main(int argc, char** argv) {
         window.update_activity_snapshot(derived_activity);
         require(activity_events->item(0, 2) == retained_event_item &&
                     activity_abilities->item(0, 2) == retained_ability_item &&
-                    window.findChild<QLabel*>("activity-overview")
+                    window.findChild<QLabel*>("activity-summary-xp")
                         ->text()
                         .contains("0.500%/h"),
                 "derived refresh rebuilt unchanged activity tables or left "
@@ -643,7 +721,7 @@ int main(int argc, char** argv) {
         unknown_aa_activity.alternate_advancement_percent.reset();
         unknown_aa_activity.alternate_advancement_points.reset();
         window.update_activity_snapshot(unknown_aa_activity);
-        require(window.findChild<QLabel*>("activity-overview")
+        require(window.findChild<QLabel*>("activity-summary-aa")
                     ->text()
                     .contains("AA: unavailable | banked: unavailable"),
                 "unknown AA state was rendered as a real zero");
@@ -654,8 +732,11 @@ int main(int argc, char** argv) {
         incompatible_activity.detail =
             "Stored activity uses an unsupported or invalid schema";
         window.update_activity_snapshot(incompatible_activity);
-        require(delete_activity_action->isEnabled(),
-                "incompatible activity partition could not be deleted");
+        require(delete_activity_action->isEnabled() &&
+                    activity_state->isVisible() &&
+                    activity_state->text().contains("unsupported"),
+                "incompatible activity partition could not be deleted or "
+                "did not show its failure state");
         auto unavailable_activity = incompatible_activity;
         unavailable_activity.persisted = true;
         unavailable_activity.available = false;
@@ -667,7 +748,15 @@ int main(int argc, char** argv) {
                     window.findChild<QTableWidget*>("activity-events")
                             ->rowCount() == 0 &&
                     window.findChild<QTableWidget*>("activity-abilities")
-                            ->rowCount() == 0,
+                            ->rowCount() == 0 &&
+                    window.findChild<QLabel*>("activity-summary-xp")
+                            ->toolTip() == "XP: unavailable" &&
+                    window.findChild<QLabel*>("activity-summary-aa")
+                            ->toolTip() == "AA: unavailable" &&
+                    window.findChild<QLabel*>("activity-summary-latest")
+                            ->toolTip() == "Latest: Activity unavailable" &&
+                    activity_state->isVisible() &&
+                    activity_state->text() == "Activity unavailable",
                 "unavailable lifecycle state retained stale activity");
         window.update_activity_snapshot(activity);
         require(window.findChild<QTableWidget*>("activity-events")
@@ -719,8 +808,8 @@ int main(int argc, char** argv) {
                         ->rowCount() == 1 &&
                     window.findChild<QTableWidget*>("combat-abilities")
                             ->rowCount() == 0 &&
-                    window.findChild<QLabel*>("character-dps")->text() ==
-                        "Current DPS: 300.0",
+                    window.findChild<QLabel*>("activity-summary-dps")->text() ==
+                        "DPS: 300.0",
                 "retained history selection did not drive drill-down tabs");
         auto unavailable_analytics = analytics;
         unavailable_analytics.encounter = {
@@ -759,8 +848,8 @@ int main(int argc, char** argv) {
         completed.state = plazmic::CombatEncounterState::complete;
         completed.detail = "Most recent encounter";
         window.update_combat_snapshot(completed);
-        require(window.findChild<QLabel*>("character-dps")->text() ==
-                    "Current DPS: 0.0" &&
+        require(window.findChild<QLabel*>("activity-summary-dps")->text() ==
+                    "DPS: 0.0" &&
                     window.findChild<QTableWidget*>("parse-table")
                             ->rowCount() == 2,
                 "completed encounter did not clear current DPS or retain parse");
@@ -815,6 +904,10 @@ int main(int argc, char** argv) {
                     "HP unavailable" &&
                     window.findChild<QProgressBar*>("character-mana")->text() ==
                         "MP unavailable" &&
+                    !equipment_state->isHidden() &&
+                    equipment_state->text() ==
+                        "Character information unavailable" &&
+                    equipment_table->rowCount() == 0 &&
                     window.findChild<QTableWidget*>(
                                "inventory-reconciliation")
                             ->rowCount() == 0 &&
@@ -823,6 +916,15 @@ int main(int argc, char** argv) {
                         ->text()
                         .contains("became unavailable"),
                 "unavailable character retained vitals or imported inventory");
+
+        auto empty_equipment = character;
+        empty_equipment.equipment.clear();
+        window.update_character_snapshot(empty_equipment);
+        require(!equipment_state->isHidden() &&
+                    equipment_state->text() ==
+                        "No equipped items reported" &&
+                    equipment_table->rowCount() == 0,
+                "available empty equipment state was not explicit");
 
         plazmic::CombatEncounterSnapshot large_combat{
             .state = plazmic::CombatEncounterState::active,
@@ -1350,6 +1452,11 @@ int main(int argc, char** argv) {
         window.setCorner(
             Qt::BottomRightCorner, Qt::RightDockWidgetArea);
 
+        activity_summary_splitter->setSizes({80, 180, 220, 160});
+        process_events();
+        const QList<int> expected_summary_sizes =
+            activity_summary_splitter->sizes();
+
         const QByteArray expected_geometry_state = window.saveGeometry();
         close_button->click();
         process_events();
@@ -1383,8 +1490,13 @@ int main(int argc, char** argv) {
                     saved_state->spawn_type_filter == 1 &&
                     saved_state->spawn_sort_column == 1 &&
                     saved_state->spawn_sort_descending &&
-                    saved_state->spawn_column_widths[0] == 260,
-                "close did not persist spawn table state");
+                    saved_state->spawn_column_widths[0] == 260 &&
+                    saved_state->activity_summary_widths ==
+                        std::array<int, 4>{expected_summary_sizes[0],
+                                           expected_summary_sizes[1],
+                                           expected_summary_sizes[2],
+                                           expected_summary_sizes[3]},
+                "close did not persist table or activity summary state");
 
         {
             plazmic::MainWindow reset_layout(
@@ -1441,6 +1553,37 @@ int main(int argc, char** argv) {
         restored.show();
         process_events();
         require(restored.isVisible(), "restored window is not visible");
+        const QList<int> restored_summary_sizes =
+            restored.findChild<QSplitter*>("activity-summary-splitter")
+                ->sizes();
+        const int expected_summary_total =
+            std::accumulate(expected_summary_sizes.cbegin(),
+                            expected_summary_sizes.cend(), 0);
+        const int restored_summary_total =
+            std::accumulate(restored_summary_sizes.cbegin(),
+                            restored_summary_sizes.cend(), 0);
+        bool summary_proportions_restored =
+            expected_summary_total > 0 && restored_summary_total > 0;
+        for (qsizetype index = 0;
+             summary_proportions_restored &&
+             index < restored_summary_sizes.size(); ++index) {
+            const int scaled_expected =
+                expected_summary_sizes[index] * restored_summary_total /
+                expected_summary_total;
+            summary_proportions_restored =
+                std::abs(restored_summary_sizes[index] - scaled_expected) <= 2;
+        }
+        require(
+            summary_proportions_restored,
+            "saved activity summary proportions were not restored: saved " +
+                std::to_string(expected_summary_sizes[0]) + "," +
+                std::to_string(expected_summary_sizes[1]) + "," +
+                std::to_string(expected_summary_sizes[2]) + "," +
+                std::to_string(expected_summary_sizes[3]) + ", got " +
+                std::to_string(restored_summary_sizes[0]) + "," +
+                std::to_string(restored_summary_sizes[1]) + "," +
+                std::to_string(restored_summary_sizes[2]) + "," +
+                std::to_string(restored_summary_sizes[3]));
         require(restored.map_canvas()->height_filter_enabled() &&
                     restored.map_canvas()->height_filter_below() == 0.0 &&
                     restored.map_canvas()->height_filter_above() ==
@@ -1479,12 +1622,18 @@ int main(int argc, char** argv) {
                 "restored spawn dock is missing");
         require(restored_spawn_dock->isFloating(),
                 "saved floating dock state was not restored");
+        auto* restored_detail_dock =
+            restored.findChild<QDockWidget*>("detail-dock");
+        require(restored_detail_dock != nullptr,
+                "restored detail dock is missing");
         require(
             restored.corner(Qt::BottomLeftCorner) ==
                     Qt::BottomDockWidgetArea &&
                 restored.corner(Qt::BottomRightCorner) ==
                     Qt::RightDockWidgetArea,
             "saved dock-corner ownership was not restored");
+        restored_detail_dock->hide();
+        process_events();
         restored.close();
         process_events();
         const auto restored_saved_state =
@@ -1492,8 +1641,31 @@ int main(int argc, char** argv) {
         require(
             restored_saved_state &&
                 restored_saved_state->client_directory ==
-                    client_directory,
-            "restored window did not preserve the client directory");
+                    client_directory &&
+                restored_saved_state->activity_summary_widths ==
+                    saved_state->activity_summary_widths,
+            "hidden Details did not preserve the client directory or "
+            "activity summary widths");
+
+        plazmic::MainWindow hidden_details_restored(
+            snapshot, settings_path, false);
+        hidden_details_restored.show();
+        process_events();
+        auto* hidden_detail_dock =
+            hidden_details_restored.findChild<QDockWidget*>("detail-dock");
+        require(hidden_detail_dock != nullptr &&
+                    !hidden_detail_dock->isVisible(),
+                "saved hidden Details state was not restored");
+        hidden_details_restored.close();
+        process_events();
+        const auto hidden_details_saved_state =
+            plazmic::UiSettings(settings_path).load();
+        require(
+            hidden_details_saved_state &&
+                hidden_details_saved_state->activity_summary_widths ==
+                    saved_state->activity_summary_widths,
+            "closing with Details restored hidden changed activity summary "
+            "widths");
 
         const QString shutdown_path = directory.filePath("shutdown.toml");
         plazmic::MainWindow lifecycle(snapshot, shutdown_path, true);

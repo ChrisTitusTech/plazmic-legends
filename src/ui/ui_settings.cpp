@@ -208,6 +208,7 @@ std::optional<UiState> UiSettings::load() const {
     bool other_spawns_visible = true;
     bool combat_history_enabled = false;
     bool activity_history_enabled = false;
+    std::array<int, 4> activity_summary_widths{100, 240, 300, 260};
     QString spawn_filter;
     int spawn_type_filter = -1;
     int spawn_sort_column = 3;
@@ -353,6 +354,24 @@ std::optional<UiState> UiSettings::load() const {
                     return std::nullopt;
                 }
                 activity_history_enabled = *value == "true";
+            } else if (line.startsWith("summary_widths")) {
+                const auto value = scalar_value(line, "summary_widths");
+                if (!value) {
+                    return std::nullopt;
+                }
+                const QList<QByteArray> widths = value->split(',');
+                if (widths.size() != 4) {
+                    return std::nullopt;
+                }
+                for (qsizetype index = 0; index < widths.size(); ++index) {
+                    bool valid = false;
+                    const int width = widths[index].trimmed().toInt(&valid);
+                    if (!valid || width < 0 || width > 4096) {
+                        return std::nullopt;
+                    }
+                    activity_summary_widths[
+                        static_cast<std::size_t>(index)] = width;
+                }
             }
         } else if (section == Section::spawns) {
             if (line.startsWith("filter")) {
@@ -434,6 +453,7 @@ std::optional<UiState> UiSettings::load() const {
         .other_spawns_visible = other_spawns_visible,
         .combat_history_enabled = combat_history_enabled,
         .activity_history_enabled = activity_history_enabled,
+        .activity_summary_widths = activity_summary_widths,
         .spawn_filter = spawn_filter,
         .spawn_type_filter = spawn_type_filter,
         .spawn_sort_column = spawn_sort_column,
@@ -462,7 +482,10 @@ bool UiSettings::save(const UiState& state) const {
         state.spawn_sort_column > 3 ||
         std::ranges::any_of(
             state.spawn_column_widths,
-            [](int width) { return width < 40 || width > 1000; })) {
+            [](int width) { return width < 40 || width > 1000; }) ||
+        std::ranges::any_of(
+            state.activity_summary_widths,
+            [](int width) { return width < 0 || width > 4096; })) {
         return false;
     }
     const QFileInfo info(path_);
@@ -537,6 +560,15 @@ bool UiSettings::save(const UiState& state) const {
     contents += "\n[activity]\n";
     contents += QByteArray("retain_history = ") +
                 (state.activity_history_enabled ? "true\n" : "false\n");
+    contents += "summary_widths = ";
+    for (std::size_t index = 0;
+         index < state.activity_summary_widths.size(); ++index) {
+        if (index != 0U) {
+            contents += ",";
+        }
+        contents += QByteArray::number(state.activity_summary_widths[index]);
+    }
+    contents += "\n";
     contents += "\n[spawns]\n";
     contents += "filter = \"" +
                 state.spawn_filter.toUtf8().toBase64() + "\"\n";

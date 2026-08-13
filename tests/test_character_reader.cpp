@@ -174,11 +174,47 @@ int main() {
         require(result.snapshot->mana.current == 400 &&
                     result.snapshot->mana.maximum == 500,
                 "mana current/maximum were not decoded");
+        require(!result.snapshot->alternate_advancement_percent &&
+                    !result.snapshot->alternate_advancement_points,
+                "unsupported progression fields were published");
         require(result.snapshot->equipment.size() == 23U &&
                     result.snapshot->equipment[13].slot == "Primary" &&
                     result.snapshot->equipment[13].item ==
                         "Synthetic item 13",
                 "equipment slot and item names were not decoded");
+
+        Fixture progression;
+        progression.symbols.progression_cache_rva = 0x300U;
+        progression.symbols.alternate_advancement_percent_offset = 0U;
+        progression.symbols.alternate_advancement_points_offset = 4U;
+        store(progression.memory, 0x300U, 66.48F);
+        store(progression.memory, 0x304U, std::uint32_t{7U});
+        const auto progression_result = plazmic::read_character_snapshot(
+            progression.process,
+            progression.local_player,
+            progression.symbols);
+        require(progression_result &&
+                    progression_result.snapshot
+                            ->alternate_advancement_percent &&
+                    *progression_result.snapshot
+                             ->alternate_advancement_percent > 66.47 &&
+                    *progression_result.snapshot
+                             ->alternate_advancement_percent < 66.49 &&
+                    progression_result.snapshot
+                            ->alternate_advancement_points == 7U,
+                "bounded progression cache values were not decoded");
+
+        store(progression.memory, 0x300U, 101.0F);
+        const auto invalid_progression = plazmic::read_character_snapshot(
+            progression.process,
+            progression.local_player,
+            progression.symbols);
+        require(invalid_progression &&
+                    !invalid_progression.snapshot
+                         ->alternate_advancement_percent &&
+                    invalid_progression.snapshot
+                            ->alternate_advancement_points == 7U,
+                "invalid optional AA percent affected the character snapshot");
         constexpr std::size_t kPerformanceReads = 100U;
         const auto performance_start = std::chrono::steady_clock::now();
         for (std::size_t index = 0U; index < kPerformanceReads; ++index) {

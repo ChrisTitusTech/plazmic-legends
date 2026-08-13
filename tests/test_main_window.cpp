@@ -27,6 +27,7 @@
 #include <QMenuBar>
 #include <QMouseEvent>
 #include <QProgressBar>
+#include <QStatusBar>
 #include <QTableWidget>
 #include <QTableView>
 #include <QTemporaryDir>
@@ -142,6 +143,14 @@ int main(int argc, char** argv) {
             window.findChild<QAction*>("export-inventory-action");
         QAction* retain_history_action =
             window.findChild<QAction*>("retain-combat-history-action");
+        QAction* import_inventory_action =
+            window.findChild<QAction*>("import-inventory-action");
+        QAction* retain_activity_action =
+            window.findChild<QAction*>("retain-activity-history-action");
+        QAction* export_activity_action =
+            window.findChild<QAction*>("export-activity-action");
+        QAction* delete_activity_action =
+            window.findChild<QAction*>("delete-activity-action");
         require(
             menu_bar->actions().contains(user_menu->menuAction()) &&
                 menu_bar->actions().contains(views_menu->menuAction()) &&
@@ -156,14 +165,31 @@ int main(int argc, char** argv) {
                 user_menu->actions().contains(retain_history_action) &&
                 retain_history_action->isCheckable() &&
                 !retain_history_action->isChecked() &&
-                !window.combat_history_enabled(),
+                !window.combat_history_enabled() &&
+                import_inventory_action != nullptr &&
+                user_menu->actions().contains(import_inventory_action) &&
+                retain_activity_action != nullptr &&
+                retain_activity_action->isCheckable() &&
+                !retain_activity_action->isChecked() &&
+                !window.activity_history_enabled() &&
+                export_activity_action != nullptr &&
+                !export_activity_action->isEnabled() &&
+                delete_activity_action != nullptr &&
+                !delete_activity_action->isEnabled(),
             "User actions or Views menu hierarchy is incomplete");
         retain_history_action->trigger();
+        retain_activity_action->trigger();
+        auto immediate_retention =
+            plazmic::UiSettings(settings_path).load();
+        require(immediate_retention &&
+                    immediate_retention->activity_history_enabled &&
+                    window.activity_history_enabled(),
+                "activity retention opt-in was not persisted immediately");
+        retain_activity_action->trigger();
         require(retain_history_action->isChecked() &&
                     window.combat_history_enabled(),
                 "retention action did not update the window state");
-        auto immediate_retention =
-            plazmic::UiSettings(settings_path).load();
+        immediate_retention = plazmic::UiSettings(settings_path).load();
         require(immediate_retention &&
                     immediate_retention->combat_history_enabled,
                 "retention opt-in was not persisted immediately");
@@ -173,6 +199,23 @@ int main(int argc, char** argv) {
                     !immediate_retention->combat_history_enabled,
                 "retention opt-out was not persisted immediately");
         retain_history_action->trigger();
+        {
+            plazmic::MainWindow failed_preference_window(
+                snapshot, "/proc/plazmic-legends-test/config.toml", true);
+            auto* failed_activity_action =
+                failed_preference_window.findChild<QAction*>(
+                    "retain-activity-history-action");
+            require(failed_activity_action != nullptr,
+                    "failed-preference activity action is missing");
+            failed_activity_action->trigger();
+            require(!failed_activity_action->isChecked() &&
+                        !failed_preference_window.activity_history_enabled() &&
+                        failed_preference_window.statusBar()
+                                ->currentMessage()
+                                .contains("could not be saved"),
+                    "failed activity preference save was not surfaced and "
+                    "rolled back");
+        }
         QWidget* window_controls =
             menu_bar->cornerWidget(Qt::TopRightCorner);
         require(window_controls != nullptr &&
@@ -204,13 +247,18 @@ int main(int argc, char** argv) {
         auto* character_dock =
             window.findChild<QDockWidget*>("character-dock");
         auto* parse_dock = window.findChild<QDockWidget*>("parse-dock");
+        auto* activity_dock =
+            window.findChild<QDockWidget*>("activity-dock");
         auto* spawn_dock = window.findChild<QDockWidget*>("spawn-dock");
         auto* detail_dock = window.findChild<QDockWidget*>("detail-dock");
         require(character_dock != nullptr && parse_dock != nullptr &&
+                    activity_dock != nullptr &&
                     spawn_dock != nullptr && detail_dock != nullptr &&
                     window.dockWidgetArea(character_dock) ==
                         Qt::LeftDockWidgetArea &&
                     window.dockWidgetArea(parse_dock) ==
+                        Qt::LeftDockWidgetArea &&
+                    window.dockWidgetArea(activity_dock) ==
                         Qt::LeftDockWidgetArea &&
                     character_dock->geometry().top() <
                         parse_dock->geometry().top(),
@@ -236,27 +284,33 @@ int main(int argc, char** argv) {
                     detail_dock->geometry().top(),
             "Details is not below the map and Spawns with a full-height "
             "Character/Parse column");
-        const std::array<std::pair<const char*, QDockWidget*>, 4>
+        const std::array<std::pair<const char*, QDockWidget*>, 5>
             view_actions{
                 std::pair{"view-character-action", character_dock},
                 std::pair{"view-parse-action", parse_dock},
+                std::pair{"view-activity-action", activity_dock},
                 std::pair{"view-spawns-action", spawn_dock},
                 std::pair{"view-details-action", detail_dock},
             };
         for (const auto& [action_name, dock] : view_actions) {
             QAction* action =
                 window.findChild<QAction*>(action_name);
-            require(action != nullptr && dock != nullptr &&
-                        views_menu->actions().contains(action) &&
+            require(action != nullptr && dock != nullptr,
+                    std::string(action_name) + " has no dock or action");
+            dock->raise();
+            process_events();
+            require(views_menu->actions().contains(action) &&
                         action->isCheckable() && action->isChecked(),
                     std::string(action_name) +
                         " is missing from Views or not checked");
             action->trigger();
+            dock->raise();
             process_events();
             require(!dock->isVisible() && !action->isChecked(),
                     std::string(action_name) +
                         " did not hide its view");
             action->trigger();
+            dock->raise();
             process_events();
             require(dock->isVisible() && action->isChecked(),
                     std::string(action_name) +
@@ -267,6 +321,7 @@ int main(int argc, char** argv) {
                     std::string(action_name) +
                         " did not track a closed dock");
             action->trigger();
+            dock->raise();
             process_events();
             require(dock->isVisible() && action->isChecked(),
                     std::string(action_name) +
@@ -308,6 +363,8 @@ int main(int argc, char** argv) {
             .name = "synthetic_character",
             .health = {.current = 90, .maximum = 100},
             .mana = {.current = 40, .maximum = 50},
+            .alternate_advancement_percent = std::nullopt,
+            .alternate_advancement_points = std::nullopt,
             .equipment =
                 {
                     {.slot = "Head", .item = "Synthetic Helm"},
@@ -465,6 +522,189 @@ int main(int argc, char** argv) {
                         ->text()
                         .contains("1 completed"),
                 "combat analytics tabs did not render history and healing");
+        plazmic::ActivityAnalyticsSnapshot activity;
+        activity.storage_key =
+            "0123456789abcdef0123456789abcdef";
+        activity.events.push_back({
+            .kind = plazmic::ActivityEventKind::experience,
+            .timestamp_unix_seconds = 1,
+            .zone = "synthetic_zone",
+            .label = "Experience gained",
+            .amount = 0.125,
+            .total = std::nullopt,
+            .evidence = "Synthetic exact log percentage",
+            .source_id = {},
+        });
+        activity.events.push_back({
+            .kind = plazmic::ActivityEventKind::loot,
+            .timestamp_unix_seconds = 2,
+            .zone = "synthetic_zone",
+            .label = "Synthetic Gem",
+            .amount = 1.0,
+            .total = std::nullopt,
+            .evidence = "Synthetic exact loot line",
+            .source_id = {},
+        });
+        activity.events.push_back({
+            .kind = plazmic::ActivityEventKind::alternate_advancement,
+            .timestamp_unix_seconds = 3,
+            .zone = "synthetic_zone",
+            .label = "Alternate Advancement points gained",
+            .amount = 2.0,
+            .total = 42U,
+            .evidence = "Synthetic exact AA total",
+            .source_id = {},
+        });
+        activity.abilities.push_back({
+            .name = "Synthetic Burst",
+            .category = "Spell",
+            .damage = 500,
+            .observations = 2,
+            .confidence = "Observed; proc unconfirmed",
+        });
+        activity.experience_percent = 0.125;
+        activity.experience_percent_per_hour = 0.25;
+        activity.level_pace_hours = 400.0;
+        activity.alternate_advancement_percent = 66.48;
+        activity.alternate_advancement_points = 42;
+        activity.alternate_advancement_points_per_hour = 1.0;
+        activity.next_alternate_advancement_hours = 1.0;
+        activity.recent_loot_count = 1;
+        activity.available = true;
+        activity.detail = "Synthetic activity";
+        auto changed_activity = activity;
+        changed_activity.events.front().amount = 0.250;
+        require(changed_activity != activity &&
+                    !plazmic::same_activity_export_payload(
+                        changed_activity, activity),
+                "activity export consistency ignored changed bounded data");
+        auto derived_activity = activity;
+        derived_activity.experience_percent_per_hour = 0.5;
+        derived_activity.level_pace_hours = 200.0;
+        require(derived_activity != activity &&
+                    plazmic::same_activity_export_payload(
+                        derived_activity, activity),
+                "derived activity fields invalidated an unchanged export");
+        window.update_activity_snapshot(activity);
+        require(window.findChild<QTableWidget*>("activity-events")
+                            ->rowCount() == 3 &&
+                    window.findChild<QTableWidget*>("activity-events")
+                            ->item(0, 2)
+                            ->text()
+                            .contains("(2 points; total 42)") &&
+                    window.findChild<QTableWidget*>("activity-abilities")
+                            ->rowCount() == 1 &&
+                    window.findChild<QLabel*>("activity-overview")
+                            ->text()
+                            .contains("AA: 66.480% | banked: 42") &&
+                    window.findChild<QLabel*>("activity-overview")
+                            ->text()
+                            .contains("recent loot: 1") &&
+                    export_activity_action->isEnabled() &&
+                    delete_activity_action->isEnabled() &&
+                    window.findChild<QTableWidget*>(
+                               "inventory-reconciliation") != nullptr &&
+                    window.findChild<QLabel*>("activity-overview")
+                            ->textFormat() == Qt::PlainText &&
+                    window.findChild<QLabel*>(
+                               "inventory-reconciliation-state")
+                            ->textFormat() == Qt::PlainText,
+                "progression, activity, or inventory views did not render");
+        auto* activity_events =
+            window.findChild<QTableWidget*>("activity-events");
+        auto* activity_abilities =
+            window.findChild<QTableWidget*>("activity-abilities");
+        auto* retained_event_item = activity_events->item(0, 2);
+        auto* retained_ability_item = activity_abilities->item(0, 2);
+        window.update_activity_snapshot(derived_activity);
+        require(activity_events->item(0, 2) == retained_event_item &&
+                    activity_abilities->item(0, 2) == retained_ability_item &&
+                    window.findChild<QLabel*>("activity-overview")
+                        ->text()
+                        .contains("0.500%/h"),
+                "derived refresh rebuilt unchanged activity tables or left "
+                "the overview stale");
+        auto retained_but_hidden = plazmic::ActivityAnalyticsSnapshot{};
+        retained_but_hidden.storage_key = "confirmed-partition";
+        retained_but_hidden.available = true;
+        window.update_activity_snapshot(retained_but_hidden);
+        require(delete_activity_action->isEnabled(),
+                "confirmed retained partition was not deletable when hidden");
+        window.update_activity_snapshot(activity);
+        retain_activity_action->trigger();
+        require(!window.queue_activity_history_deletion(
+                    activity.storage_key) &&
+                    retain_activity_action->isChecked() &&
+                    delete_activity_action->isEnabled() &&
+                    window.statusBar()->currentMessage().contains(
+                        "deletion is unavailable"),
+                "missing deletion callback changed retention or queued work");
+        auto unknown_aa_activity = activity;
+        unknown_aa_activity.alternate_advancement_percent.reset();
+        unknown_aa_activity.alternate_advancement_points.reset();
+        window.update_activity_snapshot(unknown_aa_activity);
+        require(window.findChild<QLabel*>("activity-overview")
+                    ->text()
+                    .contains("AA: unavailable | banked: unavailable"),
+                "unknown AA state was rendered as a real zero");
+        auto incompatible_activity = activity;
+        incompatible_activity.events.clear();
+        incompatible_activity.abilities.clear();
+        incompatible_activity.persisted = false;
+        incompatible_activity.detail =
+            "Stored activity uses an unsupported or invalid schema";
+        window.update_activity_snapshot(incompatible_activity);
+        require(delete_activity_action->isEnabled(),
+                "incompatible activity partition could not be deleted");
+        auto unavailable_activity = incompatible_activity;
+        unavailable_activity.persisted = true;
+        unavailable_activity.available = false;
+        unavailable_activity.storage_key.clear();
+        unavailable_activity.detail = "Activity unavailable";
+        window.update_activity_snapshot(unavailable_activity);
+        require(!delete_activity_action->isEnabled() &&
+                    !export_activity_action->isEnabled() &&
+                    window.findChild<QTableWidget*>("activity-events")
+                            ->rowCount() == 0 &&
+                    window.findChild<QTableWidget*>("activity-abilities")
+                            ->rowCount() == 0,
+                "unavailable lifecycle state retained stale activity");
+        window.update_activity_snapshot(activity);
+        require(window.findChild<QTableWidget*>("activity-events")
+                            ->rowCount() == 3 &&
+                    export_activity_action->isEnabled(),
+                "recovered lifecycle state did not republish activity");
+        std::vector<std::string> deleted_activity_keys;
+        window.set_delete_activity_callback(
+            [&deleted_activity_keys](std::string key) {
+                deleted_activity_keys.push_back(std::move(key));
+            });
+        auto replacement_activity = activity;
+        replacement_activity.storage_key =
+            "fedcba9876543210fedcba9876543210";
+        window.update_activity_snapshot(replacement_activity);
+        require(!window.queue_activity_history_deletion(
+                    activity.storage_key) &&
+                    deleted_activity_keys.empty() &&
+                    delete_activity_action->isEnabled() &&
+                    window.statusBar()->currentMessage().contains(
+                        "partition changed"),
+                "activity deletion ignored a confirmed partition change");
+        window.update_activity_snapshot(activity);
+        require(window.queue_activity_history_deletion(activity.storage_key) &&
+                    deleted_activity_keys.size() == 1U &&
+                    deleted_activity_keys.front() == activity.storage_key &&
+                    !retain_activity_action->isChecked() &&
+                    !delete_activity_action->isEnabled(),
+                "confirmed activity deletion was not queued safely");
+        window.report_activity_deletion_result(activity.storage_key, true);
+        require(window.findChild<QTableWidget*>("activity-events")
+                            ->rowCount() == 0 &&
+                    window.findChild<QTableWidget*>("activity-abilities")
+                            ->rowCount() == 0 &&
+                    !export_activity_action->isEnabled() &&
+                    !delete_activity_action->isEnabled(),
+                "successful activity deletion retained exportable UI data");
         auto* history_table =
             window.findChild<QTableWidget*>("combat-history");
         require(history_table->selectionMode() ==
@@ -524,14 +764,65 @@ int main(int argc, char** argv) {
                     window.findChild<QTableWidget*>("parse-table")
                             ->rowCount() == 2,
                 "completed encounter did not clear current DPS or retain parse");
+        window.update_inventory_reconciliation(
+            {
+                .entries = {{.location = "General1",
+                             .item = "Synthetic Helm",
+                             .quantity = 1}},
+                .equipped_not_in_import = {},
+                .imported_equipped_items = {"Head: Synthetic Helm"},
+                .source_name = "synthetic-inventory.txt",
+                .detail = "Synthetic inventory",
+                .available = true,
+            },
+            "/synthetic/inventory.txt");
+        require(window.findChild<QTableWidget*>("inventory-reconciliation")
+                            ->rowCount() == 1,
+                "available inventory reconciliation did not render");
+        window.update_inventory_reconciliation(
+            {
+                .entries = {},
+                .equipped_not_in_import = {},
+                .imported_equipped_items = {},
+                .source_name = {},
+                .detail = "Synthetic inventory read failed",
+                .available = false,
+            },
+            {});
+        require(window.findChild<QTableWidget*>("inventory-reconciliation")
+                            ->rowCount() == 0 &&
+                    window.findChild<QLabel*>(
+                               "inventory-reconciliation-state")
+                        ->text()
+                        .contains("Synthetic inventory read failed"),
+                "failed inventory import retained stale rows or lost detail");
+        window.update_inventory_reconciliation(
+            {
+                .entries = {{.location = "General1",
+                             .item = "Synthetic Helm",
+                             .quantity = 1}},
+                .equipped_not_in_import = {},
+                .imported_equipped_items = {"Head: Synthetic Helm"},
+                .source_name = "synthetic-inventory.txt",
+                .detail = "Synthetic inventory",
+                .available = true,
+            },
+            "/synthetic/inventory.txt");
         window.update_character_snapshot({});
         require(!export_inventory_action->isEnabled(),
                 "unavailable character data left inventory export enabled");
         require(window.findChild<QProgressBar*>("character-health")->text() ==
                     "HP unavailable" &&
                     window.findChild<QProgressBar*>("character-mana")->text() ==
-                        "MP unavailable",
-                "unavailable character vitals were rendered as zero");
+                        "MP unavailable" &&
+                    window.findChild<QTableWidget*>(
+                               "inventory-reconciliation")
+                            ->rowCount() == 0 &&
+                    window.findChild<QLabel*>(
+                               "inventory-reconciliation-state")
+                        ->text()
+                        .contains("became unavailable"),
+                "unavailable character retained vitals or imported inventory");
 
         plazmic::CombatEncounterSnapshot large_combat{
             .state = plazmic::CombatEncounterState::active,

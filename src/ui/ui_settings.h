@@ -24,6 +24,7 @@ struct UiState {
     bool npc_spawns_visible{true};
     bool other_spawns_visible{true};
     bool combat_history_enabled{false};
+    bool activity_history_enabled{false};
     QString spawn_filter;
     int spawn_type_filter{-1};
     int spawn_sort_column{3};

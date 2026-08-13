@@ -20,11 +20,15 @@ struct VitalSnapshot {
         return static_cast<double>(current) * 100.0 /
                static_cast<double>(*maximum);
     }
+
+    bool operator==(const VitalSnapshot&) const = default;
 };
 
 struct EquipmentSlotSnapshot {
     std::string slot;
     std::string item;
+
+    bool operator==(const EquipmentSlotSnapshot&) const = default;
 };
 
 struct CharacterSnapshot {
@@ -32,12 +36,16 @@ struct CharacterSnapshot {
     std::string name;
     VitalSnapshot health;
     VitalSnapshot mana;
+    std::optional<double> alternate_advancement_percent;
+    std::optional<std::uint32_t> alternate_advancement_points;
     std::vector<EquipmentSlotSnapshot> equipment;
     std::string detail{"Character information unavailable"};
 
     [[nodiscard]] bool available() const {
         return state == PlayerSnapshotState::in_world;
     }
+
+    bool operator==(const CharacterSnapshot&) const = default;
 };
 
 }  // namespace plazmic

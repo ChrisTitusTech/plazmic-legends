@@ -53,6 +53,14 @@ GPL-3.0-only with the Qt exception, and the package continues to use the system
 shared library. Removing Qt Core now also requires replacing the bounded
 history serializer, privacy-key derivation, and atomic persistence layer.
 
+## Phase 9 update
+
+The activity store and export reuse the existing Qt Core JSON, permission, and
+atomic-save APIs; the Activity dock and inventory file dialog reuse Qt Widgets.
+No new library or package dependency is introduced. Removing Phase 9 removes
+`activity_tracker`, its model and tests, the Activity dock, and its User-menu
+actions without changing the Phase 8 dependency inventory.
+
 ## ShowEQ provenance boundary
 
 The ShowEQ 6.4.25 checkout was used only to identify useful product concepts:

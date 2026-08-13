@@ -1,5 +1,6 @@
 #include "ui/main_window.h"
 
+#include "activity/activity_tracker.h"
 #include "game/combat_history_store.h"
 
 #include "ui/character_profile_exporter.h"
@@ -11,6 +12,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <filesystem>
 #include <ranges>
 #include <utility>
 
@@ -40,6 +42,7 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QScreen>
+#include <QSignalBlocker>
 #include <QStatusBar>
 #include <QStyle>
 #include <QTableWidget>
@@ -55,6 +58,28 @@ namespace {
 
 constexpr std::size_t kMaximumCombatAbilityRows =
     CombatHistoryStore::maximum_total_abilities;
+
+QString activity_kind_label(ActivityEventKind kind) {
+    switch (kind) {
+        case ActivityEventKind::experience:
+            return "XP";
+        case ActivityEventKind::alternate_advancement:
+            return "AA";
+        case ActivityEventKind::loot:
+            return "Loot";
+        case ActivityEventKind::equipment_change:
+            return "Equipment";
+        case ActivityEventKind::celebration:
+            return "Celebration";
+    }
+    return "Activity";
+}
+
+bool same_inventory_context(const CharacterSnapshot& left,
+                            const CharacterSnapshot& right) {
+    return left.state == right.state && left.name == right.name &&
+           left.equipment == right.equipment;
+}
 
 QDockWidget* create_dock(const QString& title,
                          const QString& object_name,
@@ -330,6 +355,89 @@ void MainWindow::build_ui() {
     addDockWidget(Qt::LeftDockWidgetArea, parse_dock);
     splitDockWidget(character_dock, parse_dock, Qt::Vertical);
 
+    auto* activity_container = new QWidget;
+    auto* activity_layout = new QVBoxLayout(activity_container);
+    activity_layout->setContentsMargins(6, 6, 6, 6);
+    activity_overview_ = new QLabel(
+        "Waiting for progression or activity events");
+    activity_overview_->setObjectName("activity-overview");
+    activity_overview_->setTextFormat(Qt::PlainText);
+    activity_overview_->setWordWrap(true);
+    activity_layout->addWidget(activity_overview_);
+    auto* activity_tabs = new QTabWidget;
+    activity_tabs->setObjectName("activity-tabs");
+
+    activity_events_ = new QTableWidget;
+    activity_events_->setObjectName("activity-events");
+    activity_events_->setColumnCount(4);
+    activity_events_->setHorizontalHeaderLabels(
+        {"Type", "Zone", "Activity", "Evidence"});
+    activity_events_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    activity_events_->setAlternatingRowColors(true);
+    activity_events_->verticalHeader()->setVisible(false);
+    activity_events_->horizontalHeader()->setSectionResizeMode(
+        0, QHeaderView::ResizeToContents);
+    activity_events_->horizontalHeader()->setSectionResizeMode(
+        1, QHeaderView::ResizeToContents);
+    activity_events_->horizontalHeader()->setSectionResizeMode(
+        2, QHeaderView::Stretch);
+    activity_events_->horizontalHeader()->setSectionResizeMode(
+        3, QHeaderView::Stretch);
+    activity_tabs->addTab(activity_events_, "Progression / Loot");
+
+    activity_abilities_ = new QTableWidget;
+    activity_abilities_->setObjectName("activity-abilities");
+    activity_abilities_->setColumnCount(5);
+    activity_abilities_->setHorizontalHeaderLabels(
+        {"Ability", "Type", "Damage", "Observations", "Confidence"});
+    activity_abilities_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    activity_abilities_->setAlternatingRowColors(true);
+    activity_abilities_->verticalHeader()->setVisible(false);
+    activity_abilities_->horizontalHeader()->setSectionResizeMode(
+        0, QHeaderView::Stretch);
+    activity_abilities_->horizontalHeader()->setSectionResizeMode(
+        1, QHeaderView::ResizeToContents);
+    activity_abilities_->horizontalHeader()->setSectionResizeMode(
+        2, QHeaderView::ResizeToContents);
+    activity_abilities_->horizontalHeader()->setSectionResizeMode(
+        3, QHeaderView::ResizeToContents);
+    activity_abilities_->horizontalHeader()->setSectionResizeMode(
+        4, QHeaderView::Stretch);
+    activity_tabs->addTab(activity_abilities_, "Class / Proc Evidence");
+
+    auto* inventory_container = new QWidget;
+    auto* inventory_layout = new QVBoxLayout(inventory_container);
+    inventory_layout->setContentsMargins(0, 0, 0, 0);
+    inventory_state_ = new QLabel(
+        "Select User > Import Inventory Output to reconcile a local file");
+    inventory_state_->setObjectName("inventory-reconciliation-state");
+    inventory_state_->setTextFormat(Qt::PlainText);
+    inventory_state_->setWordWrap(true);
+    inventory_layout->addWidget(inventory_state_);
+    inventory_reconciliation_ = new QTableWidget;
+    inventory_reconciliation_->setObjectName("inventory-reconciliation");
+    inventory_reconciliation_->setColumnCount(3);
+    inventory_reconciliation_->setHorizontalHeaderLabels(
+        {"Location", "Item", "Quantity"});
+    inventory_reconciliation_->setEditTriggers(
+        QAbstractItemView::NoEditTriggers);
+    inventory_reconciliation_->setAlternatingRowColors(true);
+    inventory_reconciliation_->verticalHeader()->setVisible(false);
+    inventory_reconciliation_->horizontalHeader()->setSectionResizeMode(
+        0, QHeaderView::ResizeToContents);
+    inventory_reconciliation_->horizontalHeader()->setSectionResizeMode(
+        1, QHeaderView::Stretch);
+    inventory_reconciliation_->horizontalHeader()->setSectionResizeMode(
+        2, QHeaderView::ResizeToContents);
+    inventory_layout->addWidget(inventory_reconciliation_);
+    activity_tabs->addTab(inventory_container, "Inventory");
+    activity_layout->addWidget(activity_tabs, 1);
+    auto* activity_dock = create_dock(
+        "Activity", "activity-dock", activity_container, this);
+    addDockWidget(Qt::LeftDockWidgetArea, activity_dock);
+    tabifyDockWidget(parse_dock, activity_dock);
+    parse_dock->raise();
+
     auto* spawn_container = new QWidget;
     auto* spawn_layout = new QVBoxLayout(spawn_container);
     spawn_state_ = new QLabel("Waiting for live spawn data");
@@ -381,7 +489,8 @@ void MainWindow::build_ui() {
     setCorner(Qt::BottomLeftCorner, Qt::LeftDockWidgetArea);
     setCorner(Qt::BottomRightCorner, Qt::BottomDockWidgetArea);
 
-    build_menu_bar(character_dock, parse_dock, spawn_dock, detail_dock);
+    build_menu_bar(character_dock, parse_dock, activity_dock,
+                   spawn_dock, detail_dock);
 
     connect(
         spawn_filter_, &QLineEdit::textChanged, spawn_proxy_,
@@ -477,8 +586,157 @@ void MainWindow::open_inventory_export() {
             .arg(result.equipped_items));
 }
 
+void MainWindow::open_inventory_import() {
+    const QString source = QFileDialog::getOpenFileName(
+        this, "Import EverQuest Inventory Output", QDir::homePath(),
+        "EverQuest inventory output (*.txt);;All files (*)");
+    if (source.isEmpty()) {
+        return;
+    }
+    const InventoryReconciliationSnapshot imported =
+        import_inventory_output(
+            std::filesystem::path(source.toStdString()),
+            character_snapshot_);
+    if (!imported.available) {
+        update_inventory_reconciliation(imported, {});
+        QMessageBox::warning(
+            this, "Import Inventory Output",
+            QString::fromStdString(imported.detail));
+        return;
+    }
+    update_inventory_reconciliation(imported, source);
+}
+
+void MainWindow::update_inventory_reconciliation(
+    InventoryReconciliationSnapshot snapshot,
+    QString source_path) {
+    if (!snapshot.available || source_path.isEmpty()) {
+        snapshot.entries.clear();
+        snapshot.equipped_not_in_import.clear();
+        snapshot.imported_equipped_items.clear();
+        snapshot.source_name.clear();
+        snapshot.available = false;
+        if (snapshot.detail.empty()) {
+            snapshot.detail = "Inventory import is unavailable";
+        }
+        inventory_path_.clear();
+        inventory_character_name_.clear();
+        render_inventory_reconciliation(snapshot);
+        return;
+    }
+    inventory_path_ = std::move(source_path);
+    inventory_character_name_ = character_snapshot_.available()
+                                    ? character_snapshot_.name
+                                    : std::string{};
+    render_inventory_reconciliation(snapshot);
+}
+
+void MainWindow::export_activity_history() {
+    if (activity_analytics_.events.empty() &&
+        activity_analytics_.abilities.empty()) {
+        QMessageBox::information(
+            this, "Export Activity History",
+            "No progression, loot, equipment, or ability observations are "
+            "available to export.");
+        return;
+    }
+    const ActivityAnalyticsSnapshot snapshot_for_export = activity_analytics_;
+    const QString destination = QFileDialog::getSaveFileName(
+        this, "Export Activity History",
+        QDir::home().filePath("plazmic-activity.json"),
+        "Plazmic activity JSON (*.json)");
+    if (destination.isEmpty()) {
+        return;
+    }
+    if (!same_activity_export_payload(
+            snapshot_for_export, activity_analytics_)) {
+        QMessageBox::warning(
+            this, "Export Activity History",
+            "The displayed activity changed while choosing the export file. "
+            "Open Export Activity History again.");
+        return;
+    }
+    if (!save_activity_export(
+            std::filesystem::path(destination.toStdString()),
+            snapshot_for_export)) {
+        QMessageBox::critical(
+            this, "Export Activity History",
+            "The bounded owner-only activity export could not be saved.");
+        return;
+    }
+    QMessageBox::information(
+        this, "Export Activity History",
+        "Saved the currently displayed local activity observations.");
+}
+
+void MainWindow::delete_activity_history() {
+    const std::string selected_key = activity_analytics_.storage_key;
+    if (selected_key.empty()) {
+        return;
+    }
+    if (QMessageBox::question(
+            this, "Delete Activity History",
+            "Delete the selected character's retained progression, loot, "
+            "equipment, and ability observations? Retain Activity History "
+            "is also turned off. This cannot be undone.",
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::No) !=
+        QMessageBox::Yes) {
+        return;
+    }
+    (void)queue_activity_history_deletion(selected_key);
+}
+
+bool MainWindow::queue_activity_history_deletion(
+    std::string_view confirmed_key) {
+    if (activity_analytics_.storage_key != confirmed_key) {
+        statusBar()->showMessage(
+            "The selected activity partition changed while confirming; open "
+            "Delete Activity History again");
+        return false;
+    }
+    if (!delete_activity_callback_) {
+        statusBar()->showMessage(
+            "Activity history deletion is unavailable; retention was not "
+            "changed");
+        return false;
+    }
+    retain_activity_history_action_->setChecked(false);
+    if (retain_activity_history_action_->isChecked()) {
+        statusBar()->showMessage(
+            "Activity retention could not be turned off safely; deletion was "
+            "not queued");
+        return false;
+    }
+    delete_activity_callback_(std::string(confirmed_key));
+    delete_activity_action_->setEnabled(false);
+    return true;
+}
+
+void MainWindow::report_activity_deletion_result(std::string_view key,
+                                                 bool succeeded) {
+    if (succeeded) {
+        if (activity_analytics_.storage_key == key) {
+            statusBar()->clearMessage();
+            auto deleted = ActivityAnalyticsSnapshot{};
+            deleted.detail = "Activity history deleted";
+            update_activity_snapshot(deleted);
+        }
+        return;
+    }
+    const QString detail =
+        "Activity history deletion failed; the retained file remains on disk "
+        "and can be retried";
+    if (activity_analytics_.storage_key == key) {
+        statusBar()->showMessage(detail);
+        activity_analytics_.persisted = false;
+        activity_analytics_.detail = detail.toStdString();
+        update_activity_snapshot(activity_analytics_);
+    }
+}
+
 void MainWindow::build_menu_bar(QDockWidget* character_dock,
                                 QDockWidget* parse_dock,
+                                QDockWidget* activity_dock,
                                 QDockWidget* spawn_dock,
                                 QDockWidget* detail_dock) {
     QMenuBar* bar = menuBar();
@@ -492,6 +750,11 @@ void MainWindow::build_menu_bar(QDockWidget* character_dock,
     export_inventory_action_->setEnabled(false);
     connect(export_inventory_action_, &QAction::triggered,
             this, &MainWindow::open_inventory_export);
+    import_inventory_action_ =
+        user_menu->addAction("Import Inventory Output...");
+    import_inventory_action_->setObjectName("import-inventory-action");
+    connect(import_inventory_action_, &QAction::triggered,
+            this, &MainWindow::open_inventory_import);
     QAction* ui_install_action =
         user_menu->addAction("UI File Install...");
     ui_install_action->setObjectName("ui-file-install-action");
@@ -504,12 +767,32 @@ void MainWindow::build_menu_bar(QDockWidget* character_dock,
     retain_combat_history_action_->setCheckable(true);
     connect(retain_combat_history_action_, &QAction::toggled,
             this, [this]() { save_combat_history_preference(); });
+    retain_activity_history_action_ =
+        user_menu->addAction("Retain Activity History");
+    retain_activity_history_action_->setObjectName(
+        "retain-activity-history-action");
+    retain_activity_history_action_->setCheckable(true);
+    connect(retain_activity_history_action_, &QAction::toggled,
+            this, [this]() { save_activity_history_preference(); });
+    export_activity_action_ =
+        user_menu->addAction("Export Activity History...");
+    export_activity_action_->setObjectName("export-activity-action");
+    export_activity_action_->setEnabled(false);
+    connect(export_activity_action_, &QAction::triggered,
+            this, &MainWindow::export_activity_history);
+    delete_activity_action_ =
+        user_menu->addAction("Delete Activity History...");
+    delete_activity_action_->setObjectName("delete-activity-action");
+    delete_activity_action_->setEnabled(false);
+    connect(delete_activity_action_, &QAction::triggered,
+            this, &MainWindow::delete_activity_history);
 
     QMenu* views_menu = bar->addMenu("&Views");
     views_menu->setObjectName("views-menu");
-    const std::array<std::pair<QDockWidget*, QString>, 4> views{
+    const std::array<std::pair<QDockWidget*, QString>, 5> views{
         std::pair{character_dock, QString("view-character-action")},
         std::pair{parse_dock, QString("view-parse-action")},
+        std::pair{activity_dock, QString("view-activity-action")},
         std::pair{spawn_dock, QString("view-spawns-action")},
         std::pair{detail_dock, QString("view-details-action")},
     };
@@ -730,7 +1013,40 @@ void MainWindow::update_player_snapshot(const PlayerSnapshot& snapshot) {
 
 void MainWindow::update_character_snapshot(
     const CharacterSnapshot& snapshot) {
+    const bool inventory_character_changed =
+        !inventory_path_.isEmpty() &&
+        !inventory_character_name_.empty() &&
+        snapshot.available() && snapshot.name != inventory_character_name_;
+    const bool inventory_character_lost =
+        !inventory_path_.isEmpty() &&
+        !inventory_character_name_.empty() && !snapshot.available();
+    const bool inventory_character_arrived =
+        !inventory_path_.isEmpty() && inventory_character_name_.empty() &&
+        snapshot.available();
+    const bool inventory_reconcile_changed =
+        !inventory_path_.isEmpty() &&
+        !inventory_character_changed && !inventory_character_lost &&
+        (inventory_character_arrived ||
+         (!inventory_character_name_.empty() &&
+          !same_inventory_context(snapshot, character_snapshot_)));
     character_snapshot_ = snapshot;
+    if (inventory_character_changed || inventory_character_lost) {
+        inventory_character_name_.clear();
+        render_inventory_reconciliation({
+            .entries = {},
+            .equipped_not_in_import = {},
+            .imported_equipped_items = {},
+            .source_name = {},
+            .detail = inventory_character_lost
+                          ? "Inventory import cleared after the active "
+                            "character became unavailable"
+                          : "Inventory import cleared after the active "
+                            "character changed",
+            .available = false,
+        });
+    } else if (inventory_character_arrived) {
+        inventory_character_name_ = snapshot.name;
+    }
     export_inventory_action_->setEnabled(snapshot.available());
     equipment_table_->setRowCount(0);
     if (!snapshot.available()) {
@@ -738,6 +1054,12 @@ void MainWindow::update_character_snapshot(
             QString::fromStdString(snapshot.detail));
         set_vital_unavailable(health_bar_, "HP");
         set_vital_unavailable(mana_bar_, "MP");
+        if (inventory_reconcile_changed) {
+            render_inventory_reconciliation(reconcile_inventory_entries(
+                inventory_snapshot_.entries,
+                inventory_snapshot_.source_name,
+                character_snapshot_));
+        }
         return;
     }
     character_name_->setText(QString::fromStdString(snapshot.name));
@@ -756,6 +1078,166 @@ void MainWindow::update_character_snapshot(
                 equipment.item.empty()
                     ? QString::fromLatin1("Empty")
                     : QString::fromStdString(equipment.item)));
+    }
+    if (inventory_reconcile_changed) {
+        render_inventory_reconciliation(reconcile_inventory_entries(
+            inventory_snapshot_.entries,
+            inventory_snapshot_.source_name,
+            character_snapshot_));
+    }
+}
+
+void MainWindow::render_inventory_reconciliation(
+    const InventoryReconciliationSnapshot& snapshot) {
+    inventory_snapshot_ = snapshot;
+    if (!snapshot.available) {
+        inventory_path_.clear();
+        inventory_character_name_.clear();
+    }
+    inventory_reconciliation_->setRowCount(
+        static_cast<int>(snapshot.entries.size()));
+    for (std::size_t row = 0U; row < snapshot.entries.size(); ++row) {
+        const InventoryEntrySnapshot& entry = snapshot.entries[row];
+        const int table_row = static_cast<int>(row);
+        inventory_reconciliation_->setItem(
+            table_row, 0,
+            new QTableWidgetItem(QString::fromStdString(entry.location)));
+        inventory_reconciliation_->setItem(
+            table_row, 1,
+            new QTableWidgetItem(QString::fromStdString(entry.item)));
+        inventory_reconciliation_->setItem(
+            table_row, 2,
+            new QTableWidgetItem(QString::number(entry.quantity)));
+    }
+    QString detail = QString::fromStdString(snapshot.detail);
+    if (!snapshot.equipped_not_in_import.empty()) {
+        detail += QString(" | %1 equipped item(s) missing")
+                      .arg(static_cast<qulonglong>(
+                          snapshot.equipped_not_in_import.size()));
+    }
+    inventory_state_->setText(detail);
+}
+
+void MainWindow::update_activity_snapshot(
+    const ActivityAnalyticsSnapshot& analytics) {
+    const bool payload_changed =
+        !same_activity_export_payload(activity_analytics_, analytics);
+    activity_analytics_ = analytics;
+    const bool has_activity = !analytics.events.empty() ||
+                              !analytics.abilities.empty();
+    export_activity_action_->setEnabled(has_activity);
+    delete_activity_action_->setEnabled(
+        !analytics.storage_key.empty());
+    if (!analytics.available) {
+        activity_overview_->setText(QString::fromStdString(analytics.detail));
+        if (payload_changed) {
+            activity_events_->setRowCount(0);
+            activity_abilities_->setRowCount(0);
+        }
+        return;
+    }
+    const QString aa_total = analytics.alternate_advancement_points
+                                 ? QString::number(
+                                       *analytics.alternate_advancement_points)
+                                 : QString("unavailable");
+    const QString aa_progress = analytics.alternate_advancement_percent
+                                    ? QString::number(
+                                          *analytics.alternate_advancement_percent,
+                                          'f',
+                                          3) +
+                                          "%"
+                                    : QString("unavailable");
+    const QString level_pace = analytics.level_pace_hours
+                                   ? QString::number(
+                                         *analytics.level_pace_hours, 'f', 1) +
+                                         " h / 100%"
+                                   : QString("collecting");
+    const QString aa_eta = analytics.next_alternate_advancement_hours
+                               ? QString::number(
+                                     *analytics.next_alternate_advancement_hours,
+                                     'f', 1) +
+                                     " h"
+                               : QString("collecting");
+    QString overview =
+        QString("XP: %1% observed | %2%/h | pace %3 | AA: %4 | "
+                "banked: %5 | %6 points/h | next pace %7 | "
+                "recent loot: %8%9")
+            .arg(analytics.experience_percent, 0, 'f', 3)
+            .arg(analytics.experience_percent_per_hour, 0, 'f', 3)
+            .arg(level_pace)
+            .arg(aa_progress)
+            .arg(aa_total)
+            .arg(analytics.alternate_advancement_points_per_hour, 0, 'f', 2)
+            .arg(aa_eta)
+            .arg(analytics.recent_loot_count)
+            .arg(analytics.detail.empty()
+                     ? QString{}
+                     : QString(" | %1").arg(
+                           QString::fromStdString(analytics.detail)));
+    if (!analytics.class_activity_summary.empty()) {
+        overview += QString(" | %1").arg(QString::fromStdString(
+            analytics.class_activity_summary));
+    }
+    if (analytics.recent_celebration) {
+        overview += QString(" | Latest: %1").arg(
+            QString::fromStdString(*analytics.recent_celebration));
+    }
+    activity_overview_->setText(overview);
+
+    if (!payload_changed) {
+        return;
+    }
+
+    activity_events_->setRowCount(
+        static_cast<int>(analytics.events.size()));
+    for (std::size_t offset = 0U; offset < analytics.events.size(); ++offset) {
+        const std::size_t index = analytics.events.size() - offset - 1U;
+        const ActivityEventSnapshot& event = analytics.events[index];
+        const int row = static_cast<int>(offset);
+        activity_events_->setItem(
+            row, 0, new QTableWidgetItem(activity_kind_label(event.kind)));
+        activity_events_->setItem(
+            row, 1,
+            new QTableWidgetItem(QString::fromStdString(event.zone)));
+        QString label = QString::fromStdString(event.label);
+        if (event.kind == ActivityEventKind::experience) {
+            label += QString(" (%1%)").arg(event.amount, 0, 'f', 3);
+        } else if (event.kind ==
+                       ActivityEventKind::alternate_advancement &&
+                   event.total) {
+            label += QString(" (%1 %2; total %3)")
+                         .arg(event.amount, 0, 'f', 0)
+                         .arg(event.amount == 1.0 ? "point" : "points")
+                         .arg(*event.total);
+        } else if (event.total) {
+            label += QString(" (total %1)").arg(*event.total);
+        }
+        activity_events_->setItem(row, 2, new QTableWidgetItem(label));
+        activity_events_->setItem(
+            row, 3,
+            new QTableWidgetItem(QString::fromStdString(event.evidence)));
+    }
+
+    activity_abilities_->setRowCount(
+        static_cast<int>(analytics.abilities.size()));
+    for (std::size_t row = 0U; row < analytics.abilities.size(); ++row) {
+        const AbilityActivitySnapshot& ability = analytics.abilities[row];
+        const int table_row = static_cast<int>(row);
+        activity_abilities_->setItem(
+            table_row, 0,
+            new QTableWidgetItem(QString::fromStdString(ability.name)));
+        activity_abilities_->setItem(
+            table_row, 1,
+            new QTableWidgetItem(QString::fromStdString(ability.category)));
+        activity_abilities_->setItem(
+            table_row, 2,
+            new QTableWidgetItem(QString::number(ability.damage)));
+        activity_abilities_->setItem(
+            table_row, 3,
+            new QTableWidgetItem(QString::number(ability.observations)));
+        activity_abilities_->setItem(
+            table_row, 4,
+            new QTableWidgetItem(QString::fromStdString(ability.confidence)));
     }
 }
 
@@ -1072,6 +1554,8 @@ void MainWindow::restore_ui_state() {
                 : Qt::AscendingOrder);
         retain_combat_history_action_->setChecked(
             state->combat_history_enabled);
+        retain_activity_history_action_->setChecked(
+            state->activity_history_enabled);
     }
     QTimer::singleShot(0, this, [this]() { ensure_on_screen(); });
 }
@@ -1096,7 +1580,7 @@ void MainWindow::ensure_on_screen() {
     move(available.center() - rect().center());
 }
 
-void MainWindow::save_ui_state() {
+bool MainWindow::save_ui_state() {
     std::array<int, 4> column_widths{};
     for (int column = 0;
          column < SpawnTableModel::column_count; ++column) {
@@ -1135,6 +1619,7 @@ void MainWindow::save_ui_state() {
         .other_spawns_visible =
             map_canvas_->other_spawns_visible(),
         .combat_history_enabled = combat_history_enabled(),
+        .activity_history_enabled = activity_history_enabled(),
         .spawn_filter = spawn_filter_->text(),
         .spawn_type_filter = type_filter,
         .spawn_sort_column = header->sortIndicatorSection(),
@@ -1142,22 +1627,49 @@ void MainWindow::save_ui_state() {
             header->sortIndicatorOrder() == Qt::DescendingOrder,
         .spawn_column_widths = column_widths,
     };
-    (void)settings_.save(state);
+    return settings_.save(state);
 }
 
 void MainWindow::save_combat_history_preference() {
     auto state = settings_.load();
     if (!state) {
-        save_ui_state();
+        (void)save_ui_state();
         return;
     }
     state->combat_history_enabled = combat_history_enabled();
     (void)settings_.save(*state);
 }
 
+void MainWindow::save_activity_history_preference() {
+    const bool requested = activity_history_enabled();
+    auto state = settings_.load();
+    bool saved = false;
+    bool previous = !requested;
+    if (!state) {
+        saved = save_ui_state();
+    } else {
+        previous = state->activity_history_enabled;
+        state->activity_history_enabled = requested;
+        saved = settings_.save(*state);
+    }
+    if (saved) {
+        return;
+    }
+    const QSignalBlocker blocker(retain_activity_history_action_);
+    retain_activity_history_action_->setChecked(previous);
+    statusBar()->showMessage(
+        "Activity retention preference could not be saved; the previous "
+        "setting was restored");
+}
+
 bool MainWindow::combat_history_enabled() const {
     return retain_combat_history_action_ != nullptr &&
            retain_combat_history_action_->isChecked();
+}
+
+bool MainWindow::activity_history_enabled() const {
+    return retain_activity_history_action_ != nullptr &&
+           retain_activity_history_action_->isChecked();
 }
 
 void MainWindow::changeEvent(QEvent* event) {
@@ -1168,7 +1680,7 @@ void MainWindow::changeEvent(QEvent* event) {
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
-    save_ui_state();
+    (void)save_ui_state();
     QMainWindow::closeEvent(event);
     QCoreApplication::quit();
 }

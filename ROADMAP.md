@@ -525,7 +525,7 @@ true game-target source requires its own exact-profile input checkpoint.
 
 - Private log content remains local; diagnostics and tests use synthetic names.
 - Histories have explicit count, byte, age, and persistence bounds. They are
-  partitioned by a stable privacy-preserving local character key, survive
+  partitioned by a stable opaque character-and-selected-log key, survive
   append, truncation, rotation, zoning, and restart, and restore only the newly
   selected character's partition after a switch.
 - Focused parser/model/UI tests, full gates, performance limits, privacy audit,
@@ -550,18 +550,20 @@ recent-drop and XP/AA rate/ETA cards to the overview using those Phase 9 data
 contracts.
 
 Phase 9 inputs are bounded lines from the active character's local log, the
-existing immutable text-equipment snapshot, and an explicitly selected local
-EverQuest inventory-output file. Class, proc, and upgrade conclusions carry
+existing immutable text-equipment snapshot, the exact-profile optional AA
+snapshot approved by `docs/research/phase9-aa-memory-checkpoint.md`, and an
+explicitly selected local EverQuest inventory-output file. Class, proc, and
+upgrade conclusions carry
 their evidence/confidence instead of being guessed. Raid-target
 classification is not part of this phase because these inputs provide no
-authoritative roster. No new process-memory field, network source, or bundled
+authoritative roster. No other process-memory field, network source, or bundled
 game database is approved by this phase; one requires a separately documented
 input checkpoint before implementation.
 
 ### Risks, exit criteria, and validation
 
-- Character separation uses a privacy-preserving stable local key and never
-  writes names to diagnostics.
+- Character and server separation uses a stable opaque
+  character-and-selected-log key and never writes names to diagnostics.
 - Stored activity is schema-versioned, capped, recoverable, and exportable or
   deletable by the user.
 - Synthetic activity, migration, corruption, lifecycle, UI, performance,

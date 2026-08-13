@@ -98,18 +98,22 @@ review. It does not authorize merging or releasing the pull requests.
 
 - [x] Add bounded fight/zone history, drill-down, timelines, healing, and
   overview summaries under `AC-20`.
-- [x] Partition persisted history by a stable privacy-preserving local
-  character key and test switch-away, switch-back, and restart restoration.
+- [x] Partition persisted history by a stable opaque character-and-selected-log
+  key and test switch-away, switch-back, and restart restoration.
 - [ ] Complete focused, full, privacy, performance, installed, review, CI, and
   thread-resolution gates in a separate pull request.
 
 ### Phase 9: Progression, loot, inventory, and class activity
 
-- [ ] Add per-character XP/AA history, loot/inventory reconciliation,
-  class-combination/proc/upgrade insights, and celebrations.
-- [ ] Limit Phase 9 inputs to bounded active-log events, existing immutable
-  equipment, and an explicitly selected local inventory-output file; record a
-  separate checkpoint before adding any other source.
+- [x] Add per-character XP/AA history, loot/inventory reconciliation,
+  equipment-change observations, bounded derived rates, and celebrations.
+- [ ] Add class-combination, proc, and upgrade insights only after their
+  validated catalogs and evidence rules are implemented under `AC-21`.
+- [x] Limit Phase 9 inputs to bounded active-log events, existing immutable
+  equipment, the exact-profile optional AA snapshot approved in
+  `docs/research/phase9-aa-memory-checkpoint.md`, and an explicitly selected
+  local inventory-output file; record a separate checkpoint before adding any
+  other source.
 - [ ] Complete schema, lifecycle, migration, privacy, installed, review, CI,
   and thread-resolution gates in a separate pull request under `AC-21`.
 

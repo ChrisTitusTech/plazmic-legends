@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cmath>
 #include <cstring>
 #include <limits>
 #include <span>
@@ -188,6 +189,12 @@ std::optional<std::uintptr_t> resolve_profile(
 }
 
 bool valid_profile(const CharacterSymbols& symbols) {
+    const bool progression_profile_valid =
+        symbols.progression_cache_rva == 0U ||
+        (symbols.alternate_advancement_percent_offset <= 4096U &&
+         symbols.alternate_advancement_points_offset <= 4096U &&
+         symbols.alternate_advancement_percent_offset !=
+             symbols.alternate_advancement_points_offset);
     return symbols.local_character_pointer_rva != 0U &&
            symbols.player_name_bytes > 0U &&
            symbols.player_name_bytes <= 128U &&
@@ -200,7 +207,7 @@ bool valid_profile(const CharacterSymbols& symbols) {
            symbols.inventory_maximum_slots >= kEquipmentSlots.size() &&
            symbols.inventory_maximum_slots <= 256U &&
            symbols.item_name_bytes > 0U &&
-           symbols.item_name_bytes <= 128U;
+           symbols.item_name_bytes <= 128U && progression_profile_valid;
 }
 
 }  // namespace
@@ -418,6 +425,34 @@ CharacterReadResult read_character_snapshot(
         });
     }
 
+    std::optional<double> alternate_advancement_percent;
+    std::optional<std::uint32_t> alternate_advancement_points;
+    std::uintptr_t progression_cache = 0U;
+    std::string progression_detail;
+    if (symbols.progression_cache_rva != 0U &&
+        checked_add(process.image_base,
+                    symbols.progression_cache_rva,
+                    progression_cache)) {
+        const auto percent = read_value_at<float>(
+            reader,
+            progression_cache,
+            symbols.alternate_advancement_percent_offset,
+            progression_detail);
+        const auto points = read_value_at<std::uint32_t>(
+            reader,
+            progression_cache,
+            symbols.alternate_advancement_points_offset,
+            progression_detail);
+        if (percent && std::isfinite(*percent) && *percent >= 0.0F &&
+            *percent <= 100.0F) {
+            alternate_advancement_percent =
+                static_cast<double>(*percent);
+        }
+        if (points && *points <= 10'000'000U) {
+            alternate_advancement_points = *points;
+        }
+    }
+
     const auto final_character = read_value<std::uintptr_t>(
         reader, local_character_global, detail);
     const auto final_name = read_text(
@@ -511,12 +546,39 @@ CharacterReadResult read_character_snapshot(
                 "equipped item changed during the snapshot read");
         }
     }
+    if (alternate_advancement_percent) {
+        const auto final_percent = read_value_at<float>(
+            reader,
+            progression_cache,
+            symbols.alternate_advancement_percent_offset,
+            progression_detail);
+        if (!final_percent || !std::isfinite(*final_percent) ||
+            *final_percent < 0.0F || *final_percent > 100.0F ||
+            static_cast<double>(*final_percent) !=
+                *alternate_advancement_percent) {
+            alternate_advancement_percent.reset();
+        }
+    }
+    if (alternate_advancement_points) {
+        const auto final_points = read_value_at<std::uint32_t>(
+            reader,
+            progression_cache,
+            symbols.alternate_advancement_points_offset,
+            progression_detail);
+        if (!final_points || *final_points > 10'000'000U ||
+            *final_points != *alternate_advancement_points) {
+            alternate_advancement_points.reset();
+        }
+    }
     return {
         .snapshot = CharacterSnapshot{
             .state = PlayerSnapshotState::in_world,
             .name = *name,
             .health = {.current = health, .maximum = *maximum_health},
             .mana = {.current = *mana, .maximum = *maximum_mana},
+            .alternate_advancement_percent =
+                alternate_advancement_percent,
+            .alternate_advancement_points = alternate_advancement_points,
             .equipment = std::move(equipment),
             .detail = "Live read-only character snapshot",
         },

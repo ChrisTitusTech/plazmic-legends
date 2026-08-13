@@ -34,6 +34,7 @@ add_library(
     STATIC
     src/common/client_file_monitor.cpp
     src/common/sha256.cpp
+    src/activity/activity_tracker.cpp
     src/game/character_reader.cpp
     src/game/combat_history_store.cpp
     src/game/combat_log_parser.cpp
@@ -269,6 +270,22 @@ if(BUILD_TESTING)
     target_link_libraries(character_reader_test PRIVATE plazmic_core)
     add_dependencies(check character_reader_test)
     add_test(NAME character_reader.unit COMMAND character_reader_test)
+
+    add_executable(activity_tracker_test tests/test_activity_tracker.cpp)
+    target_compile_features(activity_tracker_test PRIVATE cxx_std_20)
+    target_compile_options(
+        activity_tracker_test
+        PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+    )
+    target_link_libraries(activity_tracker_test PRIVATE plazmic_core)
+    add_dependencies(check activity_tracker_test)
+    add_test(NAME activity_tracker.unit COMMAND activity_tracker_test)
 
     add_executable(
         character_profile_exporter_test

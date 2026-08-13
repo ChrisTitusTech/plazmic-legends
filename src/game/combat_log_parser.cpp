@@ -2,11 +2,11 @@
 
 #include <algorithm>
 #include <array>
+#include <cerrno>
 #include <cctype>
 #include <charconv>
 #include <cmath>
 #include <ctime>
-#include <fstream>
 #include <iomanip>
 #include <limits>
 #include <sstream>
@@ -14,7 +14,9 @@
 #include <utility>
 #include <vector>
 
+#include <fcntl.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 namespace plazmic {
 namespace {
@@ -414,20 +416,52 @@ bool valid_character(std::string_view value) {
            value.find('\\') == std::string_view::npos;
 }
 
-std::optional<CombatLogTailer::FileIdentity> stat_identity(
+bool valid_server_identity(std::string_view value) {
+    if (value.empty() || value.size() > 64U ||
+        std::isalnum(static_cast<unsigned char>(value.front())) == 0 ||
+        std::isalnum(static_cast<unsigned char>(value.back())) == 0) {
+        return false;
+    }
+    return std::ranges::all_of(value, [](unsigned char byte) {
+        return std::isalnum(byte) != 0 || byte == '-' || byte == '_';
+    });
+}
+
+struct OpenLogFile {
+    CombatLogTailer::FileIdentity identity;
+    std::shared_ptr<int> descriptor;
+    std::uintmax_t size{};
+};
+
+std::optional<OpenLogFile> open_log_file(
     const std::filesystem::path& path) {
-    struct stat status {};
-    if (::stat(path.c_str(), &status) != 0 || !S_ISREG(status.st_mode)) {
+    const int descriptor = ::open(
+        path.c_str(), O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+    if (descriptor < 0) {
         return std::nullopt;
     }
-    return CombatLogTailer::FileIdentity{
-        .device = static_cast<std::uint64_t>(status.st_dev),
-        .inode = static_cast<std::uint64_t>(status.st_ino),
+    struct stat status {};
+    if (::fstat(descriptor, &status) != 0 || !S_ISREG(status.st_mode) ||
+        status.st_size < 0) {
+        (void)::close(descriptor);
+        return std::nullopt;
+    }
+    return OpenLogFile{
+        .identity = {
+            .device = static_cast<std::uint64_t>(status.st_dev),
+            .inode = static_cast<std::uint64_t>(status.st_ino),
+        },
+        .descriptor = std::shared_ptr<int>(
+            new int(descriptor), [](const int* value) {
+                (void)::close(*value);
+                delete value;
+            }),
+        .size = static_cast<std::uintmax_t>(status.st_size),
     };
 }
 
 std::optional<std::string> read_boundary(
-    const std::filesystem::path& path,
+    int descriptor,
     std::uintmax_t offset) {
     if (offset == 0U) {
         return std::string{};
@@ -435,40 +469,94 @@ std::optional<std::string> read_boundary(
     const std::uintmax_t count = std::min<std::uintmax_t>(
         offset, CombatLogTailer::boundary_bytes);
     if (offset > static_cast<std::uintmax_t>(
-                     std::numeric_limits<std::streamoff>::max())) {
+                     std::numeric_limits<off_t>::max())) {
         return std::nullopt;
     }
-    std::ifstream input(path, std::ios::binary);
-    if (!input) {
-        return std::nullopt;
-    }
-    input.seekg(static_cast<std::streamoff>(offset - count));
     std::string result(static_cast<std::size_t>(count), '\0');
-    input.read(result.data(), static_cast<std::streamsize>(count));
-    if (static_cast<std::uintmax_t>(input.gcount()) != count) {
-        return std::nullopt;
+    std::size_t received = 0U;
+    while (received < result.size()) {
+        const ssize_t chunk = ::pread(
+            descriptor, result.data() + received,
+            result.size() - received,
+            static_cast<off_t>(offset - count + received));
+        if (chunk < 0 && errno == EINTR) {
+            continue;
+        }
+        if (chunk <= 0) {
+            return std::nullopt;
+        }
+        received += static_cast<std::size_t>(chunk);
     }
     return result;
 }
 
 std::optional<std::string> read_prefix(
-    const std::filesystem::path& path,
+    int descriptor,
     std::uintmax_t size) {
     const std::uintmax_t count = std::min<std::uintmax_t>(
-        size, CombatLogTailer::boundary_bytes);
+        size, CombatLogTailer::replay_prefix_bytes);
     if (count == 0U) {
         return std::string{};
     }
-    std::ifstream input(path, std::ios::binary);
-    if (!input) {
-        return std::nullopt;
-    }
     std::string result(static_cast<std::size_t>(count), '\0');
-    input.read(result.data(), static_cast<std::streamsize>(count));
-    if (static_cast<std::uintmax_t>(input.gcount()) != count) {
-        return std::nullopt;
+    std::size_t received = 0U;
+    while (received < result.size()) {
+        const ssize_t chunk = ::pread(
+            descriptor, result.data() + received,
+            result.size() - received, static_cast<off_t>(received));
+        if (chunk < 0 && errno == EINTR) {
+            continue;
+        }
+        if (chunk <= 0) {
+            return std::nullopt;
+        }
+        received += static_cast<std::size_t>(chunk);
     }
     return result;
+}
+
+std::optional<std::string> read_available(
+    int descriptor,
+    std::uintmax_t offset,
+    std::size_t requested) {
+    if (offset > static_cast<std::uintmax_t>(
+                     std::numeric_limits<off_t>::max())) {
+        return std::nullopt;
+    }
+    std::string result(requested, '\0');
+    std::size_t received = 0U;
+    while (received < requested) {
+        const ssize_t chunk = ::pread(
+            descriptor, result.data() + received, requested - received,
+            static_cast<off_t>(offset + received));
+        if (chunk < 0 && errno == EINTR) {
+            continue;
+        }
+        if (chunk < 0) {
+            return std::nullopt;
+        }
+        if (chunk == 0) {
+            break;
+        }
+        received += static_cast<std::size_t>(chunk);
+    }
+    result.resize(received);
+    return result;
+}
+
+std::string_view complete_common_prefix(std::string_view previous,
+                                        std::string_view current) {
+    const auto mismatch = std::ranges::mismatch(previous, current);
+    const std::size_t shared = static_cast<std::size_t>(
+        std::distance(previous.begin(), mismatch.in1));
+    if (shared == 0U) {
+        return {};
+    }
+    const std::size_t newline = previous.rfind('\n', shared - 1U);
+    if (newline == std::string_view::npos) {
+        return {};
+    }
+    return previous.substr(0U, newline + 1U);
 }
 
 }  // namespace
@@ -490,6 +578,20 @@ std::optional<DamageEvent> parse_damage_line(
         return event;
     }
     return parse_direct_damage(*timestamp, payload, active_character);
+}
+
+bool is_activity_ability(const DamageEvent& event) {
+    if (event.ability.empty()) {
+        return false;
+    }
+    if (event.kind != DamageKind::melee) {
+        return true;
+    }
+    constexpr std::array<std::string_view, 5> kGenericAutoAttacks{
+        "Hit", "Slash", "Pierce", "Crush", "Punch",
+    };
+    return std::ranges::find(kGenericAutoAttacks, event.ability) ==
+           kGenericAutoAttacks.end();
 }
 
 std::optional<HealingEvent> parse_healing_line(
@@ -912,7 +1014,13 @@ CombatEncounterSnapshot CombatAccumulator::snapshot(
 
 CombatLogRefresh CombatLogTailer::failure(
     CombatLogError error,
-    std::string detail) const {
+    std::string detail) {
+    activity_tracker_.break_equipment_baseline();
+    ActivityAnalyticsSnapshot activity =
+        activity_tracker_.unavailable_snapshot(detail);
+    if (!activity_partition_confirmed_) {
+        activity.storage_key.clear();
+    }
     CombatAnalyticsSnapshot analytics{
             .encounter = {
                 .state = CombatEncounterState::unavailable,
@@ -951,6 +1059,7 @@ CombatLogRefresh CombatLogTailer::failure(
     }
     return {
         .snapshot = std::move(analytics),
+        .activity = std::move(activity),
         .error = error,
     };
 }
@@ -997,7 +1106,16 @@ std::optional<std::filesystem::path> CombatLogTailer::select_log(
         }
         const std::string filename =
             lowercase(iterator->path().filename().string());
-        if (filename.starts_with(prefix) && filename.ends_with(".txt")) {
+        const bool candidate =
+            filename.starts_with(prefix) && filename.ends_with(".txt") &&
+            filename.size() > prefix.size() + 4U;
+        const std::string_view server = candidate
+                                            ? std::string_view(filename).substr(
+                                                  prefix.size(),
+                                                  filename.size() -
+                                                      prefix.size() - 4U)
+                                            : std::string_view{};
+        if (candidate && valid_server_identity(server)) {
             matches.push_back(iterator->path());
             if (matches.size() > 1U) {
                 error = CombatLogError::ambiguous;
@@ -1030,10 +1148,18 @@ bool CombatLogTailer::consume(
         }
         if (!dropping_line_ && !partial_line_.empty() &&
             lines_this_refresh_ < maximum_lines_per_refresh) {
-            if (const auto event =
-                    parse_damage_line(partial_line_, active_character);
-                event && !ci_equal(event->defender, active_character)) {
-                (void)accumulator_.add(*event, active_character, zone);
+            const auto damage =
+                parse_damage_line(partial_line_, active_character);
+            const bool outgoing_ability =
+                damage && ci_equal(damage->attacker, active_character) &&
+                !ci_equal(damage->defender, active_character) &&
+                is_activity_ability(*damage);
+            const std::string activity_source = activity_tracker_.consume(
+                partial_line_, active_character, zone, outgoing_ability);
+            if (damage && !ci_equal(damage->defender, active_character)) {
+                activity_tracker_.observe_damage(
+                    *damage, active_character, activity_source);
+                (void)accumulator_.add(*damage, active_character, zone);
             } else if (const auto healing =
                            parse_healing_line(partial_line_, active_character)) {
                 (void)accumulator_.add(*healing, active_character, zone);
@@ -1064,6 +1190,7 @@ CombatLogRefresh CombatLogTailer::refresh(
     std::string_view zone,
     std::chrono::system_clock::time_point now) {
     maintain_history_store();
+    activity_tracker_.maintain(now);
     if (!valid_character(active_character)) {
         clear();
         return failure(
@@ -1078,65 +1205,116 @@ CombatLogRefresh CombatLogTailer::refresh(
     const auto selected = select_log(
         game_directory, active_character, selection_error);
     if (!selected) {
+        activity_partition_confirmed_ = false;
         return failure(
             selection_error,
             selection_error == CombatLogError::ambiguous
                 ? "Multiple combat logs match the active character"
                 : "Combat logging is unavailable");
     }
+    std::optional<ReplayContinuity> retained_stream;
     if (path_ != *selected) {
         finalize_current();
-        if (!select_history(active_character, *selected)) {
+        std::string history_selection_failure;
+        if (!select_history(
+                active_character, *selected, history_selection_failure)) {
             return failure(
                 CombatLogError::unavailable,
-                "Unsaved combat history is awaiting local persistence");
+                std::move(history_selection_failure));
         }
-        const bool replacing_stream =
-            identity_.has_value() || !path_.empty();
+        const std::string selected_path = selected->lexically_normal().string();
+        const auto retained = replay_continuity_.find(selected_path);
+        const bool replacing_stream = retained != replay_continuity_.end();
+        const bool returning_stream = seen_log_paths_.contains(selected_path);
+        if (!returning_stream &&
+            seen_log_paths_.size() < maximum_log_entries) {
+            seen_log_paths_.insert(selected_path);
+        }
+        if (replacing_stream) {
+            retained_stream = retained->second;
+        }
         path_ = *selected;
         identity_.reset();
+        descriptor_.reset();
         offset_ = 0U;
         partial_line_.clear();
         dropping_line_ = false;
         oversized_line_seen_ = false;
-        prefix_boundary_.clear();
+        prefix_boundary_ = replacing_stream ? retained->second.prefix
+                                             : std::string{};
         boundary_.clear();
-        reopen_from_start_ = replacing_stream;
+        reopen_from_start_ = replacing_stream || returning_stream;
         accumulator_.clear();
     } else {
-        if (!select_history(active_character, *selected)) {
+        std::string history_selection_failure;
+        if (!select_history(
+                active_character, *selected, history_selection_failure)) {
             return failure(
                 CombatLogError::unavailable,
-                "Unsaved combat history is awaiting local persistence");
+                std::move(history_selection_failure));
         }
     }
     history_zone_ = std::string(zone);
     history_visible_ = true;
     maintain_history();
 
-    std::error_code filesystem_error;
-    const std::uintmax_t size =
-        std::filesystem::file_size(path_, filesystem_error);
-    const auto current_identity = stat_identity(path_);
-    if (filesystem_error || !current_identity) {
+    const auto current_file = open_log_file(path_);
+    if (!current_file) {
         return failure(
             CombatLogError::unavailable,
             "Combat log is unavailable");
     }
-    const auto observed_prefix = read_prefix(path_, size);
+    descriptor_ = current_file->descriptor;
+    const std::uintmax_t size = current_file->size;
+    const FileIdentity current_identity = current_file->identity;
+    const auto observed_prefix = read_prefix(*descriptor_, size);
     if (!observed_prefix) {
         return failure(
             CombatLogError::read_failed,
             "Combat log prefix cannot be read");
     }
+    if (!identity_ && retained_stream &&
+        retained_stream->descriptor &&
+        retained_stream->identity == current_identity &&
+        size >= retained_stream->offset &&
+        observed_prefix->starts_with(retained_stream->prefix)) {
+        const auto retained_boundary =
+            read_boundary(*descriptor_, retained_stream->offset);
+        if (retained_boundary &&
+            *retained_boundary == retained_stream->boundary) {
+            identity_ = retained_stream->identity;
+            offset_ = retained_stream->offset;
+            partial_line_ = retained_stream->partial_line;
+            dropping_line_ = retained_stream->dropping_line;
+            oversized_line_seen_ = retained_stream->oversized_line_seen;
+            boundary_ = retained_stream->boundary;
+            reopen_from_start_ = false;
+        }
+    }
+    const std::string prior_prefix = prefix_boundary_;
+    const std::optional<FileIdentity> prior_identity = identity_;
+    const bool continuous_identity =
+        (prior_identity && *prior_identity == current_identity) ||
+        (retained_stream &&
+         retained_stream->descriptor &&
+         retained_stream->identity == current_identity);
+    const std::string_view replay_overlap =
+        continuous_identity
+            ? complete_common_prefix(prior_prefix, *observed_prefix)
+            : std::string_view{};
     const bool had_identity = identity_.has_value();
+    const bool reopening_from_start = reopen_from_start_;
     bool stream_reset = false;
     if (!identity_) {
-        identity_ = *current_identity;
+        identity_ = current_identity;
         offset_ = start_at_end_ && !reopen_from_start_ ? size : 0U;
         reopen_from_start_ = false;
-    } else if (*identity_ != *current_identity || size < offset_) {
-        identity_ = *current_identity;
+        if (reopening_from_start) {
+            activity_tracker_.begin_log_stream(replay_overlap);
+            stream_reset = true;
+        }
+    } else if (*identity_ != current_identity || size < offset_) {
+        identity_ = current_identity;
         offset_ = 0U;
         partial_line_.clear();
         dropping_line_ = false;
@@ -1145,6 +1323,7 @@ CombatLogRefresh CombatLogTailer::refresh(
         prefix_boundary_.clear();
         boundary_.clear();
         stream_reset = true;
+        activity_tracker_.begin_log_stream(replay_overlap);
     }
     if (had_identity && !stream_reset &&
         !observed_prefix->starts_with(prefix_boundary_)) {
@@ -1155,9 +1334,10 @@ CombatLogRefresh CombatLogTailer::refresh(
         finalize_current();
         boundary_.clear();
         stream_reset = true;
+        activity_tracker_.begin_log_stream(replay_overlap);
     }
     prefix_boundary_ = *observed_prefix;
-    const auto observed_boundary = read_boundary(path_, offset_);
+    const auto observed_boundary = read_boundary(*descriptor_, offset_);
     if (!observed_boundary) {
         return failure(
             CombatLogError::read_failed,
@@ -1171,6 +1351,7 @@ CombatLogRefresh CombatLogTailer::refresh(
         oversized_line_seen_ = false;
         finalize_current();
         boundary_.clear();
+        activity_tracker_.begin_log_stream(replay_overlap);
     } else {
         boundary_ = *observed_boundary;
     }
@@ -1179,17 +1360,13 @@ CombatLogRefresh CombatLogTailer::refresh(
     const std::size_t requested = static_cast<std::size_t>(
         std::min<std::uintmax_t>(available, maximum_read_bytes));
     if (requested > 0U) {
-        std::ifstream input(path_, std::ios::binary);
-        if (!input) {
+        const auto bytes = read_available(*descriptor_, offset_, requested);
+        if (!bytes) {
             return failure(
                 CombatLogError::read_failed,
                 "Combat log cannot be read");
         }
-        input.seekg(static_cast<std::streamoff>(offset_));
-        std::vector<char> bytes(requested);
-        input.read(bytes.data(), static_cast<std::streamsize>(requested));
-        const std::size_t received =
-            static_cast<std::size_t>(input.gcount());
+        const std::size_t received = bytes->size();
         if (received == 0U && requested != 0U) {
             return failure(
                 CombatLogError::read_failed,
@@ -1198,20 +1375,35 @@ CombatLogRefresh CombatLogTailer::refresh(
         lines_this_refresh_ = 0U;
         std::size_t consumed = 0U;
         for (; consumed < received; ++consumed) {
-            if (!consume(bytes[consumed], active_character, zone)) {
+            if (!consume((*bytes)[consumed], active_character, zone)) {
                 break;
             }
         }
         offset_ += consumed;
     }
 
-    const auto final_boundary = read_boundary(path_, offset_);
+    const auto final_boundary = read_boundary(*descriptor_, offset_);
     if (!final_boundary) {
         return failure(
             CombatLogError::read_failed,
             "Combat log boundary cannot be updated");
     }
     boundary_ = *final_boundary;
+    const std::string active_path = path_.lexically_normal().string();
+    if (!replay_continuity_.contains(active_path) &&
+        replay_continuity_.size() >= maximum_replay_paths) {
+        replay_continuity_.erase(replay_continuity_.begin());
+    }
+    replay_continuity_[active_path] = {
+        .identity = *identity_,
+        .descriptor = descriptor_,
+        .offset = offset_,
+        .partial_line = partial_line_,
+        .dropping_line = dropping_line_,
+        .oversized_line_seen = oversized_line_seen_,
+        .prefix = prefix_boundary_,
+        .boundary = boundary_,
+    };
 
     if (dropping_line_ || oversized_line_seen_) {
         oversized_line_seen_ = false;
@@ -1220,8 +1412,15 @@ CombatLogRefresh CombatLogTailer::refresh(
             "Combat log contains an oversized line");
     }
 
-    CombatEncounterSnapshot current = accumulator_.snapshot(
-        now, active_character);
+    return current_snapshot(active_character, zone, now);
+}
+
+CombatLogRefresh CombatLogTailer::current_snapshot(
+    std::string_view active_character,
+    std::string_view zone,
+    std::chrono::system_clock::time_point now) {
+    CombatEncounterSnapshot current =
+        accumulator_.snapshot(now, active_character);
     if (current.state == CombatEncounterState::complete) {
         retain_encounter(current);
     }
@@ -1248,35 +1447,95 @@ CombatLogRefresh CombatLogTailer::refresh(
     }
     return {
         .snapshot = std::move(analytics),
+        .activity = activity_tracker_.snapshot(now),
         .error = CombatLogError::none,
     };
 }
 
+void CombatLogTailer::observe_character(
+    const CharacterSnapshot& character,
+    std::string_view zone,
+    std::chrono::system_clock::time_point now) {
+    activity_tracker_.observe_character(character, zone, now);
+}
+
+void CombatLogTailer::begin_deferred_persistence() {
+    persistence_deferred_ = true;
+    activity_tracker_.begin_deferred_persistence();
+}
+
+void CombatLogTailer::commit_deferred_persistence(bool retain_history,
+                                                  bool retain_activity) {
+    persistence_deferred_ = false;
+    if (retain_history != history_enabled_) {
+        set_history_enabled(retain_history);
+    } else if (retain_history && !history_persisted_ &&
+               !history_key_.empty()) {
+        history_persisted_ = history_store_.save(history_key_, history_);
+        history_retry_after_ =
+            history_persisted_
+                ? std::chrono::steady_clock::time_point{}
+                : std::chrono::steady_clock::now() + history_retry_delay;
+    }
+    activity_tracker_.commit_deferred_persistence(retain_activity);
+}
+
 bool CombatLogTailer::select_history(
     std::string_view active_character,
-    const std::filesystem::path& log_path) {
+    const std::filesystem::path& log_path,
+    std::string& failure_detail) {
+    failure_detail.clear();
     const std::string identity = lowercase(active_character) + "\n" +
                                  lowercase(log_path.filename().string());
     const std::string key = CombatHistoryStore::privacy_key(identity);
     if (key == history_key_) {
-        return !history_enabled_ || history_load_compatible_;
+        const bool activity_selected = activity_tracker_.select(key);
+        if (!activity_selected && activity_tracker_.selected_key() != key) {
+            failure_detail =
+                "Retained activity history could not be loaded safely";
+            return false;
+        }
+        activity_partition_confirmed_ = true;
+        if (history_enabled_ && !history_load_compatible_) {
+            failure_detail =
+                "Retained combat history could not be loaded safely";
+            return false;
+        }
+        return true;
     }
+    activity_partition_confirmed_ = false;
     if (!history_enabled_) {
+        const bool activity_selected = activity_tracker_.select(key);
+        if (!activity_selected && activity_tracker_.selected_key() != key) {
+            failure_detail =
+                "Retained activity history could not be loaded safely";
+            return false;
+        }
         history_key_ = key;
         history_.clear();
         history_persisted_ = true;
         history_load_compatible_ = true;
         history_retry_after_ = {};
         history_visible_ = true;
+        activity_partition_confirmed_ = true;
         return true;
     }
     if (!history_persisted_ && !history_key_.empty() &&
-        !history_store_.save(history_key_, history_)) {
+        (persistence_deferred_ ||
+         !history_store_.save(history_key_, history_))) {
+        failure_detail = "Unsaved local history is awaiting persistence";
         return false;
     }
     const auto loaded = history_store_.load_checked(key);
     if (!loaded) {
-        history_load_compatible_ = false;
+        failure_detail =
+            "Retained combat history could not be loaded safely";
+        return false;
+    }
+    const bool activity_selected = activity_tracker_.select(key);
+    if (!activity_selected && activity_tracker_.selected_key() != key) {
+        failure_detail =
+            "Retained activity history could not be loaded safely";
         return false;
     }
     history_key_ = key;
@@ -1285,6 +1544,7 @@ bool CombatLogTailer::select_history(
     history_load_compatible_ = true;
     history_retry_after_ = {};
     history_visible_ = true;
+    activity_partition_confirmed_ = true;
     return true;
 }
 
@@ -1320,8 +1580,11 @@ void CombatLogTailer::retain_encounter(
                                history_.size() -
                                CombatHistoryStore::maximum_encounters));
     }
-    if (!history_enabled_) {
+    if (!history_enabled_ || persistence_deferred_) {
         history_persisted_ = history_store_.bound(history_);
+        if (history_enabled_) {
+            history_persisted_ = false;
+        }
         return;
     }
     if (!history_key_.empty()) {
@@ -1387,8 +1650,11 @@ void CombatLogTailer::maintain_history() {
             return encounter.started_unix_seconds < oldest;
         });
     if (age_prune) {
-        if (!history_enabled_) {
+        if (!history_enabled_ || persistence_deferred_) {
             history_persisted_ = history_store_.bound(history_);
+            if (history_enabled_) {
+                history_persisted_ = false;
+            }
             return;
         }
         history_persisted_ = !history_key_.empty() &&
@@ -1397,7 +1663,8 @@ void CombatLogTailer::maintain_history() {
                                    ? std::chrono::steady_clock::time_point{}
                                    : now + history_retry_delay;
     }
-    if (!history_enabled_ || history_persisted_ || history_key_.empty()) {
+    if (persistence_deferred_ || !history_enabled_ || history_persisted_ ||
+        history_key_.empty()) {
         return;
     }
     if (now < history_retry_after_) {
@@ -1410,6 +1677,9 @@ void CombatLogTailer::maintain_history() {
 }
 
 void CombatLogTailer::maintain_history_store() {
+    if (persistence_deferred_) {
+        return;
+    }
     const auto now = std::chrono::system_clock::now();
     if (now < history_sweep_after_) {
         return;
@@ -1435,22 +1705,43 @@ void CombatLogTailer::finalize_current() {
 }
 
 void CombatLogTailer::clear() {
+    if (!path_.empty() && identity_) {
+        const std::string active_path = path_.lexically_normal().string();
+        if (!replay_continuity_.contains(active_path) &&
+            replay_continuity_.size() >= maximum_replay_paths) {
+            replay_continuity_.erase(replay_continuity_.begin());
+        }
+        replay_continuity_[active_path] = {
+            .identity = *identity_,
+            .descriptor = descriptor_,
+            .offset = offset_,
+            .partial_line = partial_line_,
+            .dropping_line = dropping_line_,
+            .oversized_line_seen = oversized_line_seen_,
+            .prefix = prefix_boundary_,
+            .boundary = boundary_,
+        };
+    }
     finalize_current();
-    if (history_enabled_ && !history_persisted_ && !history_key_.empty()) {
+    (void)activity_tracker_.flush();
+    if (!persistence_deferred_ && history_enabled_ && !history_persisted_ &&
+        !history_key_.empty()) {
         history_persisted_ = history_store_.save(history_key_, history_);
     }
     character_.clear();
     path_.clear();
     identity_.reset();
+    descriptor_.reset();
     offset_ = 0U;
     partial_line_.clear();
     dropping_line_ = false;
     oversized_line_seen_ = false;
     lines_this_refresh_ = 0U;
-    prefix_boundary_.clear();
     boundary_.clear();
     reopen_from_start_ = false;
     accumulator_.clear();
+    activity_tracker_.reset_transient_observations();
+    activity_partition_confirmed_ = false;
     history_visible_ = false;
     history_zone_.clear();
     if (history_enabled_ && history_persisted_) {

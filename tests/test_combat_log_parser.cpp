@@ -1,6 +1,7 @@
 #include "game/combat_log_parser.h"
 #include "game/combat_history_store.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
@@ -48,6 +49,10 @@ int main() {
     std::filesystem::path directory;
     try {
         constexpr std::string_view kCharacter = "Testhero";
+        require(plazmic::CombatHistoryStore::privacy_key(
+                    "synthetic identity") ==
+                    "4e7f1d22ba8ba92aed00e367fbc78a04",
+                "privacy key is not the documented truncated unkeyed SHA-256");
         const auto melee = plazmic::parse_damage_line(
             "[Sun Aug 03 12:00:00 2026] You slash Training Target "
             "for 120 points of damage.",
@@ -57,6 +62,13 @@ int main() {
                     melee->damage == 120U &&
                     melee->kind == plazmic::DamageKind::melee,
                 "melee damage line was not parsed");
+        const auto kick = plazmic::parse_damage_line(
+            "[Sun Aug 03 12:00:00 2026] You kick Training Target "
+            "for 45 points of damage.",
+            kCharacter);
+        require(kick && plazmic::is_activity_ability(*kick) &&
+                    !plazmic::is_activity_ability(*melee),
+                "named melee skill was not separated from auto-attacks");
         const auto singular = plazmic::parse_damage_line(
             "[Sun Aug 03 12:00:00 2026] You hit Training Target "
             "for 1 point of damage.",
@@ -363,8 +375,143 @@ int main() {
         append(log,
                "[Sun Aug 03 12:00:00 2026] You slash Training Target "
                "for 120 points of damage.\n");
+        const auto incompatible_activity_game =
+            directory / "incompatible-activity-game";
+        std::filesystem::create_directories(
+            incompatible_activity_game / "Logs");
+        append(incompatible_activity_game / "Logs" /
+                   "eqlog_Testhero_synthetic.txt",
+               "[Sun Aug 03 12:00:00 2026] You slash Training Target "
+               "for 120 points of damage.\n"
+               "[Sun Aug 03 12:00:01 2026] You gain experience! "
+               "(0.125%)\n");
+        const auto incompatible_activity_state =
+            directory / "incompatible-activity-state";
+        const auto incompatible_activity_key =
+            plazmic::CombatHistoryStore::privacy_key(
+                "testhero\neqlog_testhero_synthetic.txt");
+        std::filesystem::create_directories(
+            incompatible_activity_state / "activity");
+        append(incompatible_activity_state / "activity" /
+                   (incompatible_activity_key + ".json"),
+               R"({"schema":2,"events":[],"abilities":[]})");
+        plazmic::CombatLogTailer incompatible_activity_tailer(
+            false, incompatible_activity_state, false);
+        incompatible_activity_tailer.set_activity_history_enabled(true);
+        const auto incompatible_activity_refresh =
+            incompatible_activity_tailer.refresh(
+                incompatible_activity_game, kCharacter, "synthetic_zone",
+                melee->timestamp + 1s);
+        require(incompatible_activity_refresh.error ==
+                        plazmic::CombatLogError::none &&
+                    incompatible_activity_refresh.snapshot.encounter
+                            .total_damage == 120U &&
+                    !incompatible_activity_refresh.activity.available &&
+                    incompatible_activity_refresh.activity.events.empty() &&
+                    !incompatible_activity_refresh.activity.persisted &&
+                    incompatible_activity_refresh.activity.detail.find(
+                        "unsupported") != std::string::npos,
+                "activity schema failure did not fail closed independently");
+        const auto deferred_game = directory / "deferred-persistence-game";
+        const auto deferred_state = directory / "deferred-persistence-state";
+        std::filesystem::create_directories(deferred_game / "Logs");
+        append(deferred_game / "Logs" / "eqlog_Deferred_synthetic.txt",
+               "[Sun Aug 03 12:00:01 2026] You gain experience! "
+               "(0.125%)\n");
+        const auto deferred_key =
+            plazmic::CombatHistoryStore::privacy_key(
+                "deferred\neqlog_deferred_synthetic.txt");
+        plazmic::CombatLogTailer deferred_tailer(
+            false, deferred_state, true);
+        deferred_tailer.set_activity_history_enabled(true);
+        deferred_tailer.begin_deferred_persistence();
+        const auto deferred_refresh = deferred_tailer.refresh(
+            deferred_game, "Deferred", "synthetic_zone",
+            melee->timestamp + 1s);
+        require(deferred_refresh.error == plazmic::CombatLogError::none &&
+                    deferred_refresh.activity.events.size() == 1U &&
+                    !std::filesystem::exists(
+                        deferred_state / "activity" /
+                        (deferred_key + ".json")),
+                "deferred refresh wrote speculative activity history");
+        deferred_tailer.commit_deferred_persistence(false, true);
+        require(std::filesystem::is_regular_file(
+                    deferred_state / "activity" /
+                    (deferred_key + ".json")),
+                "committed deferred activity was not persisted");
+        const auto deferred_opt_out_state =
+            directory / "deferred-opt-out-state";
+        plazmic::CombatLogTailer deferred_opt_out_tailer(
+            false, deferred_opt_out_state, true);
+        deferred_opt_out_tailer.set_activity_history_enabled(true);
+        deferred_opt_out_tailer.begin_deferred_persistence();
+        const auto deferred_opt_out_refresh =
+            deferred_opt_out_tailer.refresh(
+                deferred_game, "Deferred", "synthetic_zone",
+                melee->timestamp + 1s);
+        deferred_opt_out_tailer.commit_deferred_persistence(false, false);
+        require(deferred_opt_out_refresh.error ==
+                        plazmic::CombatLogError::none &&
+                    !std::filesystem::exists(
+                        deferred_opt_out_state / "activity" /
+                        (deferred_key + ".json")),
+                "deferred activity persisted after commit-time opt-out");
+        const auto canonical_state = directory / "canonical-activity-state";
+        const auto server_one_game = directory / "server-one-game";
+        const auto server_one_case_game = directory / "server-one-case-game";
+        const auto server_two_game = directory / "server-two-game";
+        const auto invalid_server_game = directory / "invalid-server-game";
+        std::filesystem::create_directories(server_one_game / "Logs");
+        std::filesystem::create_directories(server_one_case_game / "Logs");
+        std::filesystem::create_directories(server_two_game / "Logs");
+        std::filesystem::create_directories(invalid_server_game / "Logs");
+        append(server_one_game / "Logs" /
+                   "eqlog_Testhero_ServerOne.txt", "");
+        append(server_one_case_game / "Logs" /
+                   "EQLOG_TESTHERO_SERVERONE.TXT", "");
+        append(server_two_game / "Logs" /
+                   "eqlog_Testhero_ServerTwo.txt", "");
+        append(invalid_server_game / "Logs" /
+                   "eqlog_Testhero_not a server!.txt", "");
+        plazmic::CombatLogTailer server_one_tailer(
+            true, canonical_state, false);
+        plazmic::CombatLogTailer server_one_case_tailer(
+            true, canonical_state, false);
+        plazmic::CombatLogTailer server_two_tailer(
+            true, canonical_state, false);
+        const auto server_one_refresh = server_one_tailer.refresh(
+            server_one_game, kCharacter, "synthetic_zone", melee->timestamp);
+        const auto server_one_case_refresh = server_one_case_tailer.refresh(
+            server_one_case_game, "TESTHERO", "synthetic_zone",
+            melee->timestamp);
+        const auto server_two_refresh = server_two_tailer.refresh(
+            server_two_game, kCharacter, "synthetic_zone", melee->timestamp);
+        plazmic::CombatLogTailer invalid_server_tailer(
+            true, canonical_state, false);
+        const auto invalid_server_refresh = invalid_server_tailer.refresh(
+            invalid_server_game, kCharacter, "synthetic_zone",
+            melee->timestamp);
+        const std::string server_one_key =
+            plazmic::CombatHistoryStore::privacy_key(
+                "testhero\neqlog_testhero_serverone.txt");
+        const std::string server_two_key =
+            plazmic::CombatHistoryStore::privacy_key(
+                "testhero\neqlog_testhero_servertwo.txt");
+        require(server_one_refresh.error == plazmic::CombatLogError::none &&
+                    server_one_case_refresh.error ==
+                        plazmic::CombatLogError::none &&
+                    server_two_refresh.error == plazmic::CombatLogError::none &&
+                    server_one_refresh.activity.storage_key == server_one_key &&
+                    server_one_case_refresh.activity.storage_key ==
+                        server_one_key &&
+                    server_two_refresh.activity.storage_key == server_two_key &&
+                    server_one_key != server_two_key &&
+                    invalid_server_refresh.error ==
+                        plazmic::CombatLogError::missing,
+                "activity partition key ignored case or server filename");
         plazmic::CombatLogTailer tailer(
             false, directory / "state", true);
+        tailer.set_activity_history_enabled(true);
         auto refresh = tailer.refresh(
             directory, kCharacter, "synthetic_zone",
             melee->timestamp + 1s);
@@ -405,18 +552,174 @@ int main() {
                 "completed partial line was not consumed once");
         refresh = tailer.refresh(
             directory, kCharacter, "synthetic_zone",
-            spell->timestamp + 20s);
+            spell->timestamp + 24s);
         require(refresh.snapshot.history.size() == 1U &&
                     refresh.snapshot.history.front().total_damage == 450U &&
                     refresh.snapshot.history_retention_enabled &&
                     refresh.snapshot.zone_encounters == 1U &&
                     refresh.snapshot.zone_damage == 450U,
                 "completed encounter was not retained in zone history");
+        append(log,
+               "[Sun Aug 03 12:00:21 2026] You gain experience! (0.125%)\n"
+               "[Sun Aug 03 12:00:22 2026] You have gained an ability point!  "
+               "You now have 42 ability points.\n"
+               "[Sun Aug 03 12:00:23 2026] --You have looted Synthetic Gem.--\n");
+        refresh = tailer.refresh(
+            directory, kCharacter, "synthetic_zone",
+            spell->timestamp + 24s);
+        require(refresh.activity.events.size() == 3U &&
+                    refresh.activity.retention_enabled &&
+                    refresh.activity.persisted &&
+                    refresh.activity.experience_percent == 0.125 &&
+                    refresh.activity.alternate_advancement_points == 42U &&
+                    refresh.activity.recent_loot_count == 1U,
+                "log tailer did not publish or persist activity analytics");
+        const std::string activity_key =
+            plazmic::CombatHistoryStore::privacy_key(
+                "testhero\neqlog_testhero_synthetic.txt");
+        std::ifstream activity_input(
+            directory / "state" / "activity" / (activity_key + ".json"),
+            std::ios::binary);
+        require(activity_input.is_open(),
+                "persisted activity partition could not be opened");
+        const std::string activity_bytes{
+            std::istreambuf_iterator<char>(activity_input), {}};
+        require(!activity_bytes.empty() &&
+                    activity_bytes.find(
+                        plazmic::CombatHistoryStore::privacy_key(
+                            "[Sun Aug 03 12:00:01 2026] Testmage hit Training "
+                            "Target for 300 points of magic damage by Synthetic "
+                        "Bolt.")) == std::string::npos,
+                "another attacker's ability polluted activity replay metadata");
+        const auto combat_file =
+            directory / "state" / "combat" / (activity_key + ".json");
+        const auto activity_file =
+            directory / "state" / "activity" / (activity_key + ".json");
+        struct stat combat_before {};
+        struct stat activity_before {};
+        require(::stat(combat_file.c_str(), &combat_before) == 0 &&
+                    ::stat(activity_file.c_str(), &activity_before) == 0,
+                "retained state could not be inspected before deferral");
+        tailer.begin_deferred_persistence();
+        tailer.commit_deferred_persistence(true, true);
+        struct stat combat_after {};
+        struct stat activity_after {};
+        require(::stat(combat_file.c_str(), &combat_after) == 0 &&
+                    ::stat(activity_file.c_str(), &activity_after) == 0 &&
+                    combat_before.st_dev == combat_after.st_dev &&
+                    combat_before.st_ino == combat_after.st_ino &&
+                    activity_before.st_dev == activity_after.st_dev &&
+                    activity_before.st_ino == activity_after.st_ino,
+                "unchanged deferred commit rewrote retained state");
+        plazmic::CombatLogTailer restored_activity(
+            true, directory / "state", false);
+        restored_activity.set_activity_history_enabled(true);
+        const auto restored_activity_refresh = restored_activity.refresh(
+            directory, kCharacter, "synthetic_zone",
+            spell->timestamp + 24s);
+        require(restored_activity_refresh.activity.events.size() == 3U,
+                "activity partition did not restore through the log tailer");
+        const auto restart_game = directory / "restart-activity-game";
+        const auto restart_state = directory / "restart-activity-state";
+        const auto restart_log =
+            restart_game / "Logs" / "eqlog_Restart_synthetic.txt";
+        std::filesystem::create_directories(restart_log.parent_path());
+        const std::string restart_line =
+            "[Sun Aug 03 12:00:23 2026] --You have looted Restart Gem.--\n";
+        append(restart_log, restart_line);
+        plazmic::CombatLogTailer restart_writer(false, restart_state, false);
+        restart_writer.set_activity_history_enabled(true);
+        require(restart_writer.refresh(
+                    restart_game, "Restart", "synthetic_zone",
+                    spell->timestamp + 24s)
+                        .activity.events.size() == 1U,
+                "restart activity fixture was not persisted");
+        plazmic::CombatLogTailer restart_reader(true, restart_state, false);
+        restart_reader.set_activity_history_enabled(true);
+        const auto restart_initial = restart_reader.refresh(
+            restart_game, "Restart", "synthetic_zone",
+            spell->timestamp + 24s);
+        append(restart_log, restart_line);
+        const auto restored_fresh_stream = restart_reader.refresh(
+            restart_game, "Restart", "synthetic_zone",
+            spell->timestamp + 25s);
+        require(restart_initial.activity.events.size() == 1U &&
+                    restored_fresh_stream.activity.events.size() == 2U &&
+                    std::ranges::count(
+                        restored_fresh_stream.activity.events,
+                        std::string("Restart Gem"),
+                        &plazmic::ActivityEventSnapshot::label) == 2,
+                "fresh tailer did not start at end or treat appended matching "
+                "activity as a new stream observation");
+        const auto transition_game = directory / "transition-game";
+        const auto transition_logs = transition_game / "Logs";
+        const auto transition_state = directory / "transition-state";
+        std::filesystem::create_directories(transition_logs);
+        const auto transition_log =
+            transition_logs / "eqlog_Testhero_synthetic.txt";
+        append(transition_log,
+               "[Sun Aug 03 12:01:00 2026] You gain experience! (0.250%)\n");
+        plazmic::CombatLogTailer transition_tailer(
+            false, transition_state, false);
+        transition_tailer.set_activity_history_enabled(true);
+        auto transition_refresh = transition_tailer.refresh(
+            transition_game, kCharacter, "synthetic_zone",
+            spell->timestamp + 61s);
+        require(transition_refresh.error == plazmic::CombatLogError::none &&
+                    transition_refresh.activity.persisted &&
+                    transition_refresh.activity.events.size() == 1U,
+                "activity transition fixture was not persisted");
+        const auto transition_key =
+            plazmic::CombatHistoryStore::privacy_key(
+                "testhero\neqlog_testhero_synthetic.txt");
+        const auto transition_file = transition_state / "activity" /
+                                     (transition_key + ".json");
+        std::filesystem::remove(transition_file);
+        std::filesystem::create_directories(transition_file / "sentinel");
+        append(transition_log,
+               "[Sun Aug 03 12:01:01 2026] You gain experience! (0.500%)\n");
+        transition_refresh = transition_tailer.refresh(
+            transition_game, kCharacter, "synthetic_zone",
+            spell->timestamp + 62s);
+        require(transition_refresh.error == plazmic::CombatLogError::none &&
+                    !transition_refresh.activity.persisted &&
+                    transition_refresh.activity.events.size() == 2U,
+                "activity transition fixture did not retain an unsaved event");
+        const auto transition_other_log =
+            transition_logs / "eqlog_Other_synthetic.txt";
+        append(transition_other_log,
+               "[Sun Aug 03 12:01:02 2026] You gain experience! (0.125%)\n");
+        const auto blocked_transition = transition_tailer.refresh(
+            transition_game, "Other", "other_zone",
+            spell->timestamp + 63s);
+        require(blocked_transition.error ==
+                    plazmic::CombatLogError::unavailable &&
+                    !blocked_transition.activity.available &&
+                    blocked_transition.activity.storage_key.empty() &&
+                    blocked_transition.snapshot.encounter.detail.find(
+                        "activity history") != std::string::npos,
+                "failed activity transition was not reported safely");
+        std::filesystem::remove_all(transition_file);
+        std::this_thread::sleep_for(
+            plazmic::ActivityTracker::persistence_retry_delay + 50ms);
+        const auto retried_transition = transition_tailer.refresh(
+            transition_game, kCharacter, "synthetic_zone",
+            spell->timestamp + 64s);
+        require(retried_transition.error == plazmic::CombatLogError::none &&
+                    retried_transition.activity.persisted &&
+                    retried_transition.activity.events.size() == 2U,
+                "unsaved activity was not preserved for retry: error=" +
+                    std::to_string(static_cast<int>(retried_transition.error)) +
+                    " persisted=" +
+                    std::to_string(retried_transition.activity.persisted) +
+                    " events=" +
+                    std::to_string(retried_transition.activity.events.size()) +
+                    " detail=" + retried_transition.activity.detail);
         const auto off_state = directory / "off-state";
         plazmic::CombatLogTailer memory_only(false, off_state);
         const auto memory_only_refresh = memory_only.refresh(
             directory, kCharacter, "synthetic_zone",
-            spell->timestamp + 20s);
+            spell->timestamp + 24s);
         require(!memory_only_refresh.snapshot.history.empty() &&
                     !memory_only_refresh.snapshot.history_retention_enabled &&
                     !std::filesystem::exists(off_state),
@@ -430,36 +733,63 @@ int main() {
                 "cannot inspect completed history file");
         refresh = tailer.refresh(
             directory, kCharacter, "synthetic_zone",
-            spell->timestamp + 20s);
+            spell->timestamp + 24s);
         struct stat stable_after {};
         require(::stat(stable_history_path.c_str(), &stable_after) == 0 &&
                     stable_after.st_ino == stable_before.st_ino,
                 "unchanged completed history was rewritten while idle");
+        plazmic::CharacterSnapshot equipment_before{
+            .state = plazmic::PlayerSnapshotState::in_world,
+            .name = std::string(kCharacter),
+            .health = {},
+            .mana = {},
+            .alternate_advancement_percent = std::nullopt,
+            .alternate_advancement_points = std::nullopt,
+            .equipment = {{.slot = "Head", .item = "Synthetic Cap"}},
+            .detail = {},
+        };
+        tailer.observe_character(
+            equipment_before, "synthetic_zone", spell->timestamp + 24s);
         const auto missing_log = logs / "temporarily-missing.txt";
         std::filesystem::rename(log, missing_log);
         const auto missing_refresh = tailer.refresh(
             directory, kCharacter, "synthetic_zone",
-            spell->timestamp + 20s);
+            spell->timestamp + 24s);
         require(missing_refresh.error == plazmic::CombatLogError::missing &&
                     missing_refresh.snapshot.history.size() == 1U &&
-                    missing_refresh.snapshot.zone_damage == 450U,
-                "transient log failure hid retained history");
+                    missing_refresh.snapshot.zone_damage == 450U &&
+                    !missing_refresh.activity.available &&
+                    missing_refresh.activity.storage_key.empty() &&
+                    missing_refresh.activity.detail.find("unavailable") !=
+                        std::string::npos,
+                "transient log failure hid history or exposed activity");
         std::filesystem::rename(missing_log, log);
         append(log,
                "[Sun Aug 03 12:00:02 2026] You hit Training Target "
                "for 5 points of damage.\n");
         refresh = tailer.refresh(
             directory, kCharacter, "synthetic_zone",
-            spell->timestamp + 21s);
+            spell->timestamp + 25s);
+        auto equipment_after = equipment_before;
+        equipment_after.equipment.front().item = "Synthetic Crown";
+        tailer.observe_character(
+            equipment_after, "synthetic_zone", spell->timestamp + 25s);
+        const auto activity_after_gap = tailer.activity_snapshot(
+            spell->timestamp + 25s);
         require(refresh.snapshot.history.size() == 1U &&
                     refresh.snapshot.history.front().total_damage == 455U &&
-                    refresh.snapshot.zone_damage == 455U,
-                "late appended line did not replace retained history");
+                    refresh.snapshot.zone_damage == 455U &&
+                    std::ranges::find(
+                        activity_after_gap.events,
+                        plazmic::ActivityEventKind::equipment_change,
+                        &plazmic::ActivityEventSnapshot::kind) ==
+                        activity_after_gap.events.end(),
+                "late line or failed-log equipment baseline was mishandled");
         plazmic::CombatLogTailer restored(
             true, directory / "state", true);
         const auto restored_refresh = restored.refresh(
             directory, kCharacter, "synthetic_zone",
-            spell->timestamp + 21s);
+            spell->timestamp + 25s);
         require(restored_refresh.snapshot.history.size() == 1U &&
                     restored_refresh.snapshot.history.front().target ==
                         "Training Target" &&
@@ -498,25 +828,53 @@ int main() {
         {
             std::ofstream truncated(log, std::ios::trunc);
             truncated <<
+                "[Sun Aug 03 12:00:21 2026] You gain experience! (0.125%)\n"
                 "[Sun Aug 03 12:00:03 2026] You hit Second Target "
                 "for 25 points of damage.\n";
         }
         refresh = tailer.refresh(
             directory, kCharacter, spell->timestamp + 3s);
         require(refresh.snapshot.encounter.total_damage == 25U &&
+                    refresh.activity.events.size() == 4U &&
+                    refresh.activity.experience_percent == 0.250 &&
                     refresh.snapshot.encounter.target == "Second Target",
-                "truncated log did not start a new encounter");
+                "truncated log replay result: damage=" +
+                    std::to_string(refresh.snapshot.encounter.total_damage) +
+                    " events=" +
+                    std::to_string(refresh.activity.events.size()) +
+                    " xp=" +
+                    std::to_string(refresh.activity.experience_percent) +
+                    " target=" + refresh.snapshot.encounter.target);
+
+        {
+            std::ofstream truncated_with_new_repeat(log, std::ios::trunc);
+            truncated_with_new_repeat <<
+                "[Sun Aug 03 12:00:21 2026] You gain experience! (0.125%)\n"
+                "[Sun Aug 03 12:00:21 2026] You gain experience! (0.125%)\n"
+                "[Sun Aug 03 12:00:04 2026] You hit Third Target "
+                "for 30 points of damage.\n";
+        }
+        refresh = tailer.refresh(
+            directory, kCharacter, spell->timestamp + 4s);
+        require(refresh.snapshot.encounter.total_damage == 30U &&
+                    refresh.activity.events.size() == 5U &&
+                    refresh.activity.experience_percent == 0.375,
+                "truncation suppressed a new identical activity after overlap");
 
         const auto rotated = logs / "synthetic-previous.log";
         std::filesystem::rename(log, rotated);
         append(log,
+               "[Sun Aug 03 12:00:21 2026] You gain experience! (0.125%)\n"
+               "[Sun Aug 03 12:00:21 2026] You gain experience! (0.125%)\n"
+               "[Sun Aug 03 12:00:21 2026] You gain experience! (0.125%)\n"
                "[Sun Aug 03 12:00:31 2026] You hit Rotated Target "
                "for 35 points of damage.\n");
         refresh = tailer.refresh(
             directory, kCharacter, spell->timestamp + 32s);
         require(refresh.snapshot.encounter.total_damage == 35U &&
-                    refresh.snapshot.encounter.target == "Rotated Target",
-                "replaced combat log was not read from its new inode");
+                    refresh.snapshot.encounter.target == "Rotated Target" &&
+                    refresh.activity.events.size() == 8U,
+                "inode replacement suppressed a new identical activity");
 
         std::filesystem::remove(log);
         refresh = tailer.refresh(
@@ -525,13 +883,16 @@ int main() {
                     !refresh.snapshot.encounter.available(),
                 "missing selected log retained an encounter");
         append(log,
+               "[Sun Aug 03 12:00:23 2026] --You have looted Synthetic Gem.--\n"
+               "[Sun Aug 03 12:00:23 2026] --You have looted Synthetic Gem.--\n"
                "[Sun Aug 03 12:00:34 2026] You hit Gap Target "
                "for 45 points of damage.\n");
         refresh = tailer.refresh(
             directory, kCharacter, spell->timestamp + 34s);
         require(refresh.snapshot.encounter.total_damage == 45U &&
-                    refresh.snapshot.encounter.target == "Gap Target",
-                "gapped log rotation skipped replacement events");
+                    refresh.snapshot.encounter.target == "Gap Target" &&
+                    refresh.activity.events.size() == 10U,
+                "gapped recreation suppressed a new identical activity");
         {
             std::ofstream empty(log, std::ios::trunc);
         }
@@ -661,6 +1022,7 @@ int main() {
             }
         }
         plazmic::CombatLogTailer large_tailer(false, directory / "state");
+        large_tailer.set_activity_history_enabled(true);
         std::uint64_t large_total = 0U;
         const auto large_start = std::chrono::steady_clock::now();
         for (std::size_t refresh_count = 0U;
@@ -680,6 +1042,28 @@ int main() {
                 "large bounded combat fixture was not fully consumed");
         require(large_parse_ms < 1000.0,
                 "large combat fixture exceeded its refresh budget");
+        append(large_log,
+               "[Sun Aug 03 12:01:02 2026] You gain experience! (0.125%)\n");
+        auto large_activity_refresh = large_tailer.refresh(
+            directory, kCharacter, melee->timestamp + 63s);
+        require(large_activity_refresh.activity.events.size() == 1U &&
+                    large_activity_refresh.activity.experience_percent ==
+                        0.125,
+                "activity beyond the replay prefix was not consumed");
+        const auto large_other_log =
+            directory / "Logs" / "eqlog_Other_large.txt";
+        append(large_other_log,
+               "[Sun Aug 03 12:01:02 2026] You gain experience! (0.250%)\n");
+        (void)large_tailer.refresh(
+            directory, "Other", "other_zone", melee->timestamp + 63s);
+        large_activity_refresh = large_tailer.refresh(
+            directory, kCharacter, "synthetic_zone",
+            melee->timestamp + 64s);
+        require(large_activity_refresh.activity.events.size() == 1U &&
+                    large_activity_refresh.activity.experience_percent ==
+                        0.125,
+                "character switch replayed activity beyond the verified "
+                "prefix");
 
         std::filesystem::remove_all(directory);
         directory.clear();
@@ -952,6 +1336,46 @@ int main() {
                 "running tailer retained active or inactive history beyond "
                 "the age limit");
 
+        const auto unavailable_activity_state =
+            directory / "unavailable-activity-state";
+        const std::string unavailable_activity_key =
+            plazmic::CombatHistoryStore::privacy_key(
+                "inactive activity awaiting expiry");
+        plazmic::ActivityTracker unavailable_activity_fixture(
+            unavailable_activity_state);
+        unavailable_activity_fixture.set_retention_enabled(true);
+        require(unavailable_activity_fixture.select(
+                    unavailable_activity_key),
+                "unavailable-log activity fixture could not be selected");
+        unavailable_activity_fixture.consume(
+            "[Sun Aug 03 12:00:05 2026] You gain experience! (0.500%)",
+            "Unavailableactivity", "synthetic_zone");
+        require(unavailable_activity_fixture
+                    .snapshot(melee->timestamp + 1min)
+                    .persisted,
+                "unavailable-log activity fixture could not be saved");
+        plazmic::CombatLogTailer unavailable_activity_tailer(
+            true, unavailable_activity_state, false);
+        unavailable_activity_tailer.set_activity_history_enabled(true);
+        const auto unavailable_activity_refresh =
+            unavailable_activity_tailer.refresh(
+                directory / "missing-game-directory",
+                "Unavailableactivity", "synthetic_zone",
+                melee->timestamp +
+                    plazmic::ActivityTracker::maximum_age + 1h);
+        plazmic::ActivityTracker unavailable_activity_inspector(
+            unavailable_activity_state);
+        unavailable_activity_inspector.set_retention_enabled(true);
+        require(unavailable_activity_refresh.error ==
+                    plazmic::CombatLogError::missing &&
+                    unavailable_activity_inspector.select(
+                        unavailable_activity_key) &&
+                    unavailable_activity_inspector
+                        .snapshot(melee->timestamp +
+                                  plazmic::ActivityTracker::maximum_age + 1h)
+                        .events.empty(),
+                "unavailable combat log skipped activity expiry maintenance");
+
         const auto future_log =
             directory / "Logs" / "eqlog_Future_synthetic.txt";
         append(future_log, "");
@@ -975,8 +1399,42 @@ int main() {
             std::istreambuf_iterator<char>()};
         require(future_refresh.error ==
                         plazmic::CombatLogError::unavailable &&
+                    future_refresh.snapshot.encounter.detail.find(
+                        "combat history") != std::string::npos &&
                     future_after == future_contents,
                 "unsupported history schema was not preserved");
+
+        const auto atomic_state = directory / "atomic-state";
+        const auto atomic_first_log =
+            directory / "Logs" / "eqlog_Atomicfirst_synthetic.txt";
+        const auto atomic_bad_log =
+            directory / "Logs" / "eqlog_Atomicbad_synthetic.txt";
+        append(atomic_first_log, "");
+        append(atomic_bad_log, "");
+        const std::string atomic_first_key =
+            plazmic::CombatHistoryStore::privacy_key(
+                "atomicfirst\neqlog_atomicfirst_synthetic.txt");
+        const std::string atomic_bad_key =
+            plazmic::CombatHistoryStore::privacy_key(
+                "atomicbad\neqlog_atomicbad_synthetic.txt");
+        const auto atomic_bad_file = atomic_state / "combat" /
+                                     (atomic_bad_key + ".json");
+        std::filesystem::create_directories(atomic_bad_file.parent_path());
+        append(atomic_bad_file, R"({"schema":2,"encounters":[]})");
+        plazmic::CombatLogTailer atomic_tailer(true, atomic_state, true);
+        atomic_tailer.set_activity_history_enabled(true);
+        const auto atomic_first = atomic_tailer.refresh(
+            directory, "Atomicfirst", "atomic_zone", melee->timestamp);
+        const auto atomic_failed = atomic_tailer.refresh(
+            directory, "Atomicbad", "atomic_zone", melee->timestamp);
+        require(atomic_first.error == plazmic::CombatLogError::none &&
+                    atomic_first.activity.storage_key == atomic_first_key &&
+                    atomic_failed.error ==
+                        plazmic::CombatLogError::unavailable &&
+                    atomic_failed.snapshot.encounter.detail.find(
+                        "combat history") != std::string::npos &&
+                    atomic_failed.activity.storage_key.empty(),
+                "combat load failure partially switched activity history");
 
         const std::string malformed_key =
             plazmic::CombatHistoryStore::privacy_key("malformed synthetic");
@@ -997,6 +1455,7 @@ int main() {
                "for 10 points of damage.\n");
         plazmic::CombatLogTailer blocked_tailer(
             false, blocked_state, true);
+        blocked_tailer.set_activity_history_enabled(true);
         const auto blocked_refresh = blocked_tailer.refresh(
             directory, "Blocked", "blocked_zone", melee->timestamp + 20s);
         require(!blocked_refresh.snapshot.history_persisted &&
@@ -1009,8 +1468,11 @@ int main() {
             directory, "Otherblocked", "blocked_zone",
             melee->timestamp + 20s);
         require(blocked_switch.error == plazmic::CombatLogError::unavailable &&
-                    !blocked_switch.snapshot.history_persisted,
-                "character switch discarded unsaved history");
+                    !blocked_switch.snapshot.history_persisted &&
+                    blocked_switch.snapshot.encounter.detail.find(
+                        "awaiting persistence") != std::string::npos &&
+                    blocked_switch.activity.storage_key.empty(),
+                "combat save failure partially switched local history");
         std::filesystem::remove(blocked_state);
         std::this_thread::sleep_for(
             plazmic::CombatLogTailer::history_retry_delay + 50ms);
@@ -1028,6 +1490,72 @@ int main() {
                         std::filesystem::directory_iterator{},
                 "history persistence did not recover after a transient "
                 "failure");
+
+        std::filesystem::remove_all(directory);
+        directory.clear();
+        directory = fixture_directory();
+        std::filesystem::create_directory(directory / "Logs");
+        plazmic::CombatLogTailer evicted_path_tailer(
+            true, directory / "evicted-state");
+        std::vector<std::string> evicted_characters;
+        std::vector<std::filesystem::path> evicted_logs;
+        for (std::size_t index = 0U; index < 10U; ++index) {
+            evicted_characters.push_back("Evict" + std::to_string(index));
+            evicted_logs.push_back(
+                directory / "Logs" /
+                ("eqlog_" + evicted_characters.back() + "_synthetic.txt"));
+            append(evicted_logs.back(), "");
+            const auto initial = evicted_path_tailer.refresh(
+                directory, evicted_characters.back(), "synthetic_zone",
+                melee->timestamp);
+            require(initial.error == plazmic::CombatLogError::none,
+                    "evicted-path fixture could not select its initial log");
+        }
+        for (const auto& evicted_log : evicted_logs) {
+            append(evicted_log,
+                   "[Sun Aug 03 12:02:00 2026] You gain experience! "
+                   "(0.125%)\n");
+        }
+        for (std::size_t index = 0U; index < evicted_logs.size(); ++index) {
+            const auto returned = evicted_path_tailer.refresh(
+                directory, evicted_characters[index], "synthetic_zone",
+                melee->timestamp + 121s);
+            require(returned.error == plazmic::CombatLogError::none &&
+                        returned.activity.events.size() == 1U,
+                    "returning evicted log path skipped newly available "
+                    "activity");
+        }
+
+        std::filesystem::remove_all(directory);
+        directory.clear();
+        directory = fixture_directory();
+        std::filesystem::create_directory(directory / "Logs");
+        const auto flush_log =
+            directory / "Logs" / "eqlog_Flushhero_synthetic.txt";
+        append(flush_log,
+               "[Sun Aug 03 12:03:00 2026] You gain experience! (0.125%)\n");
+        append(flush_log, std::string(
+            plazmic::CombatLogTailer::maximum_line_bytes + 1U, 'x'));
+        append(flush_log, "\n");
+        const auto flush_state = directory / "flush-state";
+        plazmic::CombatLogTailer flush_tailer(false, flush_state);
+        flush_tailer.set_activity_history_enabled(true);
+        const auto failed_batch = flush_tailer.refresh(
+            directory, "Flushhero", "synthetic_zone",
+            melee->timestamp + 181s);
+        require(failed_batch.error == plazmic::CombatLogError::unavailable,
+                "flush fixture did not fail after a valid activity line");
+        flush_tailer.clear();
+        const std::string flush_key =
+            plazmic::CombatHistoryStore::privacy_key(
+                "flushhero\neqlog_flushhero_synthetic.txt");
+        plazmic::ActivityTracker flush_inspector(flush_state);
+        flush_inspector.set_retention_enabled(true);
+        require(flush_inspector.select(flush_key) &&
+                    flush_inspector.snapshot(melee->timestamp + 182s)
+                            .events.size() == 1U,
+                "lifecycle clear lost dirty retained activity after a "
+                "partial failing refresh");
 
         std::filesystem::remove_all(directory);
         directory.clear();

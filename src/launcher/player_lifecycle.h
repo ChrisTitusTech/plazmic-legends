@@ -23,6 +23,7 @@ struct PlayerLifecycleUpdate {
     std::optional<ZoneMap> map;
     bool clear_map{false};
     bool reset_combat{false};
+    bool reset_activity{false};
 };
 
 class PlayerLifecycle {

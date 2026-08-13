@@ -1,5 +1,7 @@
 #include "ui/main_window.h"
 
+#include "game/combat_history_store.h"
+
 #include "ui/character_profile_exporter.h"
 #include "ui/map_canvas.h"
 #include "ui/spawn_presentation.h"
@@ -43,12 +45,16 @@
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QTableView>
+#include <QTabWidget>
 #include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
 
 namespace plazmic {
 namespace {
+
+constexpr std::size_t kMaximumCombatAbilityRows =
+    CombatHistoryStore::maximum_total_abilities;
 
 QDockWidget* create_dock(const QString& title,
                          const QString& object_name,
@@ -203,6 +209,12 @@ void MainWindow::build_ui() {
     parse_state_->setObjectName("parse-state");
     parse_state_->setWordWrap(true);
     parse_layout->addWidget(parse_state_);
+    combat_overview_ = new QLabel("No retained combat history");
+    combat_overview_->setObjectName("combat-overview");
+    combat_overview_->setWordWrap(true);
+    parse_layout->addWidget(combat_overview_);
+    auto* combat_tabs = new QTabWidget;
+    combat_tabs->setObjectName("combat-tabs");
     parse_table_ = new QTableWidget;
     parse_table_->setObjectName("parse-table");
     parse_table_->setColumnCount(5);
@@ -219,7 +231,100 @@ void MainWindow::build_ui() {
         parse_table_->horizontalHeader()->setSectionResizeMode(
             column, QHeaderView::ResizeToContents);
     }
-    parse_layout->addWidget(parse_table_, 1);
+    combat_tabs->addTab(parse_table_, "Damage");
+
+    combat_abilities_ = new QTableWidget;
+    combat_abilities_->setObjectName("combat-abilities");
+    combat_abilities_->setColumnCount(5);
+    combat_abilities_->setHorizontalHeaderLabels(
+        {"Participant", "Attack / Spell", "Type", "Damage", "Hits"});
+    combat_abilities_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    combat_abilities_->setAlternatingRowColors(true);
+    combat_abilities_->verticalHeader()->setVisible(false);
+    combat_abilities_->horizontalHeader()->setSectionResizeMode(
+        0, QHeaderView::ResizeToContents);
+    combat_abilities_->horizontalHeader()->setSectionResizeMode(
+        1, QHeaderView::Stretch);
+    for (int column = 2; column < 5; ++column) {
+        combat_abilities_->horizontalHeader()->setSectionResizeMode(
+            column, QHeaderView::ResizeToContents);
+    }
+    combat_tabs->addTab(combat_abilities_, "Attacks / Spells");
+
+    combat_healing_ = new QTableWidget;
+    combat_healing_->setObjectName("combat-healing");
+    combat_healing_->setColumnCount(5);
+    combat_healing_->setHorizontalHeaderLabels(
+        {"Healer", "Healing", "Events", "HPS", "%"});
+    combat_healing_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    combat_healing_->setAlternatingRowColors(true);
+    combat_healing_->verticalHeader()->setVisible(false);
+    combat_healing_->horizontalHeader()->setSectionResizeMode(
+        0, QHeaderView::Stretch);
+    for (int column = 1; column < 5; ++column) {
+        combat_healing_->horizontalHeader()->setSectionResizeMode(
+            column, QHeaderView::ResizeToContents);
+    }
+    combat_tabs->addTab(combat_healing_, "Healing");
+
+    combat_timeline_ = new QTableWidget;
+    combat_timeline_->setObjectName("combat-timeline");
+    combat_timeline_->setColumnCount(3);
+    combat_timeline_->setHorizontalHeaderLabels(
+        {"Second", "Damage", "Healing"});
+    combat_timeline_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    combat_timeline_->setAlternatingRowColors(true);
+    combat_timeline_->verticalHeader()->setVisible(false);
+    combat_timeline_->horizontalHeader()->setSectionResizeMode(
+        QHeaderView::Stretch);
+    combat_tabs->addTab(combat_timeline_, "Timeline");
+
+    combat_history_ = new QTableWidget;
+    combat_history_->setObjectName("combat-history");
+    combat_history_->setColumnCount(5);
+    combat_history_->setHorizontalHeaderLabels(
+        {"Zone", "Target", "Damage", "Healing", "Seconds"});
+    combat_history_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    combat_history_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    combat_history_->setSelectionMode(QAbstractItemView::SingleSelection);
+    combat_history_->setAlternatingRowColors(true);
+    combat_history_->verticalHeader()->setVisible(false);
+    combat_history_->horizontalHeader()->setSectionResizeMode(
+        0, QHeaderView::ResizeToContents);
+    combat_history_->horizontalHeader()->setSectionResizeMode(
+        1, QHeaderView::Stretch);
+    for (int column = 2; column < 5; ++column) {
+        combat_history_->horizontalHeader()->setSectionResizeMode(
+            column, QHeaderView::ResizeToContents);
+    }
+    combat_tabs->addTab(combat_history_, "History");
+    connect(combat_history_, &QTableWidget::itemSelectionChanged,
+            this, [this]() {
+                if (updating_combat_history_) {
+                    return;
+                }
+                const int row = combat_history_->currentRow();
+                if (row < 0 ||
+                    !combat_history_->selectionModel()->isRowSelected(
+                        row, QModelIndex()) ||
+                    static_cast<std::size_t>(row) >=
+                        combat_analytics_.history.size()) {
+                    selected_combat_history_.reset();
+                    render_combat_encounter(combat_analytics_.encounter);
+                    return;
+                }
+                const std::size_t index =
+                    combat_analytics_.history.size() -
+                    static_cast<std::size_t>(row) - 1U;
+                selected_combat_history_ =
+                    combat_analytics_.history[index].started_unix_seconds;
+                render_combat_encounter(combat_analytics_.history[index]);
+                if (!combat_analytics_.encounter.available()) {
+                    parse_state_->setText(QString::fromStdString(
+                        combat_analytics_.encounter.detail));
+                }
+            });
+    parse_layout->addWidget(combat_tabs, 1);
     auto* parse_dock = create_dock(
         "Parse", "parse-dock", parse_container, this);
     addDockWidget(Qt::LeftDockWidgetArea, parse_dock);
@@ -392,6 +497,13 @@ void MainWindow::build_menu_bar(QDockWidget* character_dock,
     ui_install_action->setObjectName("ui-file-install-action");
     connect(ui_install_action, &QAction::triggered,
             this, &MainWindow::open_ui_file_install);
+    retain_combat_history_action_ =
+        user_menu->addAction("Retain Combat History");
+    retain_combat_history_action_->setObjectName(
+        "retain-combat-history-action");
+    retain_combat_history_action_->setCheckable(true);
+    connect(retain_combat_history_action_, &QAction::toggled,
+            this, [this]() { save_combat_history_preference(); });
 
     QMenu* views_menu = bar->addMenu("&Views");
     views_menu->setObjectName("views-menu");
@@ -647,15 +759,8 @@ void MainWindow::update_character_snapshot(
     }
 }
 
-void MainWindow::update_combat_snapshot(
+void MainWindow::render_combat_encounter(
     const CombatEncounterSnapshot& snapshot) {
-    const double current_dps =
-        snapshot.state == CombatEncounterState::active
-            ? snapshot.active_character_dps
-            : 0.0;
-    current_dps_->setText(
-        QString("Current DPS: %1")
-            .arg(current_dps, 0, 'f', 1));
     parse_table_->setRowCount(
         static_cast<int>(snapshot.participants.size()));
     for (std::size_t row = 0U; row < snapshot.participants.size(); ++row) {
@@ -680,17 +785,150 @@ void MainWindow::update_combat_snapshot(
             table_row, 4,
             new QTableWidgetItem(
                 QString::number(participant.active_seconds, 'f', 1)));
+        parse_table_->item(table_row, 0)->setToolTip(
+            QString("Melee %1 | Spell %2 | DoT %3 | Pet %4")
+                .arg(participant.melee_damage)
+                .arg(participant.spell_damage)
+                .arg(participant.damage_over_time)
+                .arg(participant.pet_damage));
+    }
+    std::size_t ability_rows = 0U;
+    for (const auto& participant : snapshot.participants) {
+        ability_rows += std::min(
+            participant.abilities.size(),
+            kMaximumCombatAbilityRows - ability_rows);
+        if (ability_rows == kMaximumCombatAbilityRows) {
+            break;
+        }
+    }
+    combat_abilities_->setRowCount(static_cast<int>(ability_rows));
+    int ability_row = 0;
+    for (const auto& participant : snapshot.participants) {
+        for (const auto& ability : participant.abilities) {
+            if (static_cast<std::size_t>(ability_row) == ability_rows) {
+                break;
+            }
+            combat_abilities_->setItem(ability_row, 0, new QTableWidgetItem(
+                QString::fromStdString(participant.name)));
+            combat_abilities_->setItem(ability_row, 1, new QTableWidgetItem(
+                QString::fromStdString(ability.name)));
+            combat_abilities_->setItem(ability_row, 2, new QTableWidgetItem(
+                QString::fromStdString(ability.category)));
+            combat_abilities_->setItem(ability_row, 3, new QTableWidgetItem(
+                QString::number(ability.damage)));
+            combat_abilities_->setItem(ability_row, 4, new QTableWidgetItem(
+                QString::number(ability.hits)));
+            ++ability_row;
+        }
+        if (static_cast<std::size_t>(ability_row) == ability_rows) {
+            break;
+        }
+    }
+    combat_healing_->setRowCount(static_cast<int>(snapshot.healers.size()));
+    for (std::size_t row = 0U; row < snapshot.healers.size(); ++row) {
+        const CombatHealerSnapshot& healer = snapshot.healers[row];
+        const int table_row = static_cast<int>(row);
+        combat_healing_->setItem(table_row, 0, new QTableWidgetItem(
+            QString::fromStdString(healer.name)));
+        combat_healing_->setItem(table_row, 1, new QTableWidgetItem(
+            QString::number(healer.healing)));
+        combat_healing_->setItem(table_row, 2, new QTableWidgetItem(
+            QString::number(healer.casts)));
+        combat_healing_->setItem(table_row, 3, new QTableWidgetItem(
+            QString::number(healer.hps, 'f', 1)));
+        combat_healing_->setItem(table_row, 4, new QTableWidgetItem(
+            QString::number(healer.percentage, 'f', 1)));
+    }
+    combat_timeline_->setRowCount(static_cast<int>(snapshot.timeline.size()));
+    for (std::size_t row = 0U; row < snapshot.timeline.size(); ++row) {
+        const CombatTimelinePoint& point = snapshot.timeline[row];
+        const int table_row = static_cast<int>(row);
+        combat_timeline_->setItem(table_row, 0, new QTableWidgetItem(
+            QString::number(point.elapsed_seconds)));
+        combat_timeline_->setItem(table_row, 1, new QTableWidgetItem(
+            QString::number(point.damage)));
+        combat_timeline_->setItem(table_row, 2, new QTableWidgetItem(
+            QString::number(point.healing)));
     }
     if (!snapshot.available()) {
         parse_state_->setText(QString::fromStdString(snapshot.detail));
         return;
     }
     parse_state_->setText(
-        QString("%1 - %2 - %3 damage - %4 s")
+        QString("%1 - %2 - %3 damage - %4 healing - %5 s")
             .arg(QString::fromStdString(snapshot.detail))
             .arg(QString::fromStdString(snapshot.target))
             .arg(snapshot.total_damage)
+            .arg(snapshot.total_healing)
             .arg(snapshot.duration_seconds, 0, 'f', 1));
+}
+
+void MainWindow::update_combat_snapshot(
+    const CombatAnalyticsSnapshot& analytics) {
+    combat_analytics_ = analytics;
+    const double current_dps =
+        analytics.encounter.state == CombatEncounterState::active
+            ? analytics.encounter.active_character_dps
+            : 0.0;
+    current_dps_->setText(
+        QString("Current DPS: %1").arg(current_dps, 0, 'f', 1));
+    updating_combat_history_ = true;
+    combat_history_->setRowCount(
+        static_cast<int>(combat_analytics_.history.size()));
+    int selected_row = -1;
+    for (std::size_t offset = 0U;
+         offset < combat_analytics_.history.size(); ++offset) {
+        const std::size_t index =
+            combat_analytics_.history.size() - offset - 1U;
+        const CombatEncounterSnapshot& encounter =
+            combat_analytics_.history[index];
+        const int row = static_cast<int>(offset);
+        combat_history_->setItem(row, 0, new QTableWidgetItem(
+            QString::fromStdString(encounter.zone)));
+        combat_history_->setItem(row, 1, new QTableWidgetItem(
+            QString::fromStdString(encounter.target)));
+        combat_history_->setItem(row, 2, new QTableWidgetItem(
+            QString::number(encounter.total_damage)));
+        combat_history_->setItem(row, 3, new QTableWidgetItem(
+            QString::number(encounter.total_healing)));
+        combat_history_->setItem(row, 4, new QTableWidgetItem(
+            QString::number(encounter.duration_seconds, 'f', 1)));
+        if (selected_combat_history_ &&
+            *selected_combat_history_ == encounter.started_unix_seconds) {
+            selected_row = row;
+        }
+    }
+    if (selected_row >= 0) {
+        combat_history_->selectRow(selected_row);
+    } else {
+        selected_combat_history_.reset();
+        combat_history_->clearSelection();
+    }
+    updating_combat_history_ = false;
+    combat_overview_->setText(
+        QString("Zone: %1 completed | %2 damage | %3 healing%4%5")
+            .arg(analytics.zone_encounters)
+            .arg(analytics.zone_damage)
+            .arg(analytics.zone_healing)
+            .arg(analytics.history_retention_enabled
+                     ? QString{}
+                     : QString(" | Retention off"))
+            .arg(analytics.history_persisted
+                     ? QString{}
+                     : QString(" | %1").arg(
+                           QString::fromStdString(analytics.history_detail))));
+    if (selected_row >= 0) {
+        const std::size_t index =
+            combat_analytics_.history.size() -
+            static_cast<std::size_t>(selected_row) - 1U;
+        render_combat_encounter(combat_analytics_.history[index]);
+    } else {
+        render_combat_encounter(combat_analytics_.encounter);
+    }
+    if (!combat_analytics_.encounter.available()) {
+        parse_state_->setText(QString::fromStdString(
+            combat_analytics_.encounter.detail));
+    }
 }
 
 void MainWindow::update_spawn_snapshot(
@@ -832,6 +1070,8 @@ void MainWindow::restore_ui_state() {
             state->spawn_sort_descending
                 ? Qt::DescendingOrder
                 : Qt::AscendingOrder);
+        retain_combat_history_action_->setChecked(
+            state->combat_history_enabled);
     }
     QTimer::singleShot(0, this, [this]() { ensure_on_screen(); });
 }
@@ -894,6 +1134,7 @@ void MainWindow::save_ui_state() {
             map_canvas_->npc_spawns_visible(),
         .other_spawns_visible =
             map_canvas_->other_spawns_visible(),
+        .combat_history_enabled = combat_history_enabled(),
         .spawn_filter = spawn_filter_->text(),
         .spawn_type_filter = type_filter,
         .spawn_sort_column = header->sortIndicatorSection(),
@@ -902,6 +1143,21 @@ void MainWindow::save_ui_state() {
         .spawn_column_widths = column_widths,
     };
     (void)settings_.save(state);
+}
+
+void MainWindow::save_combat_history_preference() {
+    auto state = settings_.load();
+    if (!state) {
+        save_ui_state();
+        return;
+    }
+    state->combat_history_enabled = combat_history_enabled();
+    (void)settings_.save(*state);
+}
+
+bool MainWindow::combat_history_enabled() const {
+    return retain_combat_history_action_ != nullptr &&
+           retain_combat_history_action_->isChecked();
 }
 
 void MainWindow::changeEvent(QEvent* event) {

@@ -21,6 +21,7 @@ namespace {
 
 constexpr std::uint64_t kMaximumDamage = 1'000'000'000'000ULL;
 constexpr std::size_t kMaximumNameBytes = 128U;
+constexpr std::uint32_t kMaximumTimelineSeconds = 600U;
 
 std::string lowercase(std::string_view value) {
     std::string result(value);
@@ -32,6 +33,19 @@ std::string lowercase(std::string_view value) {
 
 bool ci_equal(std::string_view left, std::string_view right) {
     return lowercase(left) == lowercase(right);
+}
+
+bool same_encounter_content(const CombatEncounterSnapshot& left,
+                            const CombatEncounterSnapshot& right) {
+    return left.target == right.target &&
+           left.participants == right.participants &&
+           left.healers == right.healers && left.timeline == right.timeline &&
+           left.zone == right.zone &&
+           left.started_unix_seconds == right.started_unix_seconds &&
+           left.total_damage == right.total_damage &&
+           left.total_healing == right.total_healing &&
+           left.duration_seconds == right.duration_seconds &&
+           left.active_character_dps == right.active_character_dps;
 }
 
 std::string_view trim(std::string_view value) {
@@ -69,6 +83,49 @@ bool valid_name(std::string_view value) {
     });
 }
 
+std::string damage_kind_label(DamageKind kind) {
+    switch (kind) {
+        case DamageKind::melee:
+            return "Melee";
+        case DamageKind::spell:
+            return "Spell";
+        case DamageKind::damage_over_time:
+            return "DoT";
+        case DamageKind::pet:
+            return "Pet";
+    }
+    return "Unknown";
+}
+
+std::string melee_ability(std::string_view verb) {
+    verb = trim(verb);
+    constexpr std::array<std::pair<std::string_view, std::string_view>, 36>
+        kNames{{
+            {"hit", "Hit"}, {"hits", "Hit"},
+            {"slash", "Slash"}, {"slashes", "Slash"},
+            {"pierce", "Pierce"}, {"pierces", "Pierce"},
+            {"crush", "Crush"}, {"crushes", "Crush"},
+            {"kick", "Kick"}, {"kicks", "Kick"},
+            {"bash", "Bash"}, {"bashes", "Bash"},
+            {"bite", "Bite"}, {"bites", "Bite"},
+            {"claw", "Claw"}, {"claws", "Claw"},
+            {"maul", "Maul"}, {"mauls", "Maul"},
+            {"punch", "Punch"}, {"punches", "Punch"},
+            {"backstab", "Backstab"}, {"backstabs", "Backstab"},
+            {"strike", "Strike"}, {"strikes", "Strike"},
+            {"cleave", "Cleave"}, {"cleaves", "Cleave"},
+            {"smite", "Smite"}, {"smites", "Smite"},
+            {"reave", "Reave"}, {"reaves", "Reave"},
+            {"rend", "Rend"}, {"rends", "Rend"},
+            {"frenzy on", "Frenzy"}, {"frenzies on", "Frenzy"},
+            {"gore", "Gore"}, {"gores", "Gore"},
+        }};
+    const auto found = std::ranges::find_if(kNames, [verb](const auto& value) {
+        return value.first == verb;
+    });
+    return found == kNames.end() ? "Melee" : std::string(found->second);
+}
+
 bool is_chat_payload(std::string_view payload) {
     if (payload.ends_with('\'') &&
         payload.find(", '") != std::string_view::npos) {
@@ -101,6 +158,38 @@ std::optional<std::uint64_t> parse_damage(std::string_view value) {
         return std::nullopt;
     }
     return damage;
+}
+
+std::optional<std::uint64_t> parse_healing_amount(std::string_view value) {
+    value = trim(value);
+    std::uint64_t amount = 0U;
+    const auto result = std::from_chars(
+        value.data(), value.data() + value.size(), amount);
+    if (result.ec != std::errc{} || amount == 0U ||
+        amount > kMaximumDamage) {
+        return std::nullopt;
+    }
+    std::string_view remainder(result.ptr,
+                               static_cast<std::size_t>(
+                                   value.data() + value.size() - result.ptr));
+    remainder = trim(remainder);
+    if (!remainder.empty()) {
+        if (remainder.size() < 3U || remainder.front() != '(' ||
+            remainder.back() != ')') {
+            return std::nullopt;
+        }
+        const std::string_view inner =
+            trim(remainder.substr(1U, remainder.size() - 2U));
+        std::uint64_t secondary = 0U;
+        const auto inner_result = std::from_chars(
+            inner.data(), inner.data() + inner.size(), secondary);
+        if (inner_result.ec != std::errc{} ||
+            inner_result.ptr != inner.data() + inner.size() ||
+            secondary > kMaximumDamage) {
+            return std::nullopt;
+        }
+    }
+    return amount;
 }
 
 std::optional<std::chrono::system_clock::time_point> parse_timestamp(
@@ -161,17 +250,21 @@ std::optional<DamageEvent> parse_damage_over_time(
         source.remove_suffix(1U);
     }
     std::string attacker;
+    std::string ability;
     const std::size_t by = source.rfind(" by ");
     if (by != std::string_view::npos) {
+        ability = clean_name(source.substr(0U, by), active_character);
         attacker = clean_name(source.substr(by + 4U), active_character);
     } else if (lowercase(source).starts_with("your ")) {
+        ability = clean_name(source.substr(5U), active_character);
         attacker = std::string(active_character);
     } else {
         return std::nullopt;
     }
     std::string defender =
         clean_name(payload.substr(0U, taken), active_character);
-    if (!valid_name(attacker) || !valid_name(defender)) {
+    if (!valid_name(attacker) || !valid_name(defender) ||
+        !valid_name(ability)) {
         return std::nullopt;
     }
     return DamageEvent{
@@ -180,6 +273,7 @@ std::optional<DamageEvent> parse_damage_over_time(
         .defender = std::move(defender),
         .damage = *damage,
         .kind = DamageKind::damage_over_time,
+        .ability = std::move(ability),
     };
 }
 
@@ -278,12 +372,31 @@ std::optional<DamageEvent> parse_direct_damage(
             active_character);
         kind = DamageKind::pet;
     }
+    std::string ability = melee_ability(verb);
+    if (kind == DamageKind::spell) {
+        const std::string lower_payload = lowercase(payload);
+        constexpr std::string_view kDamageBy = " damage by ";
+        const std::size_t by = lower_payload.rfind(kDamageBy);
+        if (by == std::string::npos) {
+            return std::nullopt;
+        }
+        std::string_view ability_text = payload.substr(by + kDamageBy.size());
+        const std::size_t modifier = ability_text.find(". (");
+        if (modifier != std::string_view::npos) {
+            ability_text = ability_text.substr(0U, modifier);
+        }
+        ability = clean_name(ability_text, active_character);
+        if (!valid_name(ability)) {
+            return std::nullopt;
+        }
+    }
     return DamageEvent{
         .timestamp = timestamp,
         .attacker = std::move(attacker),
         .defender = std::move(defender),
         .damage = *damage,
         .kind = kind,
+        .ability = std::move(ability),
     };
 }
 
@@ -379,35 +492,156 @@ std::optional<DamageEvent> parse_damage_line(
     return parse_direct_damage(*timestamp, payload, active_character);
 }
 
+std::optional<HealingEvent> parse_healing_line(
+    std::string_view line,
+    std::string_view active_character) {
+    if (line.empty() || line.size() > CombatLogTailer::maximum_line_bytes ||
+        !valid_character(active_character)) {
+        return std::nullopt;
+    }
+    std::string_view payload;
+    const auto timestamp = parse_timestamp(line, payload);
+    if (!timestamp || is_chat_payload(payload)) {
+        return std::nullopt;
+    }
+    constexpr std::string_view kFor = " for ";
+    constexpr std::array<std::string_view, 4> kUnits{
+        " hit points", " hit point", " points", " point",
+    };
+    std::size_t unit_position = std::string_view::npos;
+    std::size_t unit_end = 0U;
+    for (const auto unit : kUnits) {
+        const std::size_t found = payload.rfind(unit);
+        if (found != std::string_view::npos &&
+            (found + unit.size() > unit_end ||
+             (found + unit.size() == unit_end &&
+              (unit_position == std::string_view::npos ||
+               found < unit_position)))) {
+            unit_position = found;
+            unit_end = found + unit.size();
+        }
+    }
+    if (unit_position == std::string_view::npos) {
+        return std::nullopt;
+    }
+    const std::size_t for_position = payload.rfind(kFor, unit_position);
+    if (for_position == std::string_view::npos) {
+        return std::nullopt;
+    }
+    const auto amount = parse_healing_amount(payload.substr(
+        for_position + kFor.size(),
+        unit_position - for_position - kFor.size()));
+    if (!amount) {
+        return std::nullopt;
+    }
+
+    std::string healer;
+    std::string target;
+    constexpr std::string_view kHealedBy = " has been healed by ";
+    const std::size_t healed_by = payload.find(kHealedBy);
+    if (healed_by != std::string_view::npos && healed_by < for_position) {
+        target = clean_name(payload.substr(0U, healed_by), active_character);
+        healer = clean_name(payload.substr(
+            healed_by + kHealedBy.size(),
+            for_position - healed_by - kHealedBy.size()), active_character);
+    } else {
+        constexpr std::array<std::string_view, 2> kPassiveHealed{
+            " has been healed ", " have been healed ",
+        };
+        if (std::ranges::any_of(kPassiveHealed, [&](const auto marker) {
+                const std::size_t found = payload.find(marker);
+                return found != std::string_view::npos &&
+                       found < for_position;
+            })) {
+            return std::nullopt;
+        }
+        constexpr std::array<std::string_view, 4> kHealed{
+            " have healed ", " has healed ", " healed ", " heals ",
+        };
+        std::size_t healed = std::string_view::npos;
+        std::string_view verb;
+        for (const auto candidate : kHealed) {
+            healed = payload.rfind(candidate, for_position);
+            if (healed != std::string_view::npos && healed < for_position) {
+                verb = candidate;
+                break;
+            }
+        }
+        if (healed == std::string_view::npos) {
+            return std::nullopt;
+        }
+        std::string_view healer_text = payload.substr(0U, healed);
+        const std::size_t sentence = healer_text.rfind(". ");
+        if (sentence != std::string_view::npos) {
+            healer_text.remove_prefix(sentence + 2U);
+        }
+        healer = clean_name(healer_text, active_character);
+        std::string_view target_text = trim(payload.substr(
+            healed + verb.size(),
+            for_position - healed - verb.size()));
+        constexpr std::string_view kOverTime = " over time";
+        if (target_text.ends_with(kOverTime)) {
+            target_text.remove_suffix(kOverTime.size());
+        }
+        target = clean_name(target_text, active_character);
+        if (ci_equal(target, "himself") || ci_equal(target, "herself") ||
+            ci_equal(target, "itself") || ci_equal(target, "yourself")) {
+            target = healer;
+        }
+    }
+    if (!valid_name(healer) || !valid_name(target)) {
+        return std::nullopt;
+    }
+    return HealingEvent{
+        .timestamp = *timestamp,
+        .healer = std::move(healer),
+        .target = std::move(target),
+        .healing = *amount,
+    };
+}
+
 void CombatAccumulator::clear() {
     participants_.clear();
+    healers_.clear();
+    timeline_.clear();
     target_.clear();
+    zone_.clear();
     total_damage_ = 0U;
+    total_healing_ = 0U;
+    total_abilities_ = 0U;
     first_ = {};
     last_ = {};
+    completed_.reset();
+    active_ = false;
 }
 
 bool CombatAccumulator::add(const DamageEvent& event,
-                            std::string_view active_character) {
+                            std::string_view active_character,
+                            std::string_view zone) {
     if (!valid_name(event.attacker) || !valid_name(event.defender) ||
         event.damage == 0U || event.damage > kMaximumDamage) {
         return false;
     }
     const bool outside_encounter =
-        !participants_.empty() &&
+        active_ &&
         (event.timestamp < first_ || event.timestamp - last_ > inactivity);
     if (outside_encounter) {
         if (!active_character.empty() &&
             !ci_equal(event.attacker, active_character)) {
             return false;
         }
+        CombatEncounterSnapshot completed = snapshot(
+            last_ + inactivity + std::chrono::seconds(1),
+            active_character);
         clear();
+        completed_ = std::move(completed);
     }
-    if (participants_.empty() && !active_character.empty() &&
+    if ((!active_ || total_damage_ == 0U) && !active_character.empty() &&
         !ci_equal(event.attacker, active_character)) {
         return false;
     }
-    if (!participants_.empty() && !ci_equal(event.defender, target_)) {
+    if (active_ && total_damage_ != 0U &&
+        !ci_equal(event.defender, target_)) {
         return false;
     }
     auto found = participants_.find(event.attacker);
@@ -416,12 +650,32 @@ bool CombatAccumulator::add(const DamageEvent& event,
         return false;
     }
     if (total_damage_ >
-        std::numeric_limits<std::uint64_t>::max() - event.damage) {
+        CombatHistoryStore::maximum_aggregate - event.damage) {
         return false;
     }
-    if (participants_.empty()) {
+    const std::string ability_name = event.ability.empty()
+                                         ? damage_kind_label(event.kind)
+                                         : event.ability;
+    if (!valid_name(ability_name)) {
+        return false;
+    }
+    const std::string ability_key = damage_kind_label(event.kind) + "\n" +
+                                    lowercase(ability_name);
+    const bool existing_ability =
+        found != participants_.end() &&
+        found->second.abilities.contains(ability_key);
+    const bool record_new_ability =
+        !existing_ability &&
+        (found == participants_.end() ||
+         found->second.abilities.size() < maximum_abilities_per_participant) &&
+        total_abilities_ < maximum_total_abilities;
+    if (!active_) {
         first_ = event.timestamp;
         last_ = event.timestamp;
+        target_ = event.defender;
+        zone_ = zone.empty() ? "Unknown" : std::string(zone);
+        active_ = true;
+    } else if (total_damage_ == 0U) {
         target_ = event.defender;
     }
     auto [iterator, inserted] = participants_.try_emplace(event.attacker);
@@ -436,20 +690,108 @@ bool CombatAccumulator::add(const DamageEvent& event,
     ++participant.hits;
     const auto kind_index = static_cast<std::size_t>(event.kind);
     participant.kind_damage.at(kind_index) += event.damage;
+    if (existing_ability || record_new_ability) {
+        auto [ability_iterator, ability_inserted] =
+            participant.abilities.try_emplace(ability_key);
+        auto& ability = ability_iterator->second;
+        if (ability_inserted) {
+            ability.name = ability_name;
+            ability.kind = event.kind;
+            ++total_abilities_;
+        }
+        ability.damage += event.damage;
+        ++ability.hits;
+    }
     total_damage_ += event.damage;
+    const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+        event.timestamp - first_).count();
+    if (elapsed >= 0 &&
+        elapsed < static_cast<std::int64_t>(kMaximumTimelineSeconds)) {
+        timeline_[static_cast<std::uint32_t>(elapsed)].damage += event.damage;
+    }
     last_ = std::max(last_, event.timestamp);
     return true;
+}
+
+bool CombatAccumulator::add(const HealingEvent& event,
+                            std::string_view active_character,
+                            std::string_view zone) {
+    if (!valid_name(event.healer) ||
+        !valid_name(event.target) || event.healing == 0U ||
+        event.healing > kMaximumDamage ||
+        total_healing_ >
+            CombatHistoryStore::maximum_aggregate - event.healing) {
+        return false;
+    }
+    const bool outside_encounter = active_ &&
+        (event.timestamp < first_ || event.timestamp - last_ > inactivity);
+    if (outside_encounter) {
+        CombatEncounterSnapshot completed = snapshot(
+            last_ + inactivity + std::chrono::seconds(1), active_character);
+        clear();
+        completed_ = std::move(completed);
+    }
+    if (!active_character.empty() &&
+        !ci_equal(event.healer, active_character) &&
+        !ci_equal(event.target, active_character)) {
+        return false;
+    }
+    auto found = healers_.find(event.healer);
+    if (found == healers_.end() &&
+        healers_.size() >= maximum_participants) {
+        return false;
+    }
+    Healer& healer = healers_[event.healer];
+    if (!active_) {
+        active_ = true;
+        first_ = event.timestamp;
+        last_ = event.timestamp;
+        target_ = "Healing activity";
+        zone_ = zone.empty() ? "Unknown" : std::string(zone);
+    }
+    healer.healing += event.healing;
+    ++healer.casts;
+    total_healing_ += event.healing;
+    const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+        event.timestamp - first_).count();
+    if (elapsed >= 0 &&
+        elapsed < static_cast<std::int64_t>(kMaximumTimelineSeconds)) {
+        timeline_[static_cast<std::uint32_t>(elapsed)].healing += event.healing;
+    }
+    last_ = std::max(last_, event.timestamp);
+    return true;
+}
+
+std::optional<CombatEncounterSnapshot> CombatAccumulator::take_completed() {
+    return std::exchange(completed_, std::nullopt);
+}
+
+std::optional<CombatEncounterSnapshot> CombatAccumulator::finalize(
+    std::string_view active_character) {
+    if (!active_) {
+        clear();
+        return std::nullopt;
+    }
+    CombatEncounterSnapshot result = snapshot(
+        last_ + inactivity + std::chrono::seconds(1), active_character);
+    clear();
+    return result;
 }
 
 CombatEncounterSnapshot CombatAccumulator::snapshot(
     std::chrono::system_clock::time_point now,
     std::string_view active_character) const {
-    if (participants_.empty()) {
+    if (!active_) {
         return {
             .state = CombatEncounterState::idle,
             .target = {},
             .participants = {},
+            .healers = {},
+            .timeline = {},
+            .zone = {},
+            .started_unix_seconds = 0,
             .total_damage = 0U,
+            .total_healing = 0U,
             .duration_seconds = 0.0,
             .active_character_dps = 0.0,
             .detail = "Waiting for combat",
@@ -461,7 +803,14 @@ CombatEncounterSnapshot CombatAccumulator::snapshot(
                      : CombatEncounterState::active,
         .target = target_,
         .participants = {},
+        .healers = {},
+        .timeline = {},
+        .zone = zone_,
+        .started_unix_seconds =
+            std::chrono::duration_cast<std::chrono::seconds>(
+                first_.time_since_epoch()).count(),
         .total_damage = total_damage_,
+        .total_healing = total_healing_,
         .duration_seconds = duration_seconds(first_, last_),
         .active_character_dps = 0.0,
         .detail = now - last_ > inactivity
@@ -483,11 +832,36 @@ CombatEncounterSnapshot CombatAccumulator::snapshot(
                                     100.0 /
                                     static_cast<double>(total_damage_),
             .active_seconds = active,
+            .melee_damage = participant.kind_damage[0],
+            .spell_damage = participant.kind_damage[1],
+            .damage_over_time = participant.kind_damage[2],
+            .pet_damage = participant.kind_damage[3],
+            .abilities = {},
         };
         if (ci_equal(name, active_character)) {
             result.active_character_dps = value.dps;
         }
         result.participants.push_back(std::move(value));
+    }
+    for (std::size_t index = 0U; index < result.participants.size(); ++index) {
+        const auto& participant = participants_.at(
+            result.participants[index].name);
+        auto& abilities = result.participants[index].abilities;
+        abilities.reserve(participant.abilities.size());
+        for (const auto& [key, ability] : participant.abilities) {
+            (void)key;
+            abilities.push_back({
+                .name = ability.name,
+                .category = damage_kind_label(ability.kind),
+                .damage = ability.damage,
+                .hits = ability.hits,
+            });
+        }
+        std::ranges::sort(abilities, [](const auto& left, const auto& right) {
+            return left.damage != right.damage
+                       ? left.damage > right.damage
+                       : lowercase(left.name) < lowercase(right.name);
+        });
     }
     std::ranges::sort(
         result.participants,
@@ -498,22 +872,85 @@ CombatEncounterSnapshot CombatAccumulator::snapshot(
             }
             return lowercase(left.name) < lowercase(right.name);
         });
+    result.healers.reserve(healers_.size());
+    for (const auto& [name, healer] : healers_) {
+        result.healers.push_back({
+            .name = name,
+            .healing = healer.healing,
+            .casts = healer.casts,
+            .hps = static_cast<double>(healer.healing) /
+                   result.duration_seconds,
+            .percentage = total_healing_ == 0U
+                              ? 0.0
+                              : static_cast<double>(healer.healing) * 100.0 /
+                                    static_cast<double>(total_healing_),
+        });
+    }
+    std::ranges::sort(result.healers, [](const auto& left, const auto& right) {
+        return left.healing != right.healing
+                   ? left.healing > right.healing
+                   : lowercase(left.name) < lowercase(right.name);
+    });
+    std::vector<std::uint32_t> seconds;
+    seconds.reserve(timeline_.size());
+    for (const auto& [second, bucket] : timeline_) {
+        (void)bucket;
+        seconds.push_back(second);
+    }
+    std::ranges::sort(seconds);
+    result.timeline.reserve(seconds.size());
+    for (const std::uint32_t second : seconds) {
+        const TimelineBucket& bucket = timeline_.at(second);
+        result.timeline.push_back({
+            .elapsed_seconds = second,
+            .damage = bucket.damage,
+            .healing = bucket.healing,
+        });
+    }
     return result;
 }
 
 CombatLogRefresh CombatLogTailer::failure(
     CombatLogError error,
     std::string detail) const {
+    CombatAnalyticsSnapshot analytics{
+            .encounter = {
+                .state = CombatEncounterState::unavailable,
+                .target = {},
+                .participants = {},
+                .healers = {},
+                .timeline = {},
+                .zone = {},
+                .started_unix_seconds = 0,
+                .total_damage = 0U,
+                .total_healing = 0U,
+                .duration_seconds = 0.0,
+                .active_character_dps = 0.0,
+                .detail = std::move(detail),
+            },
+            .history = history_visible_
+                           ? history_
+                           : std::vector<CombatEncounterSnapshot>{},
+            .zone_damage = 0U,
+            .zone_healing = 0U,
+            .zone_encounters = 0U,
+            .history_retention_enabled = history_enabled_,
+            .history_persisted = history_persisted_,
+            .history_detail = history_persisted_
+                                  ? std::string{}
+                                  : "Encounter history could not be saved",
+        };
+    if (history_visible_) {
+        for (const auto& encounter : history_) {
+            if (ci_equal(encounter.zone, history_zone_)) {
+                analytics.zone_damage += encounter.total_damage;
+                analytics.zone_healing += encounter.total_healing;
+                ++analytics.zone_encounters;
+            }
+        }
+    }
     return {
-        .snapshot = {
-            .state = CombatEncounterState::unavailable,
-            .target = {},
-            .participants = {},
-            .total_damage = 0U,
-            .duration_seconds = 0.0,
-            .active_character_dps = 0.0,
-            .detail = std::move(detail),
-        },
+        .snapshot = std::move(analytics),
         .error = error,
     };
 }
@@ -582,7 +1019,8 @@ std::optional<std::filesystem::path> CombatLogTailer::select_log(
 
 bool CombatLogTailer::consume(
     char byte,
-    std::string_view active_character) {
+    std::string_view active_character,
+    std::string_view zone) {
     if (byte == '\r') {
         return true;
     }
@@ -595,8 +1033,12 @@ bool CombatLogTailer::consume(
             if (const auto event =
                     parse_damage_line(partial_line_, active_character);
                 event && !ci_equal(event->defender, active_character)) {
-                (void)accumulator_.add(*event, active_character);
+                (void)accumulator_.add(*event, active_character, zone);
+            } else if (const auto healing =
+                           parse_healing_line(partial_line_, active_character)) {
+                (void)accumulator_.add(*healing, active_character, zone);
             }
+            retain_completed();
             ++lines_this_refresh_;
         }
         partial_line_.clear();
@@ -610,7 +1052,6 @@ bool CombatLogTailer::consume(
         partial_line_.clear();
         dropping_line_ = true;
         oversized_line_seen_ = true;
-        accumulator_.clear();
         return true;
     }
     partial_line_.push_back(byte);
@@ -620,7 +1061,9 @@ bool CombatLogTailer::consume(
 CombatLogRefresh CombatLogTailer::refresh(
     const std::filesystem::path& game_directory,
     std::string_view active_character,
+    std::string_view zone,
     std::chrono::system_clock::time_point now) {
+    maintain_history_store();
     if (!valid_character(active_character)) {
         clear();
         return failure(
@@ -642,6 +1085,12 @@ CombatLogRefresh CombatLogTailer::refresh(
                 : "Combat logging is unavailable");
     }
     if (path_ != *selected) {
+        finalize_current();
+        if (!select_history(active_character, *selected)) {
+            return failure(
+                CombatLogError::unavailable,
+                "Unsaved combat history is awaiting local persistence");
+        }
         const bool replacing_stream =
             identity_.has_value() || !path_.empty();
         path_ = *selected;
@@ -654,7 +1103,16 @@ CombatLogRefresh CombatLogTailer::refresh(
         boundary_.clear();
         reopen_from_start_ = replacing_stream;
         accumulator_.clear();
+    } else {
+        if (!select_history(active_character, *selected)) {
+            return failure(
+                CombatLogError::unavailable,
+                "Unsaved combat history is awaiting local persistence");
+        }
     }
+    history_zone_ = std::string(zone);
+    history_visible_ = true;
+    maintain_history();
 
     std::error_code filesystem_error;
     const std::uintmax_t size =
@@ -683,7 +1141,7 @@ CombatLogRefresh CombatLogTailer::refresh(
         partial_line_.clear();
         dropping_line_ = false;
         oversized_line_seen_ = false;
-        accumulator_.clear();
+        finalize_current();
         prefix_boundary_.clear();
         boundary_.clear();
         stream_reset = true;
@@ -694,7 +1152,7 @@ CombatLogRefresh CombatLogTailer::refresh(
         partial_line_.clear();
         dropping_line_ = false;
         oversized_line_seen_ = false;
-        accumulator_.clear();
+        finalize_current();
         boundary_.clear();
         stream_reset = true;
     }
@@ -711,7 +1169,7 @@ CombatLogRefresh CombatLogTailer::refresh(
         partial_line_.clear();
         dropping_line_ = false;
         oversized_line_seen_ = false;
-        accumulator_.clear();
+        finalize_current();
         boundary_.clear();
     } else {
         boundary_ = *observed_boundary;
@@ -740,7 +1198,7 @@ CombatLogRefresh CombatLogTailer::refresh(
         lines_this_refresh_ = 0U;
         std::size_t consumed = 0U;
         for (; consumed < received; ++consumed) {
-            if (!consume(bytes[consumed], active_character)) {
+            if (!consume(bytes[consumed], active_character, zone)) {
                 break;
             }
         }
@@ -762,13 +1220,225 @@ CombatLogRefresh CombatLogTailer::refresh(
             "Combat log contains an oversized line");
     }
 
+    CombatEncounterSnapshot current = accumulator_.snapshot(
+        now, active_character);
+    if (current.state == CombatEncounterState::complete) {
+        retain_encounter(current);
+    }
+    CombatAnalyticsSnapshot analytics{
+        .encounter = std::move(current),
+        .history = history_,
+        .history_retention_enabled = history_enabled_,
+        .history_persisted = history_persisted_,
+        .history_detail = history_persisted_
+                              ? std::string{}
+                              : "Encounter history could not be saved",
+    };
+    for (const auto& encounter : history_) {
+        if (ci_equal(encounter.zone, zone)) {
+            analytics.zone_damage += encounter.total_damage;
+            analytics.zone_healing += encounter.total_healing;
+            ++analytics.zone_encounters;
+        }
+    }
+    if (analytics.encounter.state == CombatEncounterState::active &&
+        ci_equal(analytics.encounter.zone, zone)) {
+        analytics.zone_damage += analytics.encounter.total_damage;
+        analytics.zone_healing += analytics.encounter.total_healing;
+    }
     return {
-        .snapshot = accumulator_.snapshot(now, active_character),
+        .snapshot = std::move(analytics),
         .error = CombatLogError::none,
     };
 }
 
+bool CombatLogTailer::select_history(
+    std::string_view active_character,
+    const std::filesystem::path& log_path) {
+    const std::string identity = lowercase(active_character) + "\n" +
+                                 lowercase(log_path.filename().string());
+    const std::string key = CombatHistoryStore::privacy_key(identity);
+    if (key == history_key_) {
+        return !history_enabled_ || history_load_compatible_;
+    }
+    if (!history_enabled_) {
+        history_key_ = key;
+        history_.clear();
+        history_persisted_ = true;
+        history_load_compatible_ = true;
+        history_retry_after_ = {};
+        history_visible_ = true;
+        return true;
+    }
+    if (!history_persisted_ && !history_key_.empty() &&
+        !history_store_.save(history_key_, history_)) {
+        return false;
+    }
+    const auto loaded = history_store_.load_checked(key);
+    if (!loaded) {
+        history_load_compatible_ = false;
+        return false;
+    }
+    history_key_ = key;
+    history_ = loaded->history;
+    history_persisted_ = loaded->persisted;
+    history_load_compatible_ = true;
+    history_retry_after_ = {};
+    history_visible_ = true;
+    return true;
+}
+
+void CombatLogTailer::retain_encounter(
+    const CombatEncounterSnapshot& encounter) {
+    if (!encounter.available()) {
+        return;
+    }
+    const auto existing = std::ranges::find_if(
+        history_, [&encounter](const auto& value) {
+            return value.started_unix_seconds ==
+                   encounter.started_unix_seconds;
+        });
+    bool unchanged = false;
+    if (existing == history_.end()) {
+        history_.push_back(encounter);
+    } else {
+        if (same_encounter_content(*existing, encounter)) {
+            unchanged = true;
+        } else {
+            *existing = encounter;
+        }
+    }
+    const auto persistence_now = std::chrono::steady_clock::now();
+    if (unchanged &&
+        (history_persisted_ || persistence_now < history_retry_after_)) {
+        return;
+    }
+    if (history_.size() > CombatHistoryStore::maximum_encounters) {
+        history_.erase(history_.begin(),
+                       history_.begin() +
+                           static_cast<std::ptrdiff_t>(
+                               history_.size() -
+                               CombatHistoryStore::maximum_encounters));
+    }
+    if (!history_enabled_) {
+        history_persisted_ = history_store_.bound(history_);
+        return;
+    }
+    if (!history_key_.empty()) {
+        history_persisted_ = history_store_.save(history_key_, history_);
+        history_retry_after_ = history_persisted_
+                                   ? std::chrono::steady_clock::time_point{}
+                                   : persistence_now + history_retry_delay;
+    } else {
+        history_persisted_ = false;
+        history_retry_after_ = persistence_now + history_retry_delay;
+    }
+}
+
+void CombatLogTailer::set_history_enabled(bool enabled) {
+    if (enabled == history_enabled_) {
+        return;
+    }
+    history_enabled_ = enabled;
+    history_persisted_ = true;
+    history_load_compatible_ = true;
+    history_retry_after_ = {};
+    if (!enabled || history_key_.empty()) {
+        return;
+    }
+    const auto loaded = history_store_.load_checked(history_key_);
+    if (!loaded) {
+        history_persisted_ = false;
+        history_load_compatible_ = false;
+        return;
+    }
+    for (const auto& encounter : loaded->history) {
+        const auto existing = std::ranges::find_if(
+            history_, [&encounter](const auto& value) {
+                return value.started_unix_seconds ==
+                       encounter.started_unix_seconds;
+            });
+        if (existing == history_.end()) {
+            history_.push_back(encounter);
+        }
+    }
+    std::ranges::sort(history_, {},
+                      &CombatEncounterSnapshot::started_unix_seconds);
+    history_persisted_ = history_store_.save(history_key_, history_);
+    history_retry_after_ = history_persisted_
+                               ? std::chrono::steady_clock::time_point{}
+                               : std::chrono::steady_clock::now() +
+                                     history_retry_delay;
+}
+
+void CombatLogTailer::maintain_history() {
+    if (!history_load_compatible_) {
+        return;
+    }
+    const auto now = std::chrono::steady_clock::now();
+    const auto oldest =
+        std::chrono::duration_cast<std::chrono::seconds>(
+            (std::chrono::system_clock::now() -
+             CombatHistoryStore::maximum_age)
+                .time_since_epoch())
+            .count();
+    const bool age_prune = std::ranges::any_of(
+        history_, [oldest](const auto& encounter) {
+            return encounter.started_unix_seconds < oldest;
+        });
+    if (age_prune) {
+        if (!history_enabled_) {
+            history_persisted_ = history_store_.bound(history_);
+            return;
+        }
+        history_persisted_ = !history_key_.empty() &&
+                             history_store_.save(history_key_, history_);
+        history_retry_after_ = history_persisted_
+                                   ? std::chrono::steady_clock::time_point{}
+                                   : now + history_retry_delay;
+    }
+    if (!history_enabled_ || history_persisted_ || history_key_.empty()) {
+        return;
+    }
+    if (now < history_retry_after_) {
+        return;
+    }
+    history_persisted_ = history_store_.save(history_key_, history_);
+    history_retry_after_ = history_persisted_
+                               ? std::chrono::steady_clock::time_point{}
+                               : now + history_retry_delay;
+}
+
+void CombatLogTailer::maintain_history_store() {
+    const auto now = std::chrono::system_clock::now();
+    if (now < history_sweep_after_) {
+        return;
+    }
+    const CombatHistoryPrune result = history_store_.prune_expired();
+    history_sweep_after_ = result.next_expiration.value_or(
+        now + (result.healthy ? std::chrono::hours(24)
+                              : std::chrono::hours(1)));
+}
+
+void CombatLogTailer::retain_completed() {
+    auto completed = accumulator_.take_completed();
+    if (completed) {
+        retain_encounter(*completed);
+    }
+}
+
+void CombatLogTailer::finalize_current() {
+    auto completed = accumulator_.finalize(character_);
+    if (completed) {
+        retain_encounter(*completed);
+    }
+}
+
 void CombatLogTailer::clear() {
+    finalize_current();
+    if (history_enabled_ && !history_persisted_ && !history_key_.empty()) {
+        history_persisted_ = history_store_.save(history_key_, history_);
+    }
     character_.clear();
     path_.clear();
     identity_.reset();
@@ -781,6 +1451,14 @@ void CombatLogTailer::clear() {
     boundary_.clear();
     reopen_from_start_ = false;
     accumulator_.clear();
+    history_visible_ = false;
+    history_zone_.clear();
+    if (history_enabled_ && history_persisted_) {
+        history_key_.clear();
+        history_.clear();
+        history_retry_after_ = {};
+        history_load_compatible_ = true;
+    }
 }
 
 }  // namespace plazmic

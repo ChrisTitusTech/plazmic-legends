@@ -207,6 +207,7 @@ int main(int argc, char** argv) {
 
     plazmic::PlayerLifecycle player_lifecycle;
     std::string active_character;
+    std::string active_zone;
     std::uint64_t combat_generation = 0U;
     QFutureWatcher<plazmic::PlayerRefresh> player_watcher;
     QObject::connect(
@@ -214,7 +215,7 @@ int main(int argc, char** argv) {
         &QFutureWatcher<plazmic::PlayerRefresh>::finished,
         &window,
         [&window, &player_watcher, &player_lifecycle, &privacy_log,
-         &active_character, &combat_generation]() {
+         &active_character, &active_zone, &combat_generation]() {
             plazmic::PlayerRefresh refresh =
                 player_watcher.result();
             privacy_log.record_game_state(refresh.state.error);
@@ -238,9 +239,13 @@ int main(int argc, char** argv) {
                     ? update.character.name
                     : std::string{};
             active_character = next_character;
+            active_zone = update.player.available()
+                              ? update.player.zone
+                              : std::string{};
             if (update.reset_combat) {
                 ++combat_generation;
-                window.update_combat_snapshot({});
+                window.update_combat_snapshot(
+                    plazmic::CombatAnalyticsSnapshot{});
             }
             window.update_character_snapshot(update.character);
         });
@@ -315,19 +320,22 @@ int main(int argc, char** argv) {
         });
     QTimer combat_timer;
     const auto start_combat_refresh =
-        [&combat_watcher, &combat_tailer, &active_character,
-         &combat_generation, &tailer_generation,
+        [&combat_watcher, &combat_tailer, &active_character, &active_zone,
+         &combat_generation, &tailer_generation, &window,
          game_directory = selection.game_directory]() {
             if (combat_watcher.isRunning()) {
                 return;
             }
             const std::string character = active_character;
+            const std::string zone = active_zone;
             const std::uint64_t generation = combat_generation;
             const bool reset_tailer = tailer_generation != generation;
+            const bool retain_history = window.combat_history_enabled();
             tailer_generation = generation;
             combat_watcher.setFuture(QtConcurrent::run(
-                [combat_tailer, game_directory, character, generation,
-                 reset_tailer]() {
+                [combat_tailer, game_directory, character, zone, generation,
+                 reset_tailer, retain_history]() {
+                    combat_tailer->set_history_enabled(retain_history);
                     if (reset_tailer) {
                         combat_tailer->clear();
                     }
@@ -335,7 +343,8 @@ int main(int argc, char** argv) {
                         .character = character,
                         .generation = generation,
                         .refresh = combat_tailer->refresh(
-                            game_directory, character),
+                            game_directory, character,
+                            zone.empty() ? "Unknown" : zone),
                     };
                 }));
         };
@@ -356,6 +365,8 @@ int main(int argc, char** argv) {
     if (combat_watcher.isRunning()) {
         combat_watcher.waitForFinished();
     }
+    combat_tailer->set_history_enabled(window.combat_history_enabled());
+    combat_tailer->clear();
     privacy_log.record_shutdown();
     return result;
 }

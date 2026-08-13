@@ -177,7 +177,12 @@ only; the project does not copy or package game icons, item data, or assets.
 DPS is derived locally from the user's EverQuest combat log, not from client
 memory. The parser follows only the active character's bounded log file,
 handles appended and rotated/truncated files, starts a new encounter after an
-inactivity boundary, and never persists combatant names or encounter content.
+inactivity boundary, and may persist bounded encounter content, including
+combatant and target names, in an owner-only local state file for the History
+view only after the user enables `User > Retain Combat History`. Retention is
+off by default. It retains at most 50 encounters for 90 days, caps each
+partition at 2 MiB, and never includes those values in diagnostics or network
+traffic.
 Missing, disabled, ambiguous, malformed, oversized, or unavailable logs show
 an explicit unavailable state without affecting memory-backed character data.
 
@@ -356,7 +361,9 @@ Future side effects use similarly explicit capability contracts.
   force full table or map reconstruction.
 - Character reads have explicit record, slot-count, and string bounds. The
   combat parser tails only newly appended bounded bytes and publishes immutable
-  encounter snapshots without blocking the UI thread.
+  encounter snapshots without blocking the UI thread. Combat snapshots retain
+  at most 4,096 aggregate attack/spell detail rows, and the UI independently
+  enforces the same display cap.
 - A supported profile is immutable. A client patch creates a new profile and
   runs the compatibility gate.
 
@@ -514,8 +521,9 @@ expansion capability model; none is implicitly approved by this roadmap.
 - AC-20: Combat and overview histories are immutable, bounded, deterministic,
   lifecycle-aware, partitioned by a stable privacy-preserving local character
   key, and testable with synthetic logs. Character switching and restart
-  restore only that character's history, and diagnostics retain no private
-  names.
+  restore only that character's owner-only local history. The history may
+  contain combatant and target names for display, while diagnostics and network
+  traffic retain no private names or encounter values.
 - AC-21: Progression, loot, inventory, class, proc, upgrade, and
   celebration activity is scoped per character, bounded on disk and in memory,
   and reset or restored predictably across log rotation, zoning, character

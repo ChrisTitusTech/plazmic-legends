@@ -21,6 +21,7 @@ class QLineEdit;
 class QProgressBar;
 class QTableWidget;
 class QTableView;
+class QTabWidget;
 class QToolButton;
 
 namespace plazmic {
@@ -41,12 +42,25 @@ class MainWindow final : public QMainWindow {
     void update_snapshot(const StatusSnapshot& snapshot);
     void update_player_snapshot(const PlayerSnapshot& snapshot);
     void update_character_snapshot(const CharacterSnapshot& snapshot);
-    void update_combat_snapshot(const CombatEncounterSnapshot& snapshot);
+    void update_combat_snapshot(const CombatAnalyticsSnapshot& snapshot);
+    void update_combat_snapshot(const CombatEncounterSnapshot& snapshot) {
+        update_combat_snapshot(CombatAnalyticsSnapshot{
+            .encounter = snapshot,
+            .history = {},
+            .zone_damage = 0U,
+            .zone_healing = 0U,
+            .zone_encounters = 0U,
+            .history_retention_enabled = false,
+            .history_persisted = true,
+            .history_detail = {},
+        });
+    }
     void update_spawn_snapshot(SpawnCollectionSnapshot snapshot);
     void set_zone_map(ZoneMap map);
     void clear_zone_map(const QString& detail);
     [[nodiscard]] const StatusSnapshot& snapshot() const { return snapshot_; }
     [[nodiscard]] MapCanvas* map_canvas() const { return map_canvas_; }
+    [[nodiscard]] bool combat_history_enabled() const;
 
   protected:
     void changeEvent(QEvent* event) override;
@@ -64,9 +78,11 @@ class MainWindow final : public QMainWindow {
     void restore_ui_state();
     void ensure_on_screen();
     void save_ui_state();
+    void save_combat_history_preference();
     void select_spawn(std::uint32_t id);
     void clear_spawn_selection();
     void update_spawn_detail(const SpawnSnapshot* spawn);
+    void render_combat_encounter(const CombatEncounterSnapshot& snapshot);
 
     StatusSnapshot snapshot_;
     UiSettings settings_;
@@ -86,8 +102,17 @@ class MainWindow final : public QMainWindow {
     QLabel* current_dps_{nullptr};
     QTableWidget* equipment_table_{nullptr};
     QAction* export_inventory_action_{nullptr};
+    QAction* retain_combat_history_action_{nullptr};
     QLabel* parse_state_{nullptr};
     QTableWidget* parse_table_{nullptr};
+    QLabel* combat_overview_{nullptr};
+    QTableWidget* combat_history_{nullptr};
+    QTableWidget* combat_healing_{nullptr};
+    QTableWidget* combat_abilities_{nullptr};
+    QTableWidget* combat_timeline_{nullptr};
+    CombatAnalyticsSnapshot combat_analytics_;
+    std::optional<std::int64_t> selected_combat_history_;
+    bool updating_combat_history_{false};
     QToolButton* maximize_button_{nullptr};
     CharacterSnapshot character_snapshot_;
     std::optional<std::uint32_t> selected_spawn_;

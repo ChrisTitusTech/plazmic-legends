@@ -44,6 +44,7 @@ int main() {
             .player_spawns_visible = true,
             .npc_spawns_visible = false,
             .other_spawns_visible = false,
+            .combat_history_enabled = true,
             .spawn_filter = "guard",
             .spawn_type_filter = 1,
             .spawn_sort_column = 0,
@@ -86,6 +87,8 @@ int main() {
                         expected.npc_spawns_visible &&
                     loaded->other_spawns_visible ==
                         expected.other_spawns_visible &&
+                    loaded->combat_history_enabled ==
+                        expected.combat_history_enabled &&
                     loaded->spawn_filter == expected.spawn_filter &&
                     loaded->spawn_type_filter ==
                         expected.spawn_type_filter &&

@@ -21,7 +21,9 @@ The current `main` branch provides:
 - locally installed maps only;
 - immutable player, zone, spawn, character, and encounter snapshots;
 - an independent map, spawn table, details view, character panel, and compact
-  local combat-log parser;
+  local combat-log parser with bounded damage/healing analytics and an
+  opt-in owner-only per-character history store capped at 50 encounters, 90
+  days, and 2 MiB per partition;
 - Linux, Wine, and X11/XWayland support.
 
 This implementation is a foundation, not a permanent product-category limit.

@@ -262,7 +262,7 @@ int main(int argc, char** argv) {
             }
             window.update_player_snapshot(update.player);
             window.update_spawn_snapshot(std::move(update.spawns));
-            active_character = update.character.available()
+            active_character = update.player.available()
                                    ? update.character.name
                                    : std::string{};
             active_zone = update.player.available()

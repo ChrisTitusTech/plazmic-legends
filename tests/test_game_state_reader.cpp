@@ -217,6 +217,8 @@ int main() {
                 "spawn collection was not published");
         require(result.spawns->player_level == 50,
                 "local-player anchor level was not published");
+        require(result.spawns->player_name == "player",
+                "local-player anchor name was not published");
         require(result.spawns->spawns[1].id == 101 &&
                     result.spawns->spawns[1].name == "synth_npc" &&
                     result.spawns->spawns[1].level == 12,
@@ -244,6 +246,7 @@ int main() {
             player_not_root_result &&
                 player_not_root_result.spawns->spawns.size() == 2 &&
                 player_not_root_result.spawns->player_level == 50 &&
+                player_not_root_result.spawns->player_name == "player" &&
                 player_not_root_result.spawns->spawns[0].id == 101 &&
                 player_not_root_result.spawns->spawns[1].id == 100,
             "non-root local-player anchor did not resolve the list root");

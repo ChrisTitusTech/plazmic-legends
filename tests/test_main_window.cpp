@@ -917,6 +917,28 @@ int main(int argc, char** argv) {
                         .contains("became unavailable"),
                 "unavailable character retained vitals or imported inventory");
 
+        window.update_character_snapshot({
+            .state = plazmic::PlayerSnapshotState::unavailable,
+            .name = "synthetic_character",
+            .health = {},
+            .mana = {},
+            .alternate_advancement_percent = std::nullopt,
+            .alternate_advancement_points = std::nullopt,
+            .equipment = {},
+            .detail =
+                "Character vitals and equipment unavailable for this client",
+        });
+        require(
+            window.findChild<QLabel*>("character-name")->text() ==
+                    "synthetic_character" &&
+                window.findChild<QProgressBar*>("character-health")->text() ==
+                    "HP unavailable" &&
+                window.findChild<QProgressBar*>("character-mana")->text() ==
+                    "MP unavailable" &&
+                equipment_state->text().contains(
+                    "Vitals and equipment", Qt::CaseInsensitive),
+            "validated identity fallback hid the player or exposed vitals");
+
         auto empty_equipment = character;
         empty_equipment.equipment.clear();
         window.update_character_snapshot(empty_equipment);
@@ -1012,6 +1034,7 @@ int main(int argc, char** argv) {
             .state = plazmic::PlayerSnapshotState::in_world,
             .zone = "synthetic",
             .player_level = 50,
+            .player_name = "synthetic_player",
             .spawns =
                 {
                     {
@@ -1273,6 +1296,8 @@ int main(int argc, char** argv) {
         window.update_spawn_snapshot({
             .state = plazmic::PlayerSnapshotState::stale,
             .zone = {},
+            .player_level = 0U,
+            .player_name = {},
             .spawns = {},
             .detail = "Stale synthetic snapshot rejected",
         });
@@ -1285,6 +1310,8 @@ int main(int argc, char** argv) {
         window.update_spawn_snapshot({
             .state = plazmic::PlayerSnapshotState::in_world,
             .zone = "synthetic",
+            .player_level = 0U,
+            .player_name = "synthetic_player",
             .spawns = {},
             .detail = "Synthetic empty snapshot",
         });

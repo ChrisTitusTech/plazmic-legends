@@ -1120,7 +1120,9 @@ void MainWindow::update_character_snapshot(
     if (!snapshot.available()) {
         const QString detail = QString::fromStdString(snapshot.detail);
         character_name_->setText(
-            detail);
+            snapshot.name.empty()
+                ? detail
+                : QString::fromStdString(snapshot.name));
         equipment_state_->setText(
             detail.isEmpty() ? "Character information unavailable" : detail);
         equipment_state_->show();

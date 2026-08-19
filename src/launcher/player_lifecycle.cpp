@@ -60,6 +60,8 @@ SpawnCollectionSnapshot invalid_spawns(
     return {
         .state = player.state,
         .zone = {},
+        .player_level = 0U,
+        .player_name = {},
         .spawns = {},
         .detail = player.detail,
     };
@@ -107,7 +109,7 @@ bool PlayerLifecycle::combat_context_changed(
     const std::string next_zone =
         player.available() ? player.zone : std::string{};
     const std::string next_character =
-        character.available() ? character.name : std::string{};
+        player.available() ? character.name : std::string{};
     const bool changed = !combat_context_initialized_ ||
                          combat_zone_ != next_zone ||
                          combat_character_ != next_character;
@@ -143,6 +145,11 @@ PlayerLifecycleUpdate PlayerLifecycle::apply(PlayerRefresh refresh) {
     CharacterSnapshot character = refresh.state.character
                                       ? std::move(*refresh.state.character)
                                       : CharacterSnapshot{};
+    if (!character.available() && !spawns.player_name.empty()) {
+        character.name = spawns.player_name;
+        character.detail =
+            "Character vitals and equipment unavailable for this client";
+    }
     const bool reset_combat = combat_context_changed(player, character);
     if (!refresh.map_load) {
         const bool awaiting_new_map =

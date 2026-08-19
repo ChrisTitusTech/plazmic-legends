@@ -184,9 +184,17 @@ invalidation before it may be displayed. Equipment in the Activity Inventory
 tab uses slot labels and text only; the project does not copy or package game
 icons, item data, or assets.
 
+Character identity is independently available from the validated local-player
+anchor and does not require the profile's optional vital and equipment chain.
+When that later chain is unavailable, the Character dock may display only the
+bounded identity while keeping HP, mana, equipment, inventory export, and
+memory-derived activity unavailable.
+
 DPS is derived locally from the user's EverQuest combat log, not from client
 memory. The parser follows only the active character's bounded log file,
-handles appended and rotated/truncated files, starts a new encounter after an
+using the independently validated local-player identity even when optional
+vital and equipment reads are unavailable. It handles appended and
+rotated/truncated files, starts a new encounter after an
 inactivity boundary, and may persist bounded encounter content, including
 combatant and target names, in an owner-only local state file for the History
 view only after the user enables `User > Retain Combat History`. Retention is

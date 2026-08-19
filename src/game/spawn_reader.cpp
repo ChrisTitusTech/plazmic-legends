@@ -239,6 +239,7 @@ SpawnReadResult read_spawn_collection(
     snapshots.reserve(addresses->size());
     std::set<std::uint32_t> ids;
     unsigned int player_level = 0U;
+    std::string player_name;
     std::vector<std::byte> record(symbols.record_bytes);
     for (const std::uintptr_t address : *addresses) {
         const ProcessReadResult read_result =
@@ -278,6 +279,7 @@ SpawnReadResult read_spawn_collection(
         }
         if (address == anchor) {
             player_level = static_cast<unsigned int>(level);
+            player_name = *name;
         }
         const double delta_x =
             static_cast<double>(x) - player.x;
@@ -314,6 +316,7 @@ SpawnReadResult read_spawn_collection(
                 .state = PlayerSnapshotState::in_world,
                 .zone = player.zone,
                 .player_level = player_level,
+                .player_name = std::move(player_name),
                 .spawns = std::move(snapshots),
                 .detail = "Live read-only spawn snapshot",
             },

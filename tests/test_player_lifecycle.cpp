@@ -32,6 +32,7 @@ plazmic::GameStateReadResult live_state(std::string zone) {
                 .state = plazmic::PlayerSnapshotState::in_world,
                 .zone = zone,
                 .player_level = 10,
+                .player_name = "synthetic_character",
                 .spawns =
                     {
                         {
@@ -154,10 +155,12 @@ int main() {
         require(optional_character.player.available() &&
                     optional_character.spawns.available() &&
                     !optional_character.character.available() &&
+                    optional_character.character.name ==
+                        "synthetic_character" &&
                     !optional_character.clear_map &&
-                    optional_character.reset_combat &&
-                    optional_character.reset_activity,
-                "optional character failure cleared valid player state");
+                    !optional_character.reset_combat &&
+                    !optional_character.reset_activity,
+                "optional character failure lost the validated player identity");
 
         const auto recovered_character = lifecycle.apply({
             .state = live_state("zone_b"),
@@ -166,9 +169,9 @@ int main() {
         require(recovered_character.character.available() &&
                     recovered_character.character.name ==
                         "synthetic_character" &&
-                    recovered_character.reset_combat &&
-                    recovered_character.reset_activity,
-                "character recovery did not reset activity consumers");
+                    !recovered_character.reset_combat &&
+                    !recovered_character.reset_activity,
+                "same-identity character recovery reset activity consumers");
         auto changed_character_state = live_state("zone_b");
         changed_character_state.character->name = "other_character";
         const auto changed_character = lifecycle.apply({

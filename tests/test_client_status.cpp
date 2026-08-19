@@ -150,6 +150,37 @@ int main() {
                     0x678U &&
                 august_sixth->character.item_name_pointer_offset == 0x60U,
             "August 6 profile did not preserve its exact identity and offsets");
+        constexpr std::string_view kAugustSeventeenthDigest =
+            "3451069e63d5118a703a237f121a3ea7c20c973477a69fdd0d66bcdaa7d80b29";
+        const auto* august_seventeenth =
+            plazmic::select_client_profile(kAugustSeventeenthDigest);
+        require(
+            august_seventeenth != nullptr &&
+                august_seventeenth != &profile &&
+                august_seventeenth != august_third &&
+                august_seventeenth != august_fourth &&
+                august_seventeenth != august_sixth &&
+                august_seventeenth->id == "legends-2026-08-17" &&
+                august_seventeenth->sha256 == kAugustSeventeenthDigest &&
+                august_seventeenth->machine == 0x8664U &&
+                august_seventeenth->timestamp == 0x6a837d49U &&
+                august_seventeenth->optional_magic == 0x20bU &&
+                august_seventeenth->image_size == 0x16c2000U &&
+                !august_seventeenth->character_snapshot_supported &&
+                august_seventeenth->game_state.local_player_pointer_rva ==
+                    0x00f08248U &&
+                august_seventeenth->game_state.world_data_pointer_rva ==
+                    0x00f07d38U &&
+                august_seventeenth->game_state.player_zone_id_offset ==
+                    0x3b8U &&
+                august_seventeenth->spawns.level_offset == 0x20aU &&
+                august_seventeenth->spawns.record_bytes == 0x20bU &&
+                august_seventeenth->character.local_character_pointer_rva ==
+                    0x00f08390U &&
+                august_seventeenth->character.player_maximum_mana_offset ==
+                    0x678U &&
+                august_seventeenth->character.progression_cache_rva == 0U,
+            "August 17 profile did not preserve its exact candidate boundary");
         require(plazmic::select_client_profile("changed") == nullptr,
                 "unknown digest unexpectedly selected");
 

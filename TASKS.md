@@ -225,6 +225,47 @@ review. It does not authorize merging or releasing the pull requests.
 
 ## Post-release maintenance
 
+### M-11: Support the 2026-08-17 Legends client
+
+- [x] Capture the separate exact SHA-256
+  `3451069e63d5118a703a237f121a3ea7c20c973477a69fdd0d66bcdaa7d80b29`
+  and PE identity without modifying any prior immutable profile.
+- [x] Re-establish the exact-client local-player, world-data, and character
+  global families from static semantic cross-references. Reject the stale
+  carried-forward zone and level fields, then establish zone `0x3b8` and level
+  `0x20a` through bounded live reads and matching static access evidence.
+- [x] Keep the optional Alternate Advancement memory fields disabled because
+  their existing approval applies only to `legends-2026-08-06`.
+- [x] Pass the fresh warnings-as-errors build, repository checks, 8 Python
+  tests, all 19 CTest cases, exact fingerprint, staged install inventory, and
+  installed-command smoke test. The build and installed SHA-256 both match
+  `702aaf67559afa67f7aa6a3d10ba7dc5d24e3deca0abaac4ab72be64139a82f6`.
+- [x] Match the exact mapped PE identity in two isolated companion runs and
+  publish the expected character-select and in-world lifecycle states without
+  stale snapshots; the installed in-world smoke also loaded the current map.
+- [x] Prove consecutive complete bounded player, zone, and spawn snapshots
+  against the exact live PE identity while the client is in world.
+- [x] Fail the Character snapshot closed because the carried-forward
+  character-stat and equipment chain does not remain within readable mappings.
+- [x] Publish the independently validated bounded local-player identity from
+  the spawn anchor so the Character dock can show the player and the local
+  combat-log tailer can select the active log without enabling unverified
+  vitals, equipment, activity observations, or inventory export.
+- [ ] Re-establish and prove two consecutive bounded character, vital, and
+  equipment snapshots against the exact live PE identity.
+- [ ] Complete two controlled visible observations for every displayed field,
+  two zones, lifecycle transitions, DWM placement, game invariance,
+  performance, package, and privacy gates from `docs/profile-refresh.md`.
+- Acceptance criteria: only the exact file and mapped PE identity select the
+  candidate; every displayed field passes `docs/offset-discovery.md`; unknown
+  or inconsistent clients fail closed; and no private research artifact enters
+  the repository or package.
+- Merge exception: on 2026-08-18, the owner explicitly authorized merging all
+  completed work and starting the compatibility-automation phase. This
+  authorizes merging M-11 with the unavailable Character capability and
+  incomplete manual lifecycle checks retained as residual risk; it does not
+  count those checks as passed or authorize a release.
+
 ### M-10: Support the 2026-08-03 Legends client
 
 - [x] Add a separate immutable profile for exact SHA-256

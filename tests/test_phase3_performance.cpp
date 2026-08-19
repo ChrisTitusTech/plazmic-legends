@@ -174,6 +174,8 @@ plazmic::GameStateReadResult live_state(double coordinate) {
             plazmic::SpawnCollectionSnapshot{
                 .state = plazmic::PlayerSnapshotState::in_world,
                 .zone = "synthetic",
+                .player_level = 0U,
+                .player_name = "synthetic_player",
                 .spawns = {},
                 .detail = "Synthetic performance spawns",
             },

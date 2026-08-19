@@ -1,5 +1,7 @@
 #include "game/client_profile.h"
 
+#include <array>
+
 namespace plazmic {
 namespace {
 
@@ -362,27 +364,29 @@ constexpr ClientProfile kLegendsAugustSeventeenthProfile{
         },
 };
 
+constexpr std::array<const ClientProfile*, 5> kKnownClientProfiles{
+    &kLegendsReferenceProfile,
+    &kLegendsAugustThirdProfile,
+    &kLegendsAugustFourthProfile,
+    &kLegendsAugustSixthProfile,
+    &kLegendsAugustSeventeenthProfile,
+};
+
 }  // namespace
 
 const ClientProfile& legends_reference_profile() {
     return kLegendsReferenceProfile;
 }
 
+std::span<const ClientProfile* const> known_client_profiles() {
+    return kKnownClientProfiles;
+}
+
 const ClientProfile* select_client_profile(std::string_view sha256) {
-    if (sha256 == kLegendsReferenceProfile.sha256) {
-        return &kLegendsReferenceProfile;
-    }
-    if (sha256 == kLegendsAugustThirdProfile.sha256) {
-        return &kLegendsAugustThirdProfile;
-    }
-    if (sha256 == kLegendsAugustFourthProfile.sha256) {
-        return &kLegendsAugustFourthProfile;
-    }
-    if (sha256 == kLegendsAugustSixthProfile.sha256) {
-        return &kLegendsAugustSixthProfile;
-    }
-    if (sha256 == kLegendsAugustSeventeenthProfile.sha256) {
-        return &kLegendsAugustSeventeenthProfile;
+    for (const ClientProfile* profile : kKnownClientProfiles) {
+        if (sha256 == profile->sha256) {
+            return profile;
+        }
     }
     return nullptr;
 }

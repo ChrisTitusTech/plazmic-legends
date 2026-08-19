@@ -119,6 +119,16 @@ support tier.
 - A new profile records only exact PE identity, profile-local RVAs, bounded
   record offsets, masks, and validation limits. It never replaces or edits a
   prior profile in place.
+- The companion may detect an unknown exact identity and prepare a local,
+  SHA-bound compatibility candidate. Candidate generation is offline, writes
+  only to an owner-controlled local workspace, records which resolvers and
+  tests passed, and never makes the candidate available to normal runtime
+  selection.
+- Automated resolvers may reproduce the documented static data-flow searches
+  and bounded live observations, but every discovered value remains untrusted
+  until the complete profile contract, synthetic rejection matrix, and
+  controlled live gate pass. Promotion creates a new immutable compiled
+  profile and requires explicit owner approval.
 - Client-update research records provenance and privacy-safe validation while
   excluding proprietary binaries and disassembly, raw live addresses, memory
   content, runtime names, account data, and Wine-prefix paths.
@@ -612,6 +622,12 @@ expansion capability model; none is implicitly approved by this roadmap.
 - AC-26: Imports, exports, feedback, sharing, updates, and telemetry preview or
   document their exact payload and destination, require capability-specific
   consent, fail closed, and provide disable, deletion, and rollback behavior.
+- AC-27: Every compiled compatibility profile passes a machine-checkable
+  identity, bounds, capability-completeness, and uniqueness contract. An
+  unknown client may produce a private SHA-bound candidate and validation
+  report, but it remains unavailable to runtime selection until all required
+  resolvers, synthetic tests, controlled live observations, and explicit
+  promotion approval pass.
 
 ## Resolved Phase 1 decisions
 

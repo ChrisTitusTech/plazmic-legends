@@ -389,6 +389,50 @@ after client updates.
 Retain the last known-good package and immutable profile. Withdraw an
 incompatible artifact rather than weakening compatibility checks.
 
+## Maintenance phase: compatibility verification automation
+
+Status: Authorized on 2026-08-18 as a separate maintenance branch from the
+merged August 17 profile.
+
+### Outcome
+
+Turn the existing manual profile-refresh procedure into a repeatable local
+pipeline that tests every supported read path and prepares exact-client
+compatibility candidates without weakening runtime profile selection.
+
+### Included work
+
+- Publish a machine-checkable contract for profile identity, bounds, optional
+  capability completeness, and uniqueness, and run it against every compiled
+  profile.
+- Add synthetic success and rejection coverage for player, zone, spawn,
+  character, progression, combat-log selection, lifecycle, and UI consumers.
+- Detect an unknown executable identity and create a private SHA-bound
+  candidate workspace containing resolver status and privacy-safe evidence.
+- Automate the normative static resolver searches where their semantic
+  anchors and data flow can be reproduced deterministically.
+- Run bounded read-only candidate checks and two-observation comparisons, but
+  keep every candidate unavailable to the normal application until explicit
+  owner approval promotes it into a new immutable compiled profile.
+
+### Risks, exit criteria, and validation
+
+- A plausible value, inherited offset, nearest profile, single read, or
+  incomplete resolver never activates a capability.
+- Candidate files, disassembly, runtime addresses, names, memory values, and
+  client-derived artifacts remain private and outside packages and Git.
+- Contract, schema, corruption, duplicate, unknown-client, incomplete-field,
+  lifecycle, privacy, performance, and complete repository tests pass.
+- The installed app detects a changed client, reports candidate progress, and
+  stays fail-closed until the exact promoted profile is installed and selected.
+
+### Rollback and pause point
+
+Remove the candidate workflow and retain the existing manual
+`docs/profile-refresh.md` procedure and immutable compiled profiles. Pause if a
+resolver is ambiguous, crosses readable mappings, cannot reproduce its static
+data flow, or disagrees with either controlled live observation.
+
 ## Phase 6: Character and combat column
 
 Status: Merged and released as `v0.2.0` on 2026-08-03. Automated, privacy,

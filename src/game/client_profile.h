@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <string_view>
 
 namespace plazmic {
@@ -88,6 +89,7 @@ struct ClientProfile {
 };
 
 [[nodiscard]] const ClientProfile& legends_reference_profile();
+[[nodiscard]] std::span<const ClientProfile* const> known_client_profiles();
 [[nodiscard]] const ClientProfile* select_client_profile(
     std::string_view sha256);
 

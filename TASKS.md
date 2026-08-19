@@ -225,6 +225,38 @@ review. It does not authorize merging or releasing the pull requests.
 
 ## Post-release maintenance
 
+### M-12: Automate compatibility verification safely
+
+- [x] Define and test a machine-readable contract for every compiled profile,
+  including exact identity, bounds, unique selection, and complete-or-disabled
+  optional capabilities.
+- [ ] Cover every supported data consumer with synthetic success, malformed,
+  inconsistent, lifecycle, and unsupported-client tests.
+- [x] Add an owner-only candidate preparer that records exact identity and
+  every required resolver/evidence gate without copying client content or
+  enabling the candidate. Preserve existing candidate evidence atomically.
+- [ ] Invoke candidate preparation from the installed app when an executable
+  identity is unknown and expose only privacy-safe progress categories.
+- [ ] Reproduce the approved static local-player, world, zone, spawn, and
+  optional character resolver searches with deterministic evidence checks.
+- [ ] Add bounded two-observation live verification and privacy-safe category
+  reporting for every candidate capability.
+- [ ] Require explicit owner approval to promote a fully passing candidate to
+  a new immutable compiled profile, then rebuild, install with rollback, and
+  verify the installed and running hashes.
+- Acceptance criteria: `AC-27` passes; unknown or incomplete clients remain
+  unsupported; no resolver guesses or silently edits an active profile; and
+  candidate artifacts remain private, local, bounded, and removable.
+- Rollback: remove the automation while preserving every existing immutable
+  profile and the manual `docs/profile-refresh.md` workflow.
+- Initial validation: repository checks, 13 Python tests, all 20 CTest cases,
+  exact-client fingerprinting, atomic local installation, and an isolated
+  installed-command smoke test passed. The build and installed SHA-256 both
+  match `3504e2e74f416f6421f00ab6d74fd8481a984be1f224ada13643b4f0c2c42a1e`;
+  the prior installed build is retained as a hash-addressed rollback. The
+  pre-existing visible companion still uses an older deleted inode and must be
+  relaunched before it can validate this build.
+
 ### M-11: Support the 2026-08-17 Legends client
 
 - [x] Capture the separate exact SHA-256

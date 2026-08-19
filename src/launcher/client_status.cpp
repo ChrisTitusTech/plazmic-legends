@@ -1,6 +1,7 @@
 #include "launcher/client_status.h"
 
 #include "common/sha256.h"
+#include "game/client_profile_validation.h"
 #include "integration/process_discovery.h"
 
 #include <exception>
@@ -43,6 +44,18 @@ ClientStatusProbe::ClientStatusProbe(std::filesystem::path client)
             .process = ProcessState::unavailable,
             .profile = "none",
             .detail = "Client SHA-256 does not match a supported profile",
+            .pid = std::nullopt,
+        };
+        return;
+    }
+    if (!validate_known_client_profiles().empty() ||
+        !validate_client_profile(*profile_)) {
+        profile_ = nullptr;
+        identity_status_ = {
+            .compatibility = CompatibilityState::unsupported,
+            .process = ProcessState::unavailable,
+            .profile = "none",
+            .detail = "Compiled compatibility profile failed validation",
             .pid = std::nullopt,
         };
         return;

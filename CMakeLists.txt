@@ -39,6 +39,7 @@ add_library(
     src/game/combat_history_store.cpp
     src/game/combat_log_parser.cpp
     src/game/client_profile.cpp
+    src/game/client_profile_validation.cpp
     src/game/game_state_reader.cpp
     src/game/spawn_reader.cpp
     src/integration/process_discovery.cpp
@@ -194,27 +195,33 @@ if(PLAZMIC_ENABLE_REPOSITORY_CHECKS)
             check
             tools/create_cohesive_ui_layout.py
             tools/inspect_eqgame.py
+            tools/prepare_profile_refresh.py
             tests/test_create_cohesive_ui_layout.py
             tests/test_export_private_ui_bundle.py
             tests/test_inspect_eqgame.py
+            tests/test_prepare_profile_refresh.py
         COMMAND
             "${RUFF_EXECUTABLE}"
             format
             --check
             tools/create_cohesive_ui_layout.py
             tools/inspect_eqgame.py
+            tools/prepare_profile_refresh.py
             tests/test_create_cohesive_ui_layout.py
             tests/test_export_private_ui_bundle.py
             tests/test_inspect_eqgame.py
+            tests/test_prepare_profile_refresh.py
         COMMAND
             "${Python3_EXECUTABLE}"
             -m
             py_compile
             tools/create_cohesive_ui_layout.py
             tools/inspect_eqgame.py
+            tools/prepare_profile_refresh.py
             tests/test_create_cohesive_ui_layout.py
             tests/test_export_private_ui_bundle.py
             tests/test_inspect_eqgame.py
+            tests/test_prepare_profile_refresh.py
         COMMAND
             "${Python3_EXECUTABLE}"
             -m
@@ -352,6 +359,32 @@ if(BUILD_TESTING)
     target_link_libraries(client_status_test PRIVATE plazmic_core)
     add_dependencies(check client_status_test)
     add_test(NAME client_status.unit COMMAND client_status_test)
+
+    add_executable(
+        client_profile_validation_test
+        tests/test_client_profile_validation.cpp
+    )
+    target_compile_features(
+        client_profile_validation_test PRIVATE cxx_std_20
+    )
+    target_compile_options(
+        client_profile_validation_test
+        PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wconversion
+            -Wsign-conversion
+            -Werror
+    )
+    target_link_libraries(
+        client_profile_validation_test PRIVATE plazmic_core
+    )
+    add_dependencies(check client_profile_validation_test)
+    add_test(
+        NAME client_profile_validation.unit
+        COMMAND client_profile_validation_test
+    )
 
     add_executable(privacy_log_test tests/test_privacy_log.cpp)
     target_compile_features(privacy_log_test PRIVATE cxx_std_20)

@@ -29,6 +29,17 @@ size, and entry point in a new privacy-safe research note. Do not record the
 absolute Wine-prefix path, launch ticket, account data, memory dump, character
 name, spawn name, or game asset.
 
+Prepare the private candidate checklist outside the repository:
+
+```bash
+python3 tools/prepare_profile_refresh.py "$EQ_LEGENDS_DIR"
+```
+
+The resulting owner-only `candidate.json` is keyed by the exact SHA-256. It
+contains no client path or gameplay value, preserves existing evidence on
+repeat runs, marks every resolver pending, and explicitly blocks runtime
+selection. Creating this file does not make the client supported.
+
 ## Create an immutable profile
 
 1. Add a new `ClientProfile` entry keyed by the new SHA-256 and PE identity.

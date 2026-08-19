@@ -142,10 +142,9 @@ class MainWindow final : public QMainWindow {
     QTableWidget* combat_timeline_{nullptr};
     QLabel* activity_xp_summary_{nullptr};
     QLabel* activity_aa_summary_{nullptr};
-    QLabel* activity_latest_summary_{nullptr};
     QLabel* activity_state_{nullptr};
     QSplitter* activity_summary_splitter_{nullptr};
-    std::array<int, 4> activity_summary_widths_{100, 240, 300, 260};
+    std::array<int, 3> activity_summary_widths_{120, 320, 440};
     QTableWidget* activity_events_{nullptr};
     QTableWidget* activity_abilities_{nullptr};
     QLabel* inventory_state_{nullptr};

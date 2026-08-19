@@ -177,9 +177,10 @@ the default left column:
   participant, total damage, average DPS, percentage, and active duration.
 
 A full-width summary bar above the Details content shows current encounter DPS,
-XP rate and pace, current AA state and rate, and the latest bounded activity.
-Its four columns are independently resizable and initially allocate extra width
-to XP and AA so those values remain readable.
+XP rate and pace, and current AA state and rate. Its three columns are
+independently resizable and initially allocate extra width to XP and AA so
+those values remain readable. Recent activity remains in the Activity dock
+rather than being duplicated in the summary.
 The Activity dock retains its progression, evidence, and inventory tabs without
 duplicating this summary.
 
@@ -233,14 +234,15 @@ persisted, exported, logged, or sent over the network. The Activity summary
 uses this memory value for the current XP position; combat-log XP events remain
 the source for history, gain rate, and pace only.
 
-For the exact `legends-2026-08-06` client only, the immutable character
-snapshot may additionally publish bounded current AA progress and banked
-points from the client's read-only progression cache. These optional fields
-are read twice, validated as 0-100 percent and at most 10,000,000 points, and
-discarded for the frame if unavailable, invalid, or inconsistent. They are
-never inferred for another profile, persisted in activity history, exported,
-logged, or sent over the network. The Activity dock prefers this current
-snapshot over an older log total while retaining exact log events for rates.
+For the exact `legends-2026-08-06` and `legends-2026-08-17` clients only, the
+immutable character snapshot may additionally publish bounded current AA
+progress and banked points from each client's independently validated
+read-only progression cache. These optional fields are read twice, validated
+as 0-100 percent and at most 10,000,000 points, and discarded for the frame if
+unavailable, invalid, or inconsistent. They are never inferred for another
+profile, persisted in activity history, exported, logged, or sent over the
+network. The Activity dock prefers this current snapshot over an older log
+total while retaining exact log events for rates.
 
 Activity retention is independently opt-in and partitioned by the same stable
 opaque character-and-selected-log key. The selected log filename must contain a
@@ -294,8 +296,8 @@ the backup.
 - The default left dock area contains Character above tabified Parse and
   Activity docks. They retain movable, closable, floatable, saved-layout, and
   X11 class behavior. Details spans below the central map and right-side Spawns
-  dock, with the DPS, XP, AA, and latest-activity summary fixed directly above
-  its content at the same width.
+  dock, with the DPS, XP, and AA summary fixed directly above its content at
+  the same width.
 - An embedded top menu bar exposes checkable Views actions for Character,
   Parse, Activity, Spawns, and Details, plus minimize, maximize/restore, and
   close controls aligned at the top right.

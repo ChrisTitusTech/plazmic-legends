@@ -46,7 +46,7 @@ int main() {
             .other_spawns_visible = false,
             .combat_history_enabled = true,
             .activity_history_enabled = true,
-            .activity_summary_widths = {0, 210, 280, 240},
+            .activity_summary_widths = {0, 210, 280},
             .spawn_filter = "guard",
             .spawn_type_filter = 1,
             .spawn_sort_column = 0,
@@ -153,6 +153,32 @@ int main() {
         const auto legacy = legacy_settings.load();
         require(legacy && legacy->client_directory.isEmpty(),
                 "settings without [client] did not remain compatible");
+
+        QFile legacy_widths(legacy_path);
+        require(legacy_widths.open(
+                    QIODevice::WriteOnly | QIODevice::Truncate),
+                "cannot open legacy summary-width fixture");
+        require(legacy_widths.write(
+                    "[client]\ngame_directory = \"/tmp\"\n"
+                    "[activity]\nsummary_widths = 90,180,270,240\n") > 0,
+                "cannot write legacy summary-width fixture");
+        legacy_widths.close();
+        const auto migrated_widths = legacy_settings.load();
+        require(migrated_widths &&
+                    migrated_widths->activity_summary_widths ==
+                        std::array<int, 3>{90, 180, 270},
+                "four-column activity widths did not migrate to three");
+
+        require(legacy_widths.open(
+                    QIODevice::WriteOnly | QIODevice::Truncate),
+                "cannot reopen legacy summary-width fixture");
+        require(legacy_widths.write(
+                    "[client]\ngame_directory = \"/tmp\"\n"
+                    "[activity]\nsummary_widths = 90,180,270,invalid\n") > 0,
+                "cannot write invalid legacy summary-width fixture");
+        legacy_widths.close();
+        require(!legacy_settings.load(),
+                "invalid discarded legacy width unexpectedly loaded");
 
         QFile malformed(partial_path);
         require(malformed.open(

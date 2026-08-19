@@ -4,8 +4,10 @@
 
 The owner approved verifying Phase 9 AA tracking with the existing bounded,
 read-only process-memory boundary used by the character snapshot. This
-checkpoint adds current AA progress and banked points only for the exact
-`legends-2026-08-06` profile. It does not authorize writes, input synthesis,
+checkpoint originally added current AA progress and banked points for the
+exact `legends-2026-08-06` profile. On 2026-08-18, the owner separately
+authorized the same two read-only fields for the exact
+`legends-2026-08-17` profile. It does not authorize writes, input synthesis,
 injection, automation, a network source, or offsets for any other client.
 
 ## Exact-client evidence
@@ -31,11 +33,21 @@ AA progress value and a bounded banked-point value. The values are private
 gameplay state and are not recorded here. A manual comparison with the visible
 in-game AA window remains the final semantic gate.
 
+The August 17 executable has SHA-256
+`3451069e63d5118a703a237f121a3ea7c20c973477a69fdd0d66bcdaa7d80b29`.
+Its exact `LABELTYPE_AAEXPPCT` path calls the AA-experience routine, scales and
+clamps the result to 0-100, and writes the float to image RVA `0x00fa668c`.
+The exact `LABELTYPE_AA_PTS` path calls the banked-point accessor and writes
+the result to adjacent RVA `0x00fa6690`. The shared cache base is therefore
+RVA `0x00fa6440`, with the same profile-local offsets `0x24c` and `0x250`.
+Two separate bounded probes each produced stable, finite, in-range AA progress
+and stable bounded points. The private values are not retained.
+
 ## Native contract
 
-- The three new symbols live only in the immutable August 6 profile. Earlier
-  profiles leave the optional fields unsupported rather than borrowing these
-  offsets.
+- Each approved immutable profile owns its exact progression-cache base and
+  field offsets. All other profiles leave the optional fields unsupported
+  rather than borrowing them.
 - Each field is read and re-read through `ProcessMemoryReader`. AA progress
   must be finite and in the inclusive range 0-100; banked points must be at
   most 10,000,000.
@@ -52,10 +64,24 @@ in-game AA window remains the final semantic gate.
 
 Synthetic tests cover supported and unsupported profiles, valid and invalid
 optional values, zero banked points, memory precedence over stale log totals,
-multi-point log gains, and UI unavailable states. The exact installed build
-must then be compared with the in-game AA progress and banked-point displays
-in at least two controlled observations before this semantic gate is closed.
+multi-point log gains, and UI unavailable states. The original August 6 field
+checkpoint still requires comparison with the in-game AA progress and
+banked-point displays in at least two controlled observations before its
+separate semantic gate is closed.
 
-Rollback clears the three August 6 profile symbols and removes the two
+For the August 17 extension, the warnings-as-errors repository gate, 13 Python
+tests, all 20 CTest cases, exact-client fingerprint, package metadata, staged
+install inventory, and the review loop passed. The binary was atomically
+installed with a hash-addressed rollback and relaunched. Build, installed, and
+running SHA-256 all match
+`0116c456e8e724df00c50b76f3217e01c0dbdec48b43666c1948a0624957cf74`.
+The visible installed summary rendered bounded AA progress and memory-backed
+banked points instead of unavailable. The private values and validation
+screenshot were not retained. The summary contained only DPS, XP, and AA
+panes, while recent events remained in the Activity dock. The privacy-safe log
+selected the exact profile and reached `in_world` with the map loaded.
+
+Rollback clears the three progression symbols only from the affected exact
+profile. Removing both profiles' symbols may additionally remove the two
 optional snapshot fields. Existing log-derived history remains readable and
 no migration or retained-data deletion is required.

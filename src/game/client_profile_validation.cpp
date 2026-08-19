@@ -50,6 +50,17 @@ bool image_range(std::uintptr_t rva,
            rva <= static_cast<std::uintptr_t>(image_size - width);
 }
 
+bool image_field_range(std::uintptr_t base_rva,
+                       std::size_t offset,
+                       std::size_t width,
+                       std::uint32_t image_size) {
+    if (base_rva == 0U ||
+        offset > std::numeric_limits<std::uintptr_t>::max() - base_rva) {
+        return false;
+    }
+    return image_range(base_rva + offset, width, image_size);
+}
+
 }  // namespace
 
 ClientProfileValidation validate_client_profile(
@@ -141,9 +152,16 @@ ClientProfileValidation validate_client_profile(
                                  character.alternate_advancement_points_offset !=
                                      0U;
     const bool complete_progression =
-        image_rva(character.progression_cache_rva, profile.image_size) &&
         character.alternate_advancement_percent_offset != 0U &&
-        character.alternate_advancement_points_offset != 0U;
+        character.alternate_advancement_points_offset != 0U &&
+        image_field_range(character.progression_cache_rva,
+                          character.alternate_advancement_percent_offset,
+                          sizeof(float),
+                          profile.image_size) &&
+        image_field_range(character.progression_cache_rva,
+                          character.alternate_advancement_points_offset,
+                          sizeof(std::uint32_t),
+                          profile.image_size);
     reject(any_progression &&
                (!profile.character_snapshot_supported ||
                 !complete_progression),

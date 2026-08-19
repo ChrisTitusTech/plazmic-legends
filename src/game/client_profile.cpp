@@ -362,9 +362,9 @@ constexpr ClientProfile kLegendsAugustSeventeenthProfile{
             .item_name_pointer_offset = 0x98U,
             .item_name_bytes = 64U,
             .experience_percent_rva = 0x00fa6688U,
-            .progression_cache_rva = 0U,
-            .alternate_advancement_percent_offset = 0U,
-            .alternate_advancement_points_offset = 0U,
+            .progression_cache_rva = 0x00fa6440U,
+            .alternate_advancement_percent_offset = 0x24cU,
+            .alternate_advancement_points_offset = 0x250U,
         },
 };
 

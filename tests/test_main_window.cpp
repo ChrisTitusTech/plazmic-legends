@@ -297,7 +297,7 @@ int main(int argc, char** argv) {
                 activity_summary_bar->geometry().left() ==
                     selection_detail->geometry().left() &&
                 activity_summary_bar->width() == selection_detail->width() &&
-                activity_summary_splitter->count() == 4 &&
+                activity_summary_splitter->count() == 3 &&
                 activity_summary_splitter->handleWidth() == 6 &&
                 activity_summary_splitter->sizes()[1] >
                     activity_summary_splitter->sizes()[0] &&
@@ -635,16 +635,8 @@ int main(int argc, char** argv) {
                     window.findChild<QLabel*>("activity-summary-aa")
                             ->text()
                             .contains("AA: 66.480% | banked: 42 | 1.00/h") &&
-                    window.findChild<QLabel*>("activity-summary-latest")
-                            ->text()
-                            .contains(
-                                "Latest: Alternate Advancement points gained") &&
-                    !window.findChild<QLabel*>("activity-summary-latest")
-                         ->text()
-                         .contains("recent loot:") &&
-                    !window.findChild<QLabel*>("activity-summary-latest")
-                         ->text()
-                         .contains("Synthetic activity") &&
+                    window.findChild<QLabel*>("activity-summary-latest") ==
+                        nullptr &&
                     export_activity_action->isEnabled() &&
                     delete_activity_action->isEnabled() &&
                     window.findChild<QTableWidget*>(
@@ -674,24 +666,15 @@ int main(int argc, char** argv) {
         require(activity_state != nullptr && activity_state->isVisible() &&
                     activity_state->text().contains(
                         "Local observations only") &&
-                    window.findChild<QLabel*>("activity-summary-latest")
-                        ->text()
-                        .contains("Activity storage error") &&
-                    !window.findChild<QLabel*>("activity-summary-latest")
-                         ->text()
-                         .contains("Local observations only") &&
-                    !window.findChild<QLabel*>("activity-summary-latest")
-                         ->text()
-                         .contains("activity history could not be saved"),
-                "activity persistence failure was hidden or verbose detail "
-                "leaked into the summary");
+                    window.findChild<QLabel*>("activity-summary-latest") ==
+                        nullptr,
+                "activity persistence failure was hidden or the removed "
+                "latest summary returned");
         window.update_activity_snapshot(activity);
         require(!activity_state->isVisible(),
                 "resolved activity failure remained visible");
         window.report_activity_deletion_result(activity.storage_key, false);
-        require(window.findChild<QLabel*>("activity-summary-latest")
-                        ->text()
-                        .contains("Activity storage error") &&
+        require(activity_state->text().contains("deletion failed") &&
                     window.statusBar()->currentMessage().contains(
                         "deletion failed"),
                 "failed activity deletion displayed a misleading storage "
@@ -764,8 +747,8 @@ int main(int argc, char** argv) {
                         "XP: 24.845% | gain rate: unavailable" &&
                     window.findChild<QLabel*>("activity-summary-aa")
                             ->toolTip() == "AA: unavailable" &&
-                    window.findChild<QLabel*>("activity-summary-latest")
-                            ->toolTip() == "Latest: Activity unavailable" &&
+                    window.findChild<QLabel*>("activity-summary-latest") ==
+                        nullptr &&
                     activity_state->isVisible() &&
                     activity_state->text() == "Activity unavailable",
                 "unavailable lifecycle state retained stale activity");
@@ -1494,7 +1477,7 @@ int main(int argc, char** argv) {
         window.setCorner(
             Qt::BottomRightCorner, Qt::RightDockWidgetArea);
 
-        activity_summary_splitter->setSizes({80, 180, 220, 160});
+        activity_summary_splitter->setSizes({80, 180, 220});
         process_events();
         const QList<int> expected_summary_sizes =
             activity_summary_splitter->sizes();
@@ -1534,10 +1517,9 @@ int main(int argc, char** argv) {
                     saved_state->spawn_sort_descending &&
                     saved_state->spawn_column_widths[0] == 260 &&
                     saved_state->activity_summary_widths ==
-                        std::array<int, 4>{expected_summary_sizes[0],
+                        std::array<int, 3>{expected_summary_sizes[0],
                                            expected_summary_sizes[1],
-                                           expected_summary_sizes[2],
-                                           expected_summary_sizes[3]},
+                                           expected_summary_sizes[2]},
                 "close did not persist table or activity summary state");
 
         {
@@ -1605,6 +1587,8 @@ int main(int argc, char** argv) {
             std::accumulate(restored_summary_sizes.cbegin(),
                             restored_summary_sizes.cend(), 0);
         bool summary_proportions_restored =
+            expected_summary_sizes.size() == 3 &&
+            restored_summary_sizes.size() == 3 &&
             expected_summary_total > 0 && restored_summary_total > 0;
         for (qsizetype index = 0;
              summary_proportions_restored &&
@@ -1617,15 +1601,8 @@ int main(int argc, char** argv) {
         }
         require(
             summary_proportions_restored,
-            "saved activity summary proportions were not restored: saved " +
-                std::to_string(expected_summary_sizes[0]) + "," +
-                std::to_string(expected_summary_sizes[1]) + "," +
-                std::to_string(expected_summary_sizes[2]) + "," +
-                std::to_string(expected_summary_sizes[3]) + ", got " +
-                std::to_string(restored_summary_sizes[0]) + "," +
-                std::to_string(restored_summary_sizes[1]) + "," +
-                std::to_string(restored_summary_sizes[2]) + "," +
-                std::to_string(restored_summary_sizes[3]));
+            "saved three-column activity summary proportions were not "
+            "restored");
         require(restored.map_canvas()->height_filter_enabled() &&
                     restored.map_canvas()->height_filter_below() == 0.0 &&
                     restored.map_canvas()->height_filter_above() ==

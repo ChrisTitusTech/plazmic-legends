@@ -49,7 +49,7 @@ int main() {
                      .progression_available &&
                 plazmic::validate_client_profile(*profiles[3])
                     .progression_available &&
-                !plazmic::validate_client_profile(*profiles[4])
+                plazmic::validate_client_profile(*profiles[4])
                      .progression_available,
             "progression capability did not remain exact-profile scoped");
     require(plazmic::select_client_profile(
@@ -91,6 +91,13 @@ int main() {
 
     invalid = *profiles.back();
     invalid.character.progression_cache_rva = 0x100U;
+    invalid.character.alternate_advancement_percent_offset =
+        invalid.image_size;
+    require(!plazmic::validate_client_profile(invalid),
+            "out-of-image progression field passed the profile contract");
+
+    invalid = *profiles.back();
+    invalid.character.alternate_advancement_points_offset = 0U;
     require(!plazmic::validate_client_profile(invalid),
             "partial progression capability was enabled");
 

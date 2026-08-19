@@ -48,16 +48,21 @@ the active zone and found one matching local-player field at `0x3b8`. A later
 visible consider-level check rejected `0x20a`: it held percentage-like values
 in the 70s rather than levels. Independent update and getter paths establish
 the byte at `0x391`; two complete bounded collections produced plausible
-levels and the local-player value matched the visible level 42. The optional
-Alternate Advancement cache is deliberately omitted; its prior authorization
-applies only to the August 6 profile.
+levels and the local-player value matched the visible level 42.
 
 The exact `LABELTYPE_EXPPCT` display path reads the character owner, calculates
 the current player experience position, scales and clamps it to 0-100, and
 caches the resulting float at image RVA `0x00fa6688`. Two consecutive bounded
 read-only observations were finite, stable, and in range. The private value is
-not retained. This field is authorized independently of the omitted Alternate
-Advancement cache by `docs/research/phase9-xp-memory-checkpoint.md`.
+not retained. This field is authorized independently of the separately
+approved Alternate Advancement fields by
+`docs/research/phase9-xp-memory-checkpoint.md`.
+
+The separately authorized `LABELTYPE_AAEXPPCT` and `LABELTYPE_AA_PTS` paths
+write current AA progress and banked points to adjacent RVAs `0x00fa668c` and
+`0x00fa6690`. Two separate bounded read-only probes each produced stable,
+in-range values. The shared progression-cache base is RVA `0x00fa6440`, with
+profile-local offsets `0x24c` and `0x250`. Private values are not retained.
 
 The corrected character root completed the existing bounded type-descriptor,
 stats-record, profile-list, and equipment-container paths. Current HP and MP
@@ -88,6 +93,7 @@ terminated printable item-name pointer moved to `0x98`.
 | Current HP and MP | Character-stat lookup and update paths | Visible gauges matched | Different live values matched | Missing, negative, torn, or out of range | HP `0x2770` plus `0x28`; MP `0x2764` |
 | Maximum HP and MP | Local-player vital update and gauge paths | Visible maxima matched | HP maximum changed and reread matched | Missing, nonpositive, torn, or below current | HP `0x310`, MP `0x238` |
 | Current XP | `LABELTYPE_EXPPCT` calculation and UI-cache write | Finite bounded read | Stable bounded reread | Missing, non-finite, outside 0-100, or torn | `0x00fa6688` RVA |
+| Current AA | AA percent and point label-cache writes | Finite and bounded | Stable bounded reread | Missing, non-finite, outside bounds, or torn | Base `0x00fa6440`; percent `0x24c`, points `0x250` |
 | Equipment | Profile-list, container, slot, and name access families | 23 bounded slots valid | Complete reread valid | Invalid pointer, count, slot, string, or staged reread | Existing bounded layout; item name `0x98` |
 
 No application or analysis step wrote target memory, injected code, changed
@@ -150,8 +156,8 @@ transient character snapshot for current XP and labels the combat-log-derived
 gain rate separately.
 
 The warnings-as-errors repository gate, 13 Python tests, all 20 CTest cases,
-exact fingerprint, package metadata, staged install inventory, and two-pass
-review passed. The binary was atomically installed with the prior
+exact fingerprint, package metadata, staged install inventory, and the review
+loop passed. The binary was atomically installed with the prior
 hash-addressed rollback and relaunched. Build, installed, and running SHA-256
 all match
 `da476d1938a3479dd303ace7061e44609117a5d01233419dd3d243691bdb86d6`.
@@ -159,6 +165,26 @@ The visible installed window showed bounded current XP below 100 percent and
 did not render the retained 133 percent gain total as current XP. The
 privacy-safe log selected the exact profile and reached `in_world` with the map
 loaded.
+
+## AA and summary maintenance correction
+
+On 2026-08-18, the installed summary still showed current AA progress as
+unavailable. The owner authorized the exact August 17 progression fields
+recorded above and requested removal of the duplicated Latest activity pane.
+The implementation preserves memory-over-log precedence for current AA while
+retaining log events for rate and history, migrates saved four-column widths,
+and leaves recent activity in the Activity dock.
+
+The warnings-as-errors repository gate, 13 Python tests, all 20 CTest cases,
+exact fingerprint, package metadata, staged install inventory, and the review
+loop passed. The binary was atomically installed with the prior
+hash-addressed rollback and relaunched. Build, installed, and running SHA-256
+all match
+`0116c456e8e724df00c50b76f3217e01c0dbdec48b43666c1948a0624957cf74`.
+The visible installed window rendered bounded AA progress and memory-backed
+banked points instead of unavailable, with only DPS, XP, and AA panes in the
+Details summary. The private screenshot was deleted. The privacy-safe log
+selected the exact profile and reached `in_world` with the map loaded.
 
 ## Pending validation
 

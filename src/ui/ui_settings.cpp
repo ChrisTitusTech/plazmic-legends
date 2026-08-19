@@ -208,7 +208,7 @@ std::optional<UiState> UiSettings::load() const {
     bool other_spawns_visible = true;
     bool combat_history_enabled = false;
     bool activity_history_enabled = false;
-    std::array<int, 4> activity_summary_widths{100, 240, 300, 260};
+    std::array<int, 3> activity_summary_widths{120, 320, 440};
     QString spawn_filter;
     int spawn_type_filter = -1;
     int spawn_sort_column = 3;
@@ -360,7 +360,7 @@ std::optional<UiState> UiSettings::load() const {
                     return std::nullopt;
                 }
                 const QList<QByteArray> widths = value->split(',');
-                if (widths.size() != 4) {
+                if (widths.size() != 3 && widths.size() != 4) {
                     return std::nullopt;
                 }
                 for (qsizetype index = 0; index < widths.size(); ++index) {
@@ -369,8 +369,10 @@ std::optional<UiState> UiSettings::load() const {
                     if (!valid || width < 0 || width > 4096) {
                         return std::nullopt;
                     }
-                    activity_summary_widths[
-                        static_cast<std::size_t>(index)] = width;
+                    if (index < 3) {
+                        activity_summary_widths[
+                            static_cast<std::size_t>(index)] = width;
+                    }
                 }
             }
         } else if (section == Section::spawns) {

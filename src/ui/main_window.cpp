@@ -540,11 +540,8 @@ void MainWindow::build_ui() {
     activity_xp_summary_->setObjectName("activity-summary-xp");
     activity_aa_summary_ = new QLabel("AA: waiting");
     activity_aa_summary_->setObjectName("activity-summary-aa");
-    activity_latest_summary_ = new QLabel("Latest: waiting");
-    activity_latest_summary_->setObjectName("activity-summary-latest");
-    const std::array<QLabel*, 4> summary_labels{
-        current_dps_, activity_xp_summary_, activity_aa_summary_,
-        activity_latest_summary_};
+    const std::array<QLabel*, 3> summary_labels{
+        current_dps_, activity_xp_summary_, activity_aa_summary_};
     for (QLabel* label : summary_labels) {
         label->setTextFormat(Qt::PlainText);
         label->setMinimumWidth(0);
@@ -556,15 +553,14 @@ void MainWindow::build_ui() {
     activity_summary_splitter_->setStretchFactor(0, 1);
     activity_summary_splitter_->setStretchFactor(1, 2);
     activity_summary_splitter_->setStretchFactor(2, 3);
-    activity_summary_splitter_->setStretchFactor(3, 3);
-    activity_summary_splitter_->setSizes({100, 240, 300, 260});
+    activity_summary_splitter_->setSizes({120, 320, 440});
     connect(
         activity_summary_splitter_, &QSplitter::splitterMoved, this,
         [this]() {
             const QList<int> sizes = activity_summary_splitter_->sizes();
-            if (sizes.size() == 4) {
+            if (sizes.size() == 3) {
                 activity_summary_widths_ =
-                    {sizes[0], sizes[1], sizes[2], sizes[3]};
+                    {sizes[0], sizes[1], sizes[2]};
             }
         });
     activity_summary_layout->addWidget(activity_summary_splitter_);
@@ -1246,13 +1242,8 @@ void MainWindow::update_activity_snapshot(
             experience_summary(character_snapshot_, analytics);
         activity_xp_summary_->setText(xp_summary);
         activity_aa_summary_->setText("AA: unavailable");
-        activity_latest_summary_->setText(
-            detail.isEmpty() ? "Latest: unavailable"
-                             : QString("Latest: %1").arg(detail));
         activity_xp_summary_->setToolTip(activity_xp_summary_->text());
         activity_aa_summary_->setToolTip(activity_aa_summary_->text());
-        activity_latest_summary_->setToolTip(
-            activity_latest_summary_->text());
         if (payload_changed) {
             activity_events_->setRowCount(0);
             activity_abilities_->setRowCount(0);
@@ -1284,15 +1275,7 @@ void MainWindow::update_activity_snapshot(
             .arg(aa_total)
             .arg(analytics.alternate_advancement_points_per_hour, 0, 'f', 2)
             .arg(aa_eta);
-    QString latest = analytics.events.empty()
-                         ? QString("No recent activity")
-                         : QString::fromStdString(analytics.events.back().label);
-    if (analytics.recent_celebration) {
-        latest = QString::fromStdString(*analytics.recent_celebration);
-    }
-    QString latest_summary = QString("Latest: %1").arg(latest);
     if (!analytics.persisted) {
-        latest_summary += " | Activity storage error";
         const QString detail = QString::fromStdString(analytics.detail);
         activity_state_->setText(
             detail.isEmpty() ? "Activity storage error" : detail);
@@ -1301,16 +1284,10 @@ void MainWindow::update_activity_snapshot(
         activity_state_->clear();
         activity_state_->hide();
     }
-    if (!analytics.class_activity_summary.empty()) {
-        latest_summary += QString(" | %1").arg(QString::fromStdString(
-            analytics.class_activity_summary));
-    }
     activity_xp_summary_->setText(xp_summary);
     activity_xp_summary_->setToolTip(xp_summary);
     activity_aa_summary_->setText(aa_summary);
     activity_aa_summary_->setToolTip(aa_summary);
-    activity_latest_summary_->setText(latest_summary);
-    activity_latest_summary_->setToolTip(latest_summary);
 
     if (!payload_changed) {
         return;
@@ -1625,7 +1602,7 @@ void MainWindow::clear_zone_map(const QString& detail) {
 }
 
 void MainWindow::restore_ui_state() {
-    std::optional<std::array<int, 4>> activity_summary_widths;
+    std::optional<std::array<int, 3>> activity_summary_widths;
     if (const auto state = settings_.load()) {
         if (client_directory_.isEmpty()) {
             client_directory_ = state->client_directory;
@@ -1695,8 +1672,7 @@ void MainWindow::restore_ui_state() {
                 activity_summary_splitter_->setSizes(
                     {(*activity_summary_widths)[0],
                      (*activity_summary_widths)[1],
-                     (*activity_summary_widths)[2],
-                     (*activity_summary_widths)[3]});
+                     (*activity_summary_widths)[2]});
                 activity_summary_widths_ = *activity_summary_widths;
             }
         });
@@ -1736,10 +1712,9 @@ bool MainWindow::save_ui_state() {
     const QHeaderView* header = spawn_table_->horizontalHeader();
     if (activity_summary_splitter_->isVisible()) {
         const QList<int> summary_sizes = activity_summary_splitter_->sizes();
-        if (summary_sizes.size() == 4) {
+        if (summary_sizes.size() == 3) {
             activity_summary_widths_ =
-                {summary_sizes[0], summary_sizes[1],
-                 summary_sizes[2], summary_sizes[3]};
+                {summary_sizes[0], summary_sizes[1], summary_sizes[2]};
         }
     }
     const UiState state{

@@ -109,9 +109,9 @@ review. It does not authorize merging or releasing the pull requests.
   equipment-change observations, bounded derived rates, and celebrations.
 - [x] Consolidate live equipment and imported reconciliation in the Activity
   Inventory tab; keep the Character dock focused on identity and vitals.
-- [x] Move DPS, XP, AA, and latest activity into a full-width summary above
-  Details while retaining the Activity pane and its tabs.
-- [x] Make all four summary columns independently resizable and allocate enough
+- [x] Move DPS, XP, and AA into a full-width summary above Details while
+  retaining recent activity in the Activity pane and its tabs.
+- [x] Make all three summary columns independently resizable and allocate enough
   initial width to keep the compact XP and AA values readable.
 - [ ] Add class-combination, proc, and upgrade insights only after their
   validated catalogs and evidence rules are implemented under `AC-21`.
@@ -226,6 +226,38 @@ review. It does not authorize merging or releasing the pull requests.
   `AC-12` remain green, and the PR is ready for review without known blockers.
 
 ## Post-release maintenance
+
+### M-14: Read August 17 AA state and simplify the Details summary
+
+- [x] Record the owner's authorization and exact-client static and bounded
+  read-only evidence for August 17 AA progress and banked points in
+  `docs/research/phase9-aa-memory-checkpoint.md` without retaining private
+  gameplay values or client content.
+- [x] Enable the immutable August 17 progression-cache symbols and validate the
+  complete float and integer byte ranges inside the exact PE image.
+- [x] Preserve the existing double-read, finite 0-100 percent, bounded-point,
+  fail-closed, transient, and memory-over-log contracts.
+- [x] Remove the duplicated Latest activity column from the Details summary,
+  retain recent events in the Activity dock, and migrate saved four-column
+  summary widths to the new three-column layout.
+- [x] Pass the full repository, package, review, atomic installation, running
+  hash, privacy-log, and visible installed-window checks.
+- Acceptance criteria: only the exact August 6 or August 17 identity may expose
+  these AA fields; invalid, partial, out-of-image, or torn values fail closed;
+  the live installed summary renders bounded AA state from memory and contains
+  only DPS, XP, and AA columns.
+- Rollback: clear the three August 17 progression symbols and restore the
+  fourth summary column; existing activity history remains readable.
+- Validation: the warnings-as-errors repository gate, 13 Python tests, all 20
+  CTest cases, exact-client fingerprint, package metadata, staged install
+  inventory, and the CodeRabbit review loop passed. The validated binary was
+  atomically installed with the prior hash-addressed rollback and relaunched;
+  the build, installed path, and running executable match SHA-256
+  `0116c456e8e724df00c50b76f3217e01c0dbdec48b43666c1948a0624957cf74`.
+  The visible installed summary rendered bounded AA progress and memory-backed
+  banked points instead of unavailable, contained only DPS, XP, and AA panes,
+  and retained recent events in the Activity dock. The privacy-safe log
+  selected the exact profile and reported `in_world` with the map loaded.
 
 ### M-13: Read current player XP from the exact August 17 client
 

@@ -166,19 +166,23 @@ int main() {
                 august_seventeenth->timestamp == 0x6a837d49U &&
                 august_seventeenth->optional_magic == 0x20bU &&
                 august_seventeenth->image_size == 0x16c2000U &&
-                !august_seventeenth->character_snapshot_supported &&
+                august_seventeenth->character_snapshot_supported &&
                 august_seventeenth->game_state.local_player_pointer_rva ==
                     0x00f08248U &&
                 august_seventeenth->game_state.world_data_pointer_rva ==
                     0x00f07d38U &&
                 august_seventeenth->game_state.player_zone_id_offset ==
                     0x3b8U &&
-                august_seventeenth->spawns.level_offset == 0x20aU &&
-                august_seventeenth->spawns.record_bytes == 0x20bU &&
+                august_seventeenth->spawns.level_offset == 0x391U &&
+                august_seventeenth->spawns.record_bytes == 0x392U &&
                 august_seventeenth->character.local_character_pointer_rva ==
-                    0x00f08390U &&
+                    0x00f08398U &&
+                august_seventeenth->character.player_maximum_health_offset ==
+                    0x310U &&
                 august_seventeenth->character.player_maximum_mana_offset ==
-                    0x678U &&
+                    0x238U &&
+                august_seventeenth->character.item_name_pointer_offset ==
+                    0x98U &&
                 august_seventeenth->character.progression_cache_rva == 0U,
             "August 17 profile did not preserve its exact candidate boundary");
         require(plazmic::select_client_profile("changed") == nullptr,

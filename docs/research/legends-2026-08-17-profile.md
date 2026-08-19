@@ -36,17 +36,31 @@ family resolves repeated null-checked references to image RVA `0x00f08248`.
 The zone lookup family masks IDs with `0x7fff`, bounds them to 1 through 1000,
 indexes the world table at `0x30`, and validates entry fields at `0x0c` and
 `0x10`; its world-data global is image RVA `0x00f07d38`. Character UI access
-families resolve the separately null-checked character global at image RVA
-`0x00f08390`.
+families resolve the separately null-checked character-owner global at image
+RVA `0x00f08398`. The adjacent `0x00f08390` global belongs to a different UI
+lifecycle path and was rejected when its descriptor chain left readable
+mappings.
 
 Grouped exact-client accesses retain the player position offsets `0x74`,
 `0x78`, and `0x7c` and heading offset `0x94`. The first in-world probe rejected
 the carried-forward zone offset `0x5b0`; the world table independently resolved
-the active zone and found one matching local-player field at `0x3b8`. The same
-probe rejected `0x275` for every spawn level. The direct byte accessor at
-`0x20a` matched every bounded live record and tracked a live level transition.
-The optional Alternate Advancement cache is deliberately omitted; its prior
-authorization applies only to the August 6 profile.
+the active zone and found one matching local-player field at `0x3b8`. A later
+visible consider-level check rejected `0x20a`: it held percentage-like values
+in the 70s rather than levels. Independent update and getter paths establish
+the byte at `0x391`; two complete bounded collections produced plausible
+levels and the local-player value matched the visible level 42. The optional
+Alternate Advancement cache is deliberately omitted; its prior authorization
+applies only to the August 6 profile.
+
+The corrected character root completed the existing bounded type-descriptor,
+stats-record, profile-list, and equipment-container paths. Current HP and MP
+remain signed 64-bit `0x2770` and signed 32-bit `0x2764` fields in the resolved
+stats owner, with the signed health adjustment at character-zone `0x28`.
+Exact-client update paths separately establish the signed 64-bit local-player
+maximum-HP cache at `0x310` and maximum-MP cache at `0x238`. Visible gauges
+matched at two different current HP and MP observations, including a maximum-
+HP change. The 23 bounded equipment slots retained their container layout; the
+terminated printable item-name pointer moved to `0x98`.
 
 | Profile value | Static resolver | Observation 1 | Observation 2 | Rejection rule | Candidate value |
 | --- | --- | --- | --- | --- | --- |
@@ -60,13 +74,13 @@ authorization applies only to the August 6 profile.
 | Spawn links | Reciprocal list validation | Complete collection | Complete reread | Broken reciprocal link, cycle, or over 2048 | Next `0x08`, previous `0x10` |
 | Spawn identity | Bounded name, type, and ID fields | All records valid | All records valid | Invalid string/type, zero or duplicate ID | Name `0x0b8`, type `0x139`, ID `0x178` |
 | Player identity | Exact local-player anchor name | Bounded live read | Log selection passed | Empty, malformed, or anchor lost | Spawn name at `0x0b8` |
-| Spawn level | Direct byte accessor and live transition | All records valid | Transition tracked | Zero, implausible, or visible-level mismatch | `0x20a` |
+| Spawn level | Byte update and getter paths | All records valid; player 42 | Second complete collection; visible player 42 | Zero, implausible, or visible-level mismatch | `0x391` |
 | Spawn position | Player coordinate access family | All records finite | All records finite | Non-finite or out of bounds | X `0x74`, Y `0x78`, Z `0x7c` |
-| Character owner | Character UI access and null checks | Root readable | Later chain failed | Unreadable mapping or lifecycle mismatch | Disabled |
-| Character identity | Bounded local-player name candidate | Pending | Pending | Empty, malformed, or changed during staging | `0x0b8`, 64 bytes |
-| Current HP and MP | Character-stat lookup access families | Pending | Pending | Missing, negative, torn, or out of range | `0x2770`, `0x2764` |
-| Maximum HP and MP | Local-player vital-cache candidates | Pending | Pending | Missing, nonpositive, torn, or below current | HP `0x2b0`, MP `0x678` |
-| Equipment | Profile-list, container, slot, and name access families | Pending | Pending | Invalid pointer, count, slot, string, or staged reread | Existing bounded layout; item name `0x60` |
+| Character owner | Character UI access and null checks | Complete chain | Complete reread | Unreadable mapping or lifecycle mismatch | `0x00f08398` RVA |
+| Character identity | Bounded local-player anchor | Valid | Stable reread | Empty, malformed, or changed during staging | `0x0b8`, 64 bytes |
+| Current HP and MP | Character-stat lookup and update paths | Visible gauges matched | Different live values matched | Missing, negative, torn, or out of range | HP `0x2770` plus `0x28`; MP `0x2764` |
+| Maximum HP and MP | Local-player vital update and gauge paths | Visible maxima matched | HP maximum changed and reread matched | Missing, nonpositive, torn, or below current | HP `0x310`, MP `0x238` |
+| Equipment | Profile-list, container, slot, and name access families | 23 bounded slots valid | Complete reread valid | Invalid pointer, count, slot, string, or staged reread | Existing bounded layout; item name `0x98` |
 
 No application or analysis step wrote target memory, injected code, changed
 the Wine prefix, weakened host security, synthesized input, or retained a
@@ -90,29 +104,50 @@ SHA-256 both matched
 `702aaf67559afa67f7aa6a3d10ba7dc5d24e3deca0abaac4ab72be64139a82f6`;
 owner and mode are `root:root` and `0755`.
 
-The pre-existing companion process still retained the prior deleted inode and
-was not disrupted. It must be closed and relaunched before its visible behavior
-can count as evidence for this candidate.
+That installed checkpoint has since been superseded by the maintenance build
+described below.
+
+## Level and Character maintenance correction
+
+On 2026-08-18, the visible installed companion disproved the candidate mob
+level and showed Character vitals as unavailable. The exact live client was
+still mapped from the profile digest above, and the running companion exactly
+matched its then-installed binary, excluding a stale-process explanation.
+
+Read-only static analysis and bounded `process_vm_readv` checks established the
+corrected fields recorded above. Two consecutive complete Character snapshots
+passed with one bounded stats record, one bounded profile-list record, all 23
+equipment slots, and 22 occupied slots. A visible game capture independently
+matched the current and maximum HP and MP values while those values changed;
+the capture remained private and was deleted after comparison.
+
+The fresh warnings-as-errors build, repository gate, 13 Python tests, all 20
+CTest cases, exact-client fingerprint, package metadata, and staged install
+inventory passed. The validated binary was atomically installed with the prior
+binary retained under its SHA-256, then relaunched through the installed path.
+The build, installed pathname, and running executable all matched SHA-256
+`e3756f23813a12570b718b36ebcd73658e556221490b037336c86ab09b4fd8c4`;
+the installed file remained `root:root` and mode `0755`. The installed window
+rendered changing HP and MP gauges, a live map, the local player, and corrected
+bounded spawn levels. Its privacy-safe log selected the exact supported
+profile and reached `in_world` with the map loaded and no read failure.
 
 ## Pending validation
 
-No `eqgame.exe` process was active during the static checkpoint. A later live
-session proved the bounded player, zone, and spawn path after rejecting the two
-stale carried-forward fields. The Character path remains disabled because its
-later pointer chain left readable process mappings. Before this candidate can
-be merged or released, it still requires:
+The current session proved the bounded player, zone, spawn, Character, vital,
+and equipment paths after rejecting the stale fields. Before this candidate
+can be released, it still requires:
 
-- two consecutive complete bounded Character snapshots after separately
-  deriving its current layout;
-- two controlled visible observations for every displayed field and a second
-  zone and equipment configuration;
+- a second controlled equipment configuration and a second visibly confirmed
+  NPC level;
 - character select, entering world, zoning, camping, game exit, and process
   reacquisition;
 - DWM placement, map selection, game-window invariance, and live performance;
   and
-- complete package and privacy audits with all temporary derived files removed.
+- the remaining controlled privacy review. All temporary derived screenshots
+  and staged-install files from this correction were removed.
 
 On 2026-08-18, the owner explicitly authorized merging all completed work and
-starting the compatibility-automation phase. This accepts the unavailable
-Character capability and incomplete manual lifecycle checks as merge-time
-residual risk; it does not count them as passed or authorize a release.
+starting the compatibility-automation phase. This accepts the incomplete
+manual lifecycle checks as merge-time residual risk; it does not count them as
+passed or authorize a release.

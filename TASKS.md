@@ -265,7 +265,8 @@ review. It does not authorize merging or releasing the pull requests.
 - [x] Re-establish the exact-client local-player, world-data, and character
   global families from static semantic cross-references. Reject the stale
   carried-forward zone and level fields, then establish zone `0x3b8` and level
-  `0x20a` through bounded live reads and matching static access evidence.
+  `0x391` through bounded live reads, visible comparison, and matching static
+  access evidence.
 - [x] Keep the optional Alternate Advancement memory fields disabled because
   their existing approval applies only to `legends-2026-08-06`.
 - [x] Pass the fresh warnings-as-errors build, repository checks, 8 Python
@@ -277,14 +278,22 @@ review. It does not authorize merging or releasing the pull requests.
   stale snapshots; the installed in-world smoke also loaded the current map.
 - [x] Prove consecutive complete bounded player, zone, and spawn snapshots
   against the exact live PE identity while the client is in world.
-- [x] Fail the Character snapshot closed because the carried-forward
-  character-stat and equipment chain does not remain within readable mappings.
+- [x] Keep the Character snapshot fail-closed until the corrected character
+  root, vital maxima, and item-name pointer complete the bounded chain.
 - [x] Publish the independently validated bounded local-player identity from
   the spawn anchor so the Character dock can show the player and the local
   combat-log tailer can select the active log without enabling unverified
   vitals, equipment, activity observations, or inventory export.
-- [ ] Re-establish and prove two consecutive bounded character, vital, and
+- [x] Re-establish and prove two consecutive bounded character, vital, and
   equipment snapshots against the exact live PE identity.
+- [x] Re-run the fresh warnings-as-errors build, repository gate, 13 Python
+  tests, all 20 CTest cases, exact fingerprint, package metadata, and staged
+  install inventory after the maintenance correction. Atomically install and
+  relaunch SHA-256
+  `e3756f23813a12570b718b36ebcd73658e556221490b037336c86ab09b4fd8c4`;
+  the build, installed pathname, and running executable match, with
+  `root:root` ownership and mode `0755`. The installed window rendered changing
+  HP/MP gauges and the corrected bounded spawn levels.
 - [ ] Complete two controlled visible observations for every displayed field,
   two zones, lifecycle transitions, DWM placement, game invariance,
   performance, package, and privacy gates from `docs/profile-refresh.md`.
@@ -294,9 +303,9 @@ review. It does not authorize merging or releasing the pull requests.
   the repository or package.
 - Merge exception: on 2026-08-18, the owner explicitly authorized merging all
   completed work and starting the compatibility-automation phase. This
-  authorizes merging M-11 with the unavailable Character capability and
-  incomplete manual lifecycle checks retained as residual risk; it does not
-  count those checks as passed or authorize a release.
+  authorizes merging M-11 with the incomplete manual lifecycle checks retained
+  as residual risk; it does not count those checks as passed or authorize a
+  release.
 
 ### M-10: Support the 2026-08-03 Legends client
 

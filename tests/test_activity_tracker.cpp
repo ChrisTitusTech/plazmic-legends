@@ -175,6 +175,7 @@ int main() {
             .name = std::string(kCharacter),
             .health = {},
             .mana = {},
+            .experience_percent = std::nullopt,
             .alternate_advancement_percent = 66.48,
             .alternate_advancement_points = 0U,
             .equipment = {{.slot = "Head", .item = "Synthetic Cap"}},
@@ -191,7 +192,7 @@ int main() {
             std::chrono::system_clock::time_point{
                 std::chrono::seconds(loot->timestamp_unix_seconds + 900)});
         require(analytics.events.size() == 4U &&
-                    analytics.experience_percent == 0.125 &&
+                    analytics.experience_gained_percent == 0.125 &&
                     analytics.alternate_advancement_percent == 66.48 &&
                     analytics.alternate_advancement_points == 0U &&
                     analytics.recent_loot_count == 1U &&

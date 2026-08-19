@@ -183,6 +183,8 @@ int main() {
                     0x238U &&
                 august_seventeenth->character.item_name_pointer_offset ==
                     0x98U &&
+                august_seventeenth->character.experience_percent_rva ==
+                    0x00fa6688U &&
                 august_seventeenth->character.progression_cache_rva == 0U,
             "August 17 profile did not preserve its exact candidate boundary");
         require(plazmic::select_client_profile("changed") == nullptr,

@@ -117,7 +117,9 @@ review. It does not authorize merging or releasing the pull requests.
   validated catalogs and evidence rules are implemented under `AC-21`.
 - [x] Limit Phase 9 inputs to bounded active-log events, existing immutable
   equipment, the exact-profile optional AA snapshot approved in
-  `docs/research/phase9-aa-memory-checkpoint.md`, and an explicitly selected
+  `docs/research/phase9-aa-memory-checkpoint.md`, the exact-profile optional
+  current-XP snapshot approved in
+  `docs/research/phase9-xp-memory-checkpoint.md`, and an explicitly selected
   local inventory-output file; record a separate checkpoint before adding any
   other source.
 - [ ] Complete schema, lifecycle, migration, privacy, installed, review, CI,
@@ -224,6 +226,38 @@ review. It does not authorize merging or releasing the pull requests.
   `AC-12` remain green, and the PR is ready for review without known blockers.
 
 ## Post-release maintenance
+
+### M-13: Read current player XP from the exact August 17 client
+
+- [x] Record the owner's authorization and exact-client static and bounded
+  read-only evidence in `docs/research/phase9-xp-memory-checkpoint.md` without
+  retaining private gameplay values or client content.
+- [x] Add an immutable August 17 current-XP RVA, validate its exact-profile
+  capability, and publish only a finite, stable value in the inclusive range
+  0-100 through the character snapshot.
+- [x] Keep accumulated combat-log XP as history-derived XP gained and use it
+  only for events, rate, and pace; never present it as current player XP.
+- [x] Cover supported, unsupported, invalid, profile-bound, and UI precedence
+  behavior with synthetic tests, including a retained 133 percent gain total
+  that must not render as current XP.
+- [x] Pass the full repository, package, review, atomic installation, running
+  hash, privacy-log, and visible installed-window checks.
+- Acceptance criteria: only the exact August 17 file and mapped PE identity
+  may expose current XP; invalid or torn values fail closed; the installed
+  summary matches the in-game current XP and does not show accumulated log XP
+  as the current position.
+- Rollback: clear the August 17 XP RVA and remove the optional snapshot field;
+  existing log-derived history remains readable without migration.
+- Validation: the warnings-as-errors repository gate, 13 Python tests, all 20
+  CTest cases, exact-client fingerprint, package metadata, staged install
+  inventory, and two-pass CodeRabbit review passed. The validated binary was
+  atomically installed with the prior hash-addressed rollback and relaunched;
+  the build, installed path, and running executable match SHA-256
+  `da476d1938a3479dd303ace7061e44609117a5d01233419dd3d243691bdb86d6`.
+  The visible installed summary showed bounded current XP below 100 percent,
+  labeled the log-derived gain rate separately, and did not show the retained
+  133 percent gain total as current XP. The privacy-safe log selected the exact
+  profile and reported `in_world` with the map loaded.
 
 ### M-12: Automate compatibility verification safely
 

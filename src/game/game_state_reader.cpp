@@ -1,5 +1,7 @@
 #include "game/game_state_reader.h"
 
+#include "game/client_profile_validation.h"
+
 #include "common/sha256.h"
 #include "game/character_reader.h"
 #include "game/spawn_reader.h"
@@ -342,8 +344,10 @@ LiveGameStateProbe::LiveGameStateProbe(
     std::filesystem::path client,
     const ClientProfile* profile)
     : client_(std::move(client)), profile_(profile) {
-    if (profile_ != nullptr) {
+    if (profile_ != nullptr && validate_client_profile(*profile_)) {
         file_monitor_.emplace(client_, std::string(profile_->sha256));
+    } else {
+        profile_ = nullptr;
     }
 }
 

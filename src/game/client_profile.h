@@ -70,6 +70,7 @@ struct CharacterSymbols {
     std::size_t inventory_maximum_slots;
     std::size_t item_name_pointer_offset;
     std::size_t item_name_bytes;
+    std::uintptr_t experience_percent_rva;
     std::uintptr_t progression_cache_rva;
     std::size_t alternate_advancement_percent_offset;
     std::size_t alternate_advancement_points_offset;

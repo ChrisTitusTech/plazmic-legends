@@ -35,6 +35,9 @@ int main() {
         require(validation.character_available ==
                     profile->character_snapshot_supported,
                 "character capability did not match the profile gate");
+        require(validation.experience_available ==
+                    (profile == profiles[4]),
+                "experience capability did not remain exact-profile scoped");
         require(plazmic::select_client_profile(profile->sha256) == profile,
                 "known profile did not select by exact digest");
     }
@@ -74,6 +77,17 @@ int main() {
     invalid.character_snapshot_supported = true;
     require(!plazmic::validate_client_profile(invalid),
             "partial character capability was enabled");
+
+    invalid = *profiles.back();
+    invalid.character.experience_percent_rva = invalid.image_size - 2U;
+    require(!plazmic::validate_client_profile(invalid),
+            "partially out-of-image experience field passed the profile "
+            "contract");
+
+    invalid = *profiles[1];
+    invalid.character.experience_percent_rva = 0x100U;
+    require(!plazmic::validate_client_profile(invalid),
+            "experience capability was enabled without character support");
 
     invalid = *profiles.back();
     invalid.character.progression_cache_rva = 0x100U;

@@ -1857,7 +1857,7 @@ ActivityAnalyticsSnapshot ActivityTracker::snapshot(
         .storage_key = key_,
         .events = events_,
         .abilities = {},
-        .experience_percent = 0.0,
+        .experience_gained_percent = 0.0,
         .experience_percent_per_hour = 0.0,
         .level_pace_hours = std::nullopt,
         .alternate_advancement_percent =
@@ -1887,7 +1887,7 @@ ActivityAnalyticsSnapshot ActivityTracker::snapshot(
     std::int64_t latest_celebration = 0;
     for (const auto& event : events_) {
         if (event.kind == ActivityEventKind::experience) {
-            result.experience_percent += event.amount;
+            result.experience_gained_percent += event.amount;
         } else if (event.kind ==
                    ActivityEventKind::alternate_advancement) {
             if (event.total && event.timestamp_unix_seconds >= latest_aa) {

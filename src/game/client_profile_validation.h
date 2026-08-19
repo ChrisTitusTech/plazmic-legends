@@ -12,6 +12,7 @@ struct ClientProfileValidation {
     bool player_available{false};
     bool spawns_available{false};
     bool character_available{false};
+    bool experience_available{false};
     bool progression_available{false};
     std::vector<std::string> errors;
 

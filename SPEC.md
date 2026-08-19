@@ -224,6 +224,15 @@ hour of retained progress observations; the level pace is the time to earn
 100% at that rate, not a claim about the character's current level position.
 Recent loot means the latest 24 hours.
 
+For the exact `legends-2026-08-17` client only, the immutable character
+snapshot may additionally publish the current player experience percentage
+from the client's read-only UI cache. The optional float is read twice,
+validated as finite and in the inclusive range 0-100, and discarded for the
+frame if unavailable, invalid, or inconsistent. It is transient and is never
+persisted, exported, logged, or sent over the network. The Activity summary
+uses this memory value for the current XP position; combat-log XP events remain
+the source for history, gain rate, and pace only.
+
 For the exact `legends-2026-08-06` client only, the immutable character
 snapshot may additionally publish bounded current AA progress and banked
 points from the client's read-only progression cache. These optional fields

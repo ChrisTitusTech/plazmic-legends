@@ -74,6 +74,7 @@ CharacterSnapshot invalid_character(const GameStateReadResult& result) {
         .name = {},
         .health = {},
         .mana = {},
+        .experience_percent = std::nullopt,
         .alternate_advancement_percent = std::nullopt,
         .alternate_advancement_points = std::nullopt,
         .equipment = {},

@@ -52,6 +52,13 @@ levels and the local-player value matched the visible level 42. The optional
 Alternate Advancement cache is deliberately omitted; its prior authorization
 applies only to the August 6 profile.
 
+The exact `LABELTYPE_EXPPCT` display path reads the character owner, calculates
+the current player experience position, scales and clamps it to 0-100, and
+caches the resulting float at image RVA `0x00fa6688`. Two consecutive bounded
+read-only observations were finite, stable, and in range. The private value is
+not retained. This field is authorized independently of the omitted Alternate
+Advancement cache by `docs/research/phase9-xp-memory-checkpoint.md`.
+
 The corrected character root completed the existing bounded type-descriptor,
 stats-record, profile-list, and equipment-container paths. Current HP and MP
 remain signed 64-bit `0x2770` and signed 32-bit `0x2764` fields in the resolved
@@ -80,6 +87,7 @@ terminated printable item-name pointer moved to `0x98`.
 | Character identity | Bounded local-player anchor | Valid | Stable reread | Empty, malformed, or changed during staging | `0x0b8`, 64 bytes |
 | Current HP and MP | Character-stat lookup and update paths | Visible gauges matched | Different live values matched | Missing, negative, torn, or out of range | HP `0x2770` plus `0x28`; MP `0x2764` |
 | Maximum HP and MP | Local-player vital update and gauge paths | Visible maxima matched | HP maximum changed and reread matched | Missing, nonpositive, torn, or below current | HP `0x310`, MP `0x238` |
+| Current XP | `LABELTYPE_EXPPCT` calculation and UI-cache write | Finite bounded read | Stable bounded reread | Missing, non-finite, outside 0-100, or torn | `0x00fa6688` RVA |
 | Equipment | Profile-list, container, slot, and name access families | 23 bounded slots valid | Complete reread valid | Invalid pointer, count, slot, string, or staged reread | Existing bounded layout; item name `0x98` |
 
 No application or analysis step wrote target memory, injected code, changed
@@ -131,6 +139,26 @@ the installed file remained `root:root` and mode `0755`. The installed window
 rendered changing HP and MP gauges, a live map, the local player, and corrected
 bounded spawn levels. Its privacy-safe log selected the exact supported
 profile and reached `in_world` with the map loaded and no read failure.
+
+## Current-XP maintenance correction
+
+On 2026-08-18, the installed summary exposed that accumulated retained log XP
+was mislabeled as the player's current XP and could exceed 100 percent. The
+separate checkpoint in `docs/research/phase9-xp-memory-checkpoint.md` approved
+the exact memory-backed field above. The Activity summary now uses that
+transient character snapshot for current XP and labels the combat-log-derived
+gain rate separately.
+
+The warnings-as-errors repository gate, 13 Python tests, all 20 CTest cases,
+exact fingerprint, package metadata, staged install inventory, and two-pass
+review passed. The binary was atomically installed with the prior
+hash-addressed rollback and relaunched. Build, installed, and running SHA-256
+all match
+`da476d1938a3479dd303ace7061e44609117a5d01233419dd3d243691bdb86d6`.
+The visible installed window showed bounded current XP below 100 percent and
+did not render the retained 133 percent gain total as current XP. The
+privacy-safe log selected the exact profile and reached `in_world` with the map
+loaded.
 
 ## Pending validation
 

@@ -425,6 +425,21 @@ CharacterReadResult read_character_snapshot(
         });
     }
 
+    std::optional<double> experience_percent;
+    std::uintptr_t experience_address = 0U;
+    std::string experience_detail;
+    if (symbols.experience_percent_rva != 0U &&
+        checked_add(process.image_base,
+                    symbols.experience_percent_rva,
+                    experience_address)) {
+        const auto percent = read_value<float>(
+            reader, experience_address, experience_detail);
+        if (percent && std::isfinite(*percent) && *percent >= 0.0F &&
+            *percent <= 100.0F) {
+            experience_percent = static_cast<double>(*percent);
+        }
+    }
+
     std::optional<double> alternate_advancement_percent;
     std::optional<std::uint32_t> alternate_advancement_points;
     std::uintptr_t progression_cache = 0U;
@@ -546,6 +561,15 @@ CharacterReadResult read_character_snapshot(
                 "equipped item changed during the snapshot read");
         }
     }
+    if (experience_percent) {
+        const auto final_percent = read_value<float>(
+            reader, experience_address, experience_detail);
+        if (!final_percent || !std::isfinite(*final_percent) ||
+            *final_percent < 0.0F || *final_percent > 100.0F ||
+            static_cast<double>(*final_percent) != *experience_percent) {
+            experience_percent.reset();
+        }
+    }
     if (alternate_advancement_percent) {
         const auto final_percent = read_value_at<float>(
             reader,
@@ -576,6 +600,7 @@ CharacterReadResult read_character_snapshot(
             .name = *name,
             .health = {.current = health, .maximum = *maximum_health},
             .mana = {.current = *mana, .maximum = *maximum_mana},
+            .experience_percent = experience_percent,
             .alternate_advancement_percent =
                 alternate_advancement_percent,
             .alternate_advancement_points = alternate_advancement_points,

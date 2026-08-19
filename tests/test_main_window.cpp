@@ -387,6 +387,7 @@ int main(int argc, char** argv) {
             .name = "synthetic_character",
             .health = {.current = 90, .maximum = 100},
             .mana = {.current = 40, .maximum = 50},
+            .experience_percent = 24.845,
             .alternate_advancement_percent = std::nullopt,
             .alternate_advancement_points = std::nullopt,
             .equipment =
@@ -599,7 +600,7 @@ int main(int argc, char** argv) {
             .observations = 2,
             .confidence = "Observed; proc unconfirmed",
         });
-        activity.experience_percent = 0.125;
+        activity.experience_gained_percent = 133.0;
         activity.experience_percent_per_hour = 0.25;
         activity.level_pace_hours = 400.0;
         activity.alternate_advancement_percent = 66.48;
@@ -650,6 +651,15 @@ int main(int argc, char** argv) {
                                "inventory-reconciliation") != nullptr &&
                     window.findChild<QLabel*>("activity-summary-xp")
                             ->textFormat() == Qt::PlainText &&
+                    window.findChild<QLabel*>("activity-summary-xp")
+                            ->text()
+                            .contains("XP: 24.845%") &&
+                    window.findChild<QLabel*>("activity-summary-xp")
+                            ->text()
+                            .contains("gain rate 0.250%/h") &&
+                    !window.findChild<QLabel*>("activity-summary-xp")
+                         ->text()
+                         .contains("133.000%") &&
                     window.findChild<QLabel*>(
                                "inventory-reconciliation-state")
                             ->textFormat() == Qt::PlainText,
@@ -750,7 +760,8 @@ int main(int argc, char** argv) {
                     window.findChild<QTableWidget*>("activity-abilities")
                             ->rowCount() == 0 &&
                     window.findChild<QLabel*>("activity-summary-xp")
-                            ->toolTip() == "XP: unavailable" &&
+                            ->toolTip() ==
+                        "XP: 24.845% | gain rate: unavailable" &&
                     window.findChild<QLabel*>("activity-summary-aa")
                             ->toolTip() == "AA: unavailable" &&
                     window.findChild<QLabel*>("activity-summary-latest")
@@ -904,6 +915,9 @@ int main(int argc, char** argv) {
                     "HP unavailable" &&
                     window.findChild<QProgressBar*>("character-mana")->text() ==
                         "MP unavailable" &&
+                    window.findChild<QLabel*>("activity-summary-xp")
+                        ->text()
+                        .contains("XP: unavailable") &&
                     !equipment_state->isHidden() &&
                     equipment_state->text() ==
                         "Character information unavailable" &&
@@ -922,6 +936,7 @@ int main(int argc, char** argv) {
             .name = "synthetic_character",
             .health = {},
             .mana = {},
+            .experience_percent = std::nullopt,
             .alternate_advancement_percent = std::nullopt,
             .alternate_advancement_points = std::nullopt,
             .equipment = {},

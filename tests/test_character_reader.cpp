@@ -174,9 +174,32 @@ int main() {
         require(result.snapshot->mana.current == 400 &&
                     result.snapshot->mana.maximum == 500,
                 "mana current/maximum were not decoded");
-        require(!result.snapshot->alternate_advancement_percent &&
+        require(!result.snapshot->experience_percent &&
+                    !result.snapshot->alternate_advancement_percent &&
                     !result.snapshot->alternate_advancement_points,
                 "unsupported progression fields were published");
+
+        Fixture experience;
+        experience.symbols.experience_percent_rva = 0x308U;
+        store(experience.memory, 0x308U, 24.845F);
+        const auto experience_result = plazmic::read_character_snapshot(
+            experience.process,
+            experience.local_player,
+            experience.symbols);
+        require(experience_result &&
+                    experience_result.snapshot->experience_percent &&
+                    *experience_result.snapshot->experience_percent > 24.84 &&
+                    *experience_result.snapshot->experience_percent < 24.85,
+                "bounded current experience was not decoded");
+
+        store(experience.memory, 0x308U, 101.0F);
+        const auto invalid_experience = plazmic::read_character_snapshot(
+            experience.process,
+            experience.local_player,
+            experience.symbols);
+        require(invalid_experience &&
+                    !invalid_experience.snapshot->experience_percent,
+                "invalid optional current experience affected the snapshot");
         require(result.snapshot->equipment.size() == 23U &&
                     result.snapshot->equipment[13].slot == "Primary" &&
                     result.snapshot->equipment[13].item ==

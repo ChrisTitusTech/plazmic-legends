@@ -27,6 +27,7 @@ plazmic::CharacterSnapshot available_snapshot() {
         .name = "Synthetic Character",
         .health = {},
         .mana = {},
+        .experience_percent = std::nullopt,
         .alternate_advancement_percent = std::nullopt,
         .alternate_advancement_points = std::nullopt,
         .equipment = {},

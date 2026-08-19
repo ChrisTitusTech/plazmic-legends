@@ -77,6 +77,30 @@ QString activity_kind_label(ActivityEventKind kind) {
     return "Activity";
 }
 
+QString experience_summary(
+    const CharacterSnapshot& character,
+    const ActivityAnalyticsSnapshot& analytics) {
+    const QString current = character.experience_percent
+                                ? QString::number(
+                                      *character.experience_percent, 'f', 3) +
+                                      "%"
+                                : QString("unavailable");
+    if (!analytics.available) {
+        return QString("XP: %1 | gain rate: unavailable").arg(current);
+    }
+    const QString level_pace = analytics.level_pace_hours
+                                   ? QString::number(
+                                         *analytics.level_pace_hours,
+                                         'f',
+                                         1) +
+                                         "h/100%"
+                                   : QString("collecting");
+    return QString("XP: %1 | gain rate %2%/h | pace %3")
+        .arg(current)
+        .arg(analytics.experience_percent_per_hour, 0, 'f', 3)
+        .arg(level_pace);
+}
+
 bool same_inventory_context(const CharacterSnapshot& left,
                             const CharacterSnapshot& right) {
     return left.state == right.state && left.name == right.name &&
@@ -1098,6 +1122,10 @@ void MainWindow::update_character_snapshot(
          (!inventory_character_name_.empty() &&
           !same_inventory_context(snapshot, character_snapshot_)));
     character_snapshot_ = snapshot;
+    const QString xp_summary =
+        experience_summary(character_snapshot_, activity_analytics_);
+    activity_xp_summary_->setText(xp_summary);
+    activity_xp_summary_->setToolTip(xp_summary);
     if (inventory_character_changed || inventory_character_lost) {
         inventory_character_name_.clear();
         render_inventory_reconciliation({
@@ -1214,7 +1242,9 @@ void MainWindow::update_activity_snapshot(
         activity_state_->setText(
             detail.isEmpty() ? "Activity unavailable" : detail);
         activity_state_->show();
-        activity_xp_summary_->setText("XP: unavailable");
+        const QString xp_summary =
+            experience_summary(character_snapshot_, analytics);
+        activity_xp_summary_->setText(xp_summary);
         activity_aa_summary_->setText("AA: unavailable");
         activity_latest_summary_->setText(
             detail.isEmpty() ? "Latest: unavailable"
@@ -1240,11 +1270,6 @@ void MainWindow::update_activity_snapshot(
                                           3) +
                                           "%"
                                     : QString("unavailable");
-    const QString level_pace = analytics.level_pace_hours
-                                   ? QString::number(
-                                         *analytics.level_pace_hours, 'f', 1) +
-                                         "h/100%"
-                                   : QString("collecting");
     const QString aa_eta = analytics.next_alternate_advancement_hours
                                ? QString::number(
                                      *analytics.next_alternate_advancement_hours,
@@ -1252,10 +1277,7 @@ void MainWindow::update_activity_snapshot(
                                      "h"
                                : QString("collecting");
     const QString xp_summary =
-        QString("XP: %1% | %2%/h | pace %3")
-            .arg(analytics.experience_percent, 0, 'f', 3)
-            .arg(analytics.experience_percent_per_hour, 0, 'f', 3)
-            .arg(level_pace);
+        experience_summary(character_snapshot_, analytics);
     const QString aa_summary =
         QString("AA: %1 | banked: %2 | %3/h | next: %4")
             .arg(aa_progress)

@@ -43,6 +43,13 @@ bool image_rva(std::uintptr_t rva, std::uint32_t image_size) {
     return rva != 0U && rva < static_cast<std::uintptr_t>(image_size);
 }
 
+bool image_range(std::uintptr_t rva,
+                 std::size_t width,
+                 std::uint32_t image_size) {
+    return rva != 0U && width <= image_size &&
+           rva <= static_cast<std::uintptr_t>(image_size - width);
+}
+
 }  // namespace
 
 ClientProfileValidation validate_client_profile(
@@ -114,6 +121,19 @@ ClientProfileValidation validate_client_profile(
            "enabled character profile is incomplete", result);
     result.character_available =
         profile.character_snapshot_supported && valid_character;
+
+    reject(character.experience_percent_rva != 0U &&
+               (!profile.character_snapshot_supported ||
+                !image_range(character.experience_percent_rva,
+                             sizeof(float),
+                             profile.image_size)),
+           "experience profile lacks character support or is out of image",
+           result);
+    result.experience_available =
+        profile.character_snapshot_supported &&
+        image_range(character.experience_percent_rva,
+                    sizeof(float),
+                    profile.image_size);
 
     const bool any_progression = character.progression_cache_rva != 0U ||
                                  character.alternate_advancement_percent_offset !=

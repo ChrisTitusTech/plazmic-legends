@@ -570,7 +570,7 @@ int main() {
         require(refresh.activity.events.size() == 3U &&
                     refresh.activity.retention_enabled &&
                     refresh.activity.persisted &&
-                    refresh.activity.experience_percent == 0.125 &&
+                    refresh.activity.experience_gained_percent == 0.125 &&
                     refresh.activity.alternate_advancement_points == 42U &&
                     refresh.activity.recent_loot_count == 1U,
                 "log tailer did not publish or persist activity analytics");
@@ -743,6 +743,7 @@ int main() {
             .name = std::string(kCharacter),
             .health = {},
             .mana = {},
+            .experience_percent = std::nullopt,
             .alternate_advancement_percent = std::nullopt,
             .alternate_advancement_points = std::nullopt,
             .equipment = {{.slot = "Head", .item = "Synthetic Cap"}},
@@ -836,14 +837,15 @@ int main() {
             directory, kCharacter, spell->timestamp + 3s);
         require(refresh.snapshot.encounter.total_damage == 25U &&
                     refresh.activity.events.size() == 4U &&
-                    refresh.activity.experience_percent == 0.250 &&
+                    refresh.activity.experience_gained_percent == 0.250 &&
                     refresh.snapshot.encounter.target == "Second Target",
                 "truncated log replay result: damage=" +
                     std::to_string(refresh.snapshot.encounter.total_damage) +
                     " events=" +
                     std::to_string(refresh.activity.events.size()) +
                     " xp=" +
-                    std::to_string(refresh.activity.experience_percent) +
+                    std::to_string(
+                        refresh.activity.experience_gained_percent) +
                     " target=" + refresh.snapshot.encounter.target);
 
         {
@@ -858,7 +860,7 @@ int main() {
             directory, kCharacter, spell->timestamp + 4s);
         require(refresh.snapshot.encounter.total_damage == 30U &&
                     refresh.activity.events.size() == 5U &&
-                    refresh.activity.experience_percent == 0.375,
+                    refresh.activity.experience_gained_percent == 0.375,
                 "truncation suppressed a new identical activity after overlap");
 
         const auto rotated = logs / "synthetic-previous.log";
@@ -1047,7 +1049,8 @@ int main() {
         auto large_activity_refresh = large_tailer.refresh(
             directory, kCharacter, melee->timestamp + 63s);
         require(large_activity_refresh.activity.events.size() == 1U &&
-                    large_activity_refresh.activity.experience_percent ==
+                    large_activity_refresh.activity
+                            .experience_gained_percent ==
                         0.125,
                 "activity beyond the replay prefix was not consumed");
         const auto large_other_log =
@@ -1060,7 +1063,8 @@ int main() {
             directory, kCharacter, "synthetic_zone",
             melee->timestamp + 64s);
         require(large_activity_refresh.activity.events.size() == 1U &&
-                    large_activity_refresh.activity.experience_percent ==
+                    large_activity_refresh.activity
+                            .experience_gained_percent ==
                         0.125,
                 "character switch replayed activity beyond the verified "
                 "prefix");

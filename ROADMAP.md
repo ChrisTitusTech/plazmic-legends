@@ -599,10 +599,11 @@ with each summary column independently resizable.
 
 Phase 9 inputs are bounded lines from the active character's local log, the
 existing immutable text-equipment snapshot, the exact-profile optional AA
-snapshot approved by `docs/research/phase9-aa-memory-checkpoint.md`, and an
-explicitly selected local EverQuest inventory-output file. Class, proc, and
-upgrade conclusions carry
-their evidence/confidence instead of being guessed. Raid-target
+snapshot approved by `docs/research/phase9-aa-memory-checkpoint.md`, the
+exact-profile optional current-XP snapshot approved by
+`docs/research/phase9-xp-memory-checkpoint.md`, and an explicitly selected
+local EverQuest inventory-output file. Class, proc, and upgrade conclusions
+carry their evidence/confidence instead of being guessed. Raid-target
 classification is not part of this phase because these inputs provide no
 authoritative roster. No other process-memory field, network source, or bundled
 game database is approved by this phase; one requires a separately documented

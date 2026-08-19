@@ -59,7 +59,7 @@ struct ActivityAnalyticsSnapshot {
     std::string storage_key;
     std::vector<ActivityEventSnapshot> events;
     std::vector<AbilityActivitySnapshot> abilities;
-    double experience_percent{};
+    double experience_gained_percent{};
     double experience_percent_per_hour{};
     std::optional<double> level_pace_hours;
     std::optional<double> alternate_advancement_percent;

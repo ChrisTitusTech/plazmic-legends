@@ -35,6 +35,7 @@
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QToolButton>
+#include <QWheelEvent>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -388,8 +389,8 @@ int main(int argc, char** argv) {
             .health = {.current = 90, .maximum = 100},
             .mana = {.current = 40, .maximum = 50},
             .experience_percent = 24.845,
-            .alternate_advancement_percent = std::nullopt,
-            .alternate_advancement_points = std::nullopt,
+            .alternate_advancement_percent = 66.48,
+            .alternate_advancement_points = 42U,
             .equipment =
                 {
                     {.slot = "Head", .item = "Synthetic Helm"},
@@ -656,6 +657,26 @@ int main(int argc, char** argv) {
                                "inventory-reconciliation-state")
                             ->textFormat() == Qt::PlainText,
                 "progression, activity, or inventory views did not render");
+
+        auto memory_backed_character = character;
+        memory_backed_character.alternate_advancement_percent = 71.25;
+        memory_backed_character.alternate_advancement_points = 7U;
+        window.update_character_snapshot(memory_backed_character);
+        require(window.findChild<QLabel*>("activity-summary-aa")
+                        ->text()
+                        .contains("AA: 71.250% | banked: 7 | 1.00/h"),
+                "AA summary did not prefer the current memory snapshot");
+        auto unavailable_log_activity = activity;
+        unavailable_log_activity.available = false;
+        unavailable_log_activity.detail = "Synthetic log unavailable";
+        window.update_activity_snapshot(unavailable_log_activity);
+        require(
+            window.findChild<QLabel*>("activity-summary-aa")->text() ==
+                "AA: 71.250% | banked: 7 | gain rate: unavailable",
+            "unavailable activity input blanked memory-backed AA state");
+        window.update_character_snapshot(character);
+        window.update_activity_snapshot(activity);
+
         auto unsaved_activity = activity;
         unsaved_activity.persisted = false;
         unsaved_activity.detail =
@@ -710,14 +731,16 @@ int main(int argc, char** argv) {
                     window.statusBar()->currentMessage().contains(
                         "deletion is unavailable"),
                 "missing deletion callback changed retention or queued work");
-        auto unknown_aa_activity = activity;
-        unknown_aa_activity.alternate_advancement_percent.reset();
-        unknown_aa_activity.alternate_advancement_points.reset();
-        window.update_activity_snapshot(unknown_aa_activity);
+        auto unknown_aa_character = character;
+        unknown_aa_character.alternate_advancement_percent.reset();
+        unknown_aa_character.alternate_advancement_points.reset();
+        window.update_character_snapshot(unknown_aa_character);
+        window.update_activity_snapshot(activity);
         require(window.findChild<QLabel*>("activity-summary-aa")
                     ->text()
                     .contains("AA: unavailable | banked: unavailable"),
-                "unknown AA state was rendered as a real zero");
+                "log-derived AA total replaced unavailable memory state");
+        window.update_character_snapshot(character);
         auto incompatible_activity = activity;
         incompatible_activity.events.clear();
         incompatible_activity.abilities.clear();
@@ -746,7 +769,8 @@ int main(int argc, char** argv) {
                             ->toolTip() ==
                         "XP: 24.845% | gain rate: unavailable" &&
                     window.findChild<QLabel*>("activity-summary-aa")
-                            ->toolTip() == "AA: unavailable" &&
+                            ->toolTip() ==
+                        "AA: 66.480% | banked: 42 | gain rate: unavailable" &&
                     window.findChild<QLabel*>("activity-summary-latest") ==
                         nullptr &&
                     activity_state->isVisible() &&
@@ -901,6 +925,9 @@ int main(int argc, char** argv) {
                     window.findChild<QLabel*>("activity-summary-xp")
                         ->text()
                         .contains("XP: unavailable") &&
+                    window.findChild<QLabel*>("activity-summary-aa")
+                            ->text() ==
+                        "AA: unavailable" &&
                     !equipment_state->isHidden() &&
                     equipment_state->text() ==
                         "Character information unavailable" &&
@@ -1088,6 +1115,41 @@ int main(int argc, char** argv) {
                 "map canvas did not retain the player snapshot");
         require(window.map_canvas()->spawn_snapshot().spawns.size() == 4,
                 "map canvas did not retain the spawn snapshot");
+
+        const double fitted_scale =
+            window.map_canvas()->viewport_scale();
+        const QPoint canvas_center =
+            window.map_canvas()->rect().center();
+        QWheelEvent zoom_event(
+            QPointF(canvas_center),
+            QPointF(window.map_canvas()->mapToGlobal(canvas_center)),
+            {}, QPoint(0, 120), Qt::NoButton, Qt::NoModifier,
+            Qt::NoScrollPhase, false);
+        QApplication::sendEvent(window.map_canvas(), &zoom_event);
+        process_events();
+        const double zoomed_scale =
+            window.map_canvas()->viewport_scale();
+        require(zoomed_scale > fitted_scale,
+                "synthetic wheel input did not zoom the map");
+
+        window.set_zone_map(map);
+        process_events();
+        require(window.map_canvas()->viewport_scale() == zoomed_scale,
+                "same-zone map refresh reset the zoom");
+        window.clear_zone_map("Synthetic transient refresh");
+        window.set_zone_map(map);
+        process_events();
+        require(window.map_canvas()->viewport_scale() == zoomed_scale,
+                "same-zone map recovery reset the zoom");
+
+        auto next_zone_map = map;
+        next_zone_map.zone = "synthetic_next";
+        window.set_zone_map(next_zone_map);
+        process_events();
+        require(window.map_canvas()->viewport_scale() == fitted_scale,
+                "new-zone map did not fit its viewport");
+        window.set_zone_map(map);
+        process_events();
         require(
             plazmic::spawn_presentation_category(spawns.spawns[0]) ==
                     plazmic::SpawnPresentationCategory::player &&

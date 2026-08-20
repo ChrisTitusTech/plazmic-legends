@@ -101,6 +101,43 @@ QString experience_summary(
         .arg(level_pace);
 }
 
+QString alternate_advancement_summary(
+    const CharacterSnapshot& character,
+    const ActivityAnalyticsSnapshot& analytics) {
+    std::optional<double> current_percent;
+    std::optional<std::uint32_t> current_points;
+    if (character.available()) {
+        current_percent = character.alternate_advancement_percent;
+        current_points = character.alternate_advancement_points;
+    }
+    const QString aa_progress = current_percent
+                                    ? QString::number(
+                                          *current_percent, 'f', 3) + "%"
+                                    : QString("unavailable");
+    const QString aa_total = current_points
+                                 ? QString::number(*current_points)
+                                 : QString("unavailable");
+    if (!analytics.available) {
+        if (!current_percent && !current_points) {
+            return "AA: unavailable";
+        }
+        return QString("AA: %1 | banked: %2 | gain rate: unavailable")
+            .arg(aa_progress)
+            .arg(aa_total);
+    }
+    const QString aa_eta = analytics.next_alternate_advancement_hours
+                               ? QString::number(
+                                     *analytics.next_alternate_advancement_hours,
+                                     'f', 1) +
+                                     "h"
+                               : QString("collecting");
+    return QString("AA: %1 | banked: %2 | %3/h | next: %4")
+        .arg(aa_progress)
+        .arg(aa_total)
+        .arg(analytics.alternate_advancement_points_per_hour, 0, 'f', 2)
+        .arg(aa_eta);
+}
+
 bool same_inventory_context(const CharacterSnapshot& left,
                             const CharacterSnapshot& right) {
     return left.state == right.state && left.name == right.name &&
@@ -1120,8 +1157,13 @@ void MainWindow::update_character_snapshot(
     character_snapshot_ = snapshot;
     const QString xp_summary =
         experience_summary(character_snapshot_, activity_analytics_);
+    const QString aa_summary =
+        alternate_advancement_summary(
+            character_snapshot_, activity_analytics_);
     activity_xp_summary_->setText(xp_summary);
     activity_xp_summary_->setToolTip(xp_summary);
+    activity_aa_summary_->setText(aa_summary);
+    activity_aa_summary_->setToolTip(aa_summary);
     if (inventory_character_changed || inventory_character_lost) {
         inventory_character_name_.clear();
         render_inventory_reconciliation({
@@ -1240,41 +1282,23 @@ void MainWindow::update_activity_snapshot(
         activity_state_->show();
         const QString xp_summary =
             experience_summary(character_snapshot_, analytics);
+        const QString aa_summary =
+            alternate_advancement_summary(
+                character_snapshot_, analytics);
         activity_xp_summary_->setText(xp_summary);
-        activity_aa_summary_->setText("AA: unavailable");
+        activity_aa_summary_->setText(aa_summary);
         activity_xp_summary_->setToolTip(activity_xp_summary_->text());
-        activity_aa_summary_->setToolTip(activity_aa_summary_->text());
+        activity_aa_summary_->setToolTip(aa_summary);
         if (payload_changed) {
             activity_events_->setRowCount(0);
             activity_abilities_->setRowCount(0);
         }
         return;
     }
-    const QString aa_total = analytics.alternate_advancement_points
-                                 ? QString::number(
-                                       *analytics.alternate_advancement_points)
-                                 : QString("unavailable");
-    const QString aa_progress = analytics.alternate_advancement_percent
-                                    ? QString::number(
-                                          *analytics.alternate_advancement_percent,
-                                          'f',
-                                          3) +
-                                          "%"
-                                    : QString("unavailable");
-    const QString aa_eta = analytics.next_alternate_advancement_hours
-                               ? QString::number(
-                                     *analytics.next_alternate_advancement_hours,
-                                     'f', 1) +
-                                     "h"
-                               : QString("collecting");
     const QString xp_summary =
         experience_summary(character_snapshot_, analytics);
     const QString aa_summary =
-        QString("AA: %1 | banked: %2 | %3/h | next: %4")
-            .arg(aa_progress)
-            .arg(aa_total)
-            .arg(analytics.alternate_advancement_points_per_hour, 0, 'f', 2)
-            .arg(aa_eta);
+        alternate_advancement_summary(character_snapshot_, analytics);
     if (!analytics.persisted) {
         const QString detail = QString::fromStdString(analytics.detail);
         activity_state_->setText(

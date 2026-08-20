@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <string>
 #include <vector>
 
 #include <QColor>
@@ -110,6 +111,9 @@ class MapCanvas final : public QWidget {
     [[nodiscard]] std::optional<std::uint32_t> selected_spawn() const {
         return selected_spawn_;
     }
+    [[nodiscard]] double viewport_scale() const {
+        return viewport_.scale();
+    }
 
   protected:
     void paintEvent(QPaintEvent* event) override;
@@ -137,6 +141,7 @@ class MapCanvas final : public QWidget {
         const QPointF& point) const;
 
     std::optional<ZoneMap> map_;
+    std::string viewport_zone_;
     std::optional<MapBounds> bounds_;
     PlayerSnapshot player_;
     SpawnCollectionSnapshot spawns_;

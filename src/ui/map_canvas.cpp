@@ -156,6 +156,8 @@ void MapCanvas::set_zone_map(ZoneMap map) {
             "Map exceeds the bounded renderer record limit");
         return;
     }
+    const bool zone_changed = viewport_zone_ != map.zone;
+    viewport_zone_ = map.zone;
     map_ = std::move(map);
     bounds_ = calculate_map_bounds(*map_);
     unsigned int maximum_layer = 0;
@@ -165,7 +167,9 @@ void MapCanvas::set_zone_map(ZoneMap map) {
     visible_layers_.assign(
         static_cast<std::size_t>(maximum_layer) + 1U, true);
     empty_detail_.clear();
-    needs_fit_ = true;
+    if (zone_changed) {
+        needs_fit_ = true;
+    }
     map_cache_dirty_ = true;
     refresh_height_filter_center(true);
     update();
@@ -177,7 +181,6 @@ void MapCanvas::clear_zone_map(QString detail) {
     visible_layers_.clear();
     height_filter_center_.reset();
     empty_detail_ = std::move(detail);
-    needs_fit_ = true;
     map_cache_dirty_ = true;
     map_cache_ = {};
     update();

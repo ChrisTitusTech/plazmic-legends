@@ -82,6 +82,7 @@ constexpr ClientProfile kLegendsReferenceProfile{
             .progression_cache_rva = 0U,
             .alternate_advancement_percent_offset = 0U,
             .alternate_advancement_points_offset = 0U,
+            .unallocated_alternate_advancement_points_offset = 0U,
         },
 };
 
@@ -205,6 +206,7 @@ constexpr ClientProfile kLegendsAugustFourthProfile{
             .progression_cache_rva = 0U,
             .alternate_advancement_percent_offset = 0U,
             .alternate_advancement_points_offset = 0U,
+            .unallocated_alternate_advancement_points_offset = 0U,
         },
 };
 
@@ -285,6 +287,7 @@ constexpr ClientProfile kLegendsAugustSixthProfile{
             .progression_cache_rva = 0x00fa43d0U,
             .alternate_advancement_percent_offset = 0x24cU,
             .alternate_advancement_points_offset = 0x250U,
+            .unallocated_alternate_advancement_points_offset = 0U,
         },
 };
 
@@ -364,7 +367,8 @@ constexpr ClientProfile kLegendsAugustSeventeenthProfile{
             .experience_percent_rva = 0x00fa6688U,
             .progression_cache_rva = 0x00fa6440U,
             .alternate_advancement_percent_offset = 0x24cU,
-            .alternate_advancement_points_offset = 0x250U,
+            .alternate_advancement_points_offset = 0U,
+            .unallocated_alternate_advancement_points_offset = 0xaa5cU,
         },
 };
 

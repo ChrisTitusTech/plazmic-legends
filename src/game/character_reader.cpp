@@ -189,12 +189,30 @@ std::optional<std::uintptr_t> resolve_profile(
 }
 
 bool valid_profile(const CharacterSymbols& symbols) {
+    constexpr std::size_t kMaximumProgressionCacheOffset = 4096U;
+    constexpr std::size_t kMaximumCharacterProfileOffset = 64U * 1024U;
+    const bool has_cache_points =
+        symbols.alternate_advancement_points_offset != 0U;
+    const bool has_unallocated_points =
+        symbols.unallocated_alternate_advancement_points_offset != 0U;
+    const bool any_progression = symbols.progression_cache_rva != 0U ||
+                                 symbols.alternate_advancement_percent_offset !=
+                                     0U ||
+                                 has_cache_points || has_unallocated_points;
     const bool progression_profile_valid =
-        symbols.progression_cache_rva == 0U ||
-        (symbols.alternate_advancement_percent_offset <= 4096U &&
-         symbols.alternate_advancement_points_offset <= 4096U &&
-         symbols.alternate_advancement_percent_offset !=
-             symbols.alternate_advancement_points_offset);
+        !any_progression ||
+        (symbols.progression_cache_rva != 0U &&
+         symbols.alternate_advancement_percent_offset <=
+             kMaximumProgressionCacheOffset &&
+         has_cache_points != has_unallocated_points &&
+         (!has_cache_points ||
+          (symbols.alternate_advancement_points_offset <=
+               kMaximumProgressionCacheOffset &&
+           symbols.alternate_advancement_percent_offset !=
+               symbols.alternate_advancement_points_offset)) &&
+         (!has_unallocated_points ||
+          symbols.unallocated_alternate_advancement_points_offset <=
+              kMaximumCharacterProfileOffset - sizeof(std::uint32_t)));
     return symbols.local_character_pointer_rva != 0U &&
            symbols.player_name_bytes > 0U &&
            symbols.player_name_bytes <= 128U &&
@@ -443,6 +461,8 @@ CharacterReadResult read_character_snapshot(
     std::optional<double> alternate_advancement_percent;
     std::optional<std::uint32_t> alternate_advancement_points;
     std::uintptr_t progression_cache = 0U;
+    std::uintptr_t alternate_advancement_points_base = 0U;
+    std::size_t alternate_advancement_points_offset = 0U;
     std::string progression_detail;
     if (symbols.progression_cache_rva != 0U &&
         checked_add(process.image_base,
@@ -453,11 +473,18 @@ CharacterReadResult read_character_snapshot(
             progression_cache,
             symbols.alternate_advancement_percent_offset,
             progression_detail);
+        if (symbols.unallocated_alternate_advancement_points_offset != 0U) {
+            alternate_advancement_points_base = *profile;
+            alternate_advancement_points_offset =
+                symbols.unallocated_alternate_advancement_points_offset;
+        } else {
+            alternate_advancement_points_base = progression_cache;
+            alternate_advancement_points_offset =
+                symbols.alternate_advancement_points_offset;
+        }
         const auto points = read_value_at<std::uint32_t>(
-            reader,
-            progression_cache,
-            symbols.alternate_advancement_points_offset,
-            progression_detail);
+            reader, alternate_advancement_points_base,
+            alternate_advancement_points_offset, progression_detail);
         if (percent && std::isfinite(*percent) && *percent >= 0.0F &&
             *percent <= 100.0F) {
             alternate_advancement_percent =
@@ -585,10 +612,8 @@ CharacterReadResult read_character_snapshot(
     }
     if (alternate_advancement_points) {
         const auto final_points = read_value_at<std::uint32_t>(
-            reader,
-            progression_cache,
-            symbols.alternate_advancement_points_offset,
-            progression_detail);
+            reader, alternate_advancement_points_base,
+            alternate_advancement_points_offset, progression_detail);
         if (!final_points || *final_points > 10'000'000U ||
             *final_points != *alternate_advancement_points) {
             alternate_advancement_points.reset();

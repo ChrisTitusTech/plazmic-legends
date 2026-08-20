@@ -209,9 +209,11 @@ int main() {
         Fixture progression;
         progression.symbols.progression_cache_rva = 0x300U;
         progression.symbols.alternate_advancement_percent_offset = 0U;
-        progression.symbols.alternate_advancement_points_offset = 4U;
+        progression.symbols.alternate_advancement_points_offset = 0U;
+        progression.symbols.unallocated_alternate_advancement_points_offset =
+            0x500U;
         store(progression.memory, 0x300U, 66.48F);
-        store(progression.memory, 0x304U, std::uint32_t{7U});
+        store(progression.memory, 0xa500U, std::uint32_t{7U});
         const auto progression_result = plazmic::read_character_snapshot(
             progression.process,
             progression.local_player,

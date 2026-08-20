@@ -98,8 +98,20 @@ int main() {
 
     invalid = *profiles.back();
     invalid.character.alternate_advancement_points_offset = 0U;
+    invalid.character.unallocated_alternate_advancement_points_offset = 0U;
     require(!plazmic::validate_client_profile(invalid),
             "partial progression capability was enabled");
+
+    invalid = *profiles.back();
+    invalid.character.alternate_advancement_points_offset = 0x250U;
+    require(!plazmic::validate_client_profile(invalid),
+            "ambiguous progression point sources were enabled");
+
+    invalid = *profiles.back();
+    invalid.character.unallocated_alternate_advancement_points_offset =
+        64U * 1024U;
+    require(!plazmic::validate_client_profile(invalid),
+            "out-of-range character-profile AA field was enabled");
 
     return 0;
 }

@@ -38,16 +38,22 @@ The August 17 executable has SHA-256
 Its exact `LABELTYPE_AAEXPPCT` path calls the AA-experience routine, scales and
 clamps the result to 0-100, and writes the float to image RVA `0x00fa668c`.
 The exact `LABELTYPE_AA_PTS` path calls the banked-point accessor and writes
-the result to adjacent RVA `0x00fa6690`. The shared cache base is therefore
-RVA `0x00fa6440`, with the same profile-local offsets `0x24c` and `0x250`.
-Two separate bounded probes each produced stable, finite, in-range AA progress
-and stable bounded points. The private values are not retained.
+the result to adjacent RVA `0x00fa6690`. Later live validation showed that this
+label cache can remain zero while the visible unallocated-AA count is nonzero,
+so it is not the authoritative August 17 banked-point source. Static inspection
+of the accessor at image address `0x14069bb40` shows it resolving the active
+character profile and reading a dword at profile-local offset `0xaa5c`.
+Accordingly, August 17 reads AA progress from cache RVA `0x00fa6440` plus
+`0x24c`, and unallocated AA from the resolved active profile plus `0xaa5c`.
+Two bounded snapshot reads matched the visible nonzero state. The private
+values are not retained.
 
 ## Native contract
 
-- Each approved immutable profile owns its exact progression-cache base and
-  field offsets. All other profiles leave the optional fields unsupported
-  rather than borrowing them.
+- Each approved immutable profile owns its exact progression sources. August 6
+  uses its validated cache fields; August 17 uses its AA-percent cache plus the
+  active-profile unallocated-AA field. All other profiles leave the optional
+  fields unsupported rather than borrowing them.
 - Each field is read and re-read through `ProcessMemoryReader`. AA progress
   must be finite and in the inclusive range 0-100; banked points must be at
   most 10,000,000.
@@ -62,10 +68,11 @@ and stable bounded points. The private values are not retained.
 
 ## Validation and rollback
 
-Synthetic tests cover supported and unsupported profiles, valid and invalid
-optional values, zero banked points, memory precedence over stale log totals,
-multi-point log gains, and UI unavailable states. The original August 6 field
-checkpoint still requires comparison with the in-game AA progress and
+Synthetic tests cover supported and unsupported profiles, cache-backed and
+active-profile-backed point sources, partial or ambiguous configurations,
+invalid optional values, zero banked points, memory precedence over stale log
+totals, multi-point log gains, and UI unavailable states. The original August
+6 field checkpoint still requires comparison with the in-game AA progress and
 banked-point displays in at least two controlled observations before its
 separate semantic gate is closed.
 
@@ -81,7 +88,13 @@ screenshot were not retained. The summary contained only DPS, XP, and AA
 panes, while recent events remained in the Activity dock. The privacy-safe log
 selected the exact profile and reached `in_world` with the map loaded.
 
-Rollback clears the three progression symbols only from the affected exact
+That installation result did not prove the August 17 banked-point semantics:
+the adjacent label cache subsequently remained zero while the game displayed a
+nonzero unallocated-AA count. The 2026-08-20 correction uses the accessor's
+active-profile field at `0xaa5c`; two bounded snapshots matched the visible
+state without retaining its private value.
+
+Rollback clears the progression symbols only from the affected exact
 profile. Removing both profiles' symbols may additionally remove the two
 optional snapshot fields. Existing log-derived history remains readable and
 no migration or retained-data deletion is required.

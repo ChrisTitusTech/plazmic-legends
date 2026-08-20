@@ -233,8 +233,13 @@ review. It does not authorize merging or releasing the pull requests.
   read-only evidence for August 17 AA progress and banked points in
   `docs/research/phase9-aa-memory-checkpoint.md` without retaining private
   gameplay values or client content.
-- [x] Enable the immutable August 17 progression-cache symbols and validate the
-  complete float and integer byte ranges inside the exact PE image.
+- [x] Enable the immutable August 17 AA-percent cache symbol and active-profile
+  unallocated-AA field, validating the complete image and profile-local byte
+  ranges.
+- [x] Correct the August 17 banked-AA source after the adjacent label cache was
+  observed at zero: statically resolve the accessor to active-profile offset
+  `0xaa5c`, then confirm it with two bounded read-only snapshots without
+  retaining the private value.
 - [x] Preserve the existing double-read, finite 0-100 percent, bounded-point,
   fail-closed, transient, and memory-over-log contracts.
 - [x] Remove the duplicated Latest activity column from the Details summary,
@@ -243,10 +248,10 @@ review. It does not authorize merging or releasing the pull requests.
 - [x] Pass the full repository, package, review, atomic installation, running
   hash, privacy-log, and visible installed-window checks.
 - Acceptance criteria: only the exact August 6 or August 17 identity may expose
-  these AA fields; invalid, partial, out-of-image, or torn values fail closed;
-  the live installed summary renders bounded AA state from memory and contains
-  only DPS, XP, and AA columns.
-- Rollback: clear the three August 17 progression symbols and restore the
+  these AA fields; invalid, partial, ambiguous, out-of-image, out-of-profile,
+  or torn values fail closed; the live installed summary renders bounded AA
+  state from memory and contains only DPS, XP, and AA columns.
+- Rollback: clear the August 17 progression symbols and restore the
   fourth summary column; existing activity history remains readable.
 - Validation: the warnings-as-errors repository gate, 13 Python tests, all 20
   CTest cases, exact-client fingerprint, package metadata, staged install
@@ -258,6 +263,10 @@ review. It does not authorize merging or releasing the pull requests.
   banked points instead of unavailable, contained only DPS, XP, and AA panes,
   and retained recent events in the Activity dock. The privacy-safe log
   selected the exact profile and reported `in_world` with the map loaded.
+  A 2026-08-20 correction supersedes the original August 17 banked-point
+  source: static inspection resolved the unallocated-AA accessor to active-
+  profile offset `0xaa5c`, and two bounded snapshots matched the visible
+  nonzero state. The private value was not retained.
 
 ### M-13: Read current player XP from the exact August 17 client
 

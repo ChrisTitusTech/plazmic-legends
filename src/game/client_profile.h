@@ -74,6 +74,7 @@ struct CharacterSymbols {
     std::uintptr_t progression_cache_rva;
     std::size_t alternate_advancement_percent_offset;
     std::size_t alternate_advancement_points_offset;
+    std::size_t unallocated_alternate_advancement_points_offset;
 };
 
 struct ClientProfile {

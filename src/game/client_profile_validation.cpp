@@ -15,6 +15,7 @@ namespace {
 constexpr std::size_t kMaximumNameBytes = 65U;
 constexpr std::size_t kMaximumSpawnCount = 2048U;
 constexpr std::size_t kMaximumEquipmentSlots = 36U;
+constexpr std::size_t kMaximumCharacterProfileFieldOffset = 64U * 1024U;
 
 void reject(bool condition,
             std::string_view detail,
@@ -150,18 +151,27 @@ ClientProfileValidation validate_client_profile(
                                  character.alternate_advancement_percent_offset !=
                                      0U ||
                                  character.alternate_advancement_points_offset !=
+                                     0U ||
+                                 character
+                                         .unallocated_alternate_advancement_points_offset !=
                                      0U;
-    const bool complete_progression =
-        character.alternate_advancement_percent_offset != 0U &&
+    const bool cache_points =
         character.alternate_advancement_points_offset != 0U &&
-        image_field_range(character.progression_cache_rva,
-                          character.alternate_advancement_percent_offset,
-                          sizeof(float),
-                          profile.image_size) &&
         image_field_range(character.progression_cache_rva,
                           character.alternate_advancement_points_offset,
                           sizeof(std::uint32_t),
                           profile.image_size);
+    const bool unallocated_points =
+        character.unallocated_alternate_advancement_points_offset != 0U &&
+        character.unallocated_alternate_advancement_points_offset <=
+            kMaximumCharacterProfileFieldOffset - sizeof(std::uint32_t);
+    const bool complete_progression =
+        character.alternate_advancement_percent_offset != 0U &&
+        image_field_range(character.progression_cache_rva,
+                          character.alternate_advancement_percent_offset,
+                          sizeof(float),
+                          profile.image_size) &&
+        cache_points != unallocated_points;
     reject(any_progression &&
                (!profile.character_snapshot_supported ||
                 !complete_progression),

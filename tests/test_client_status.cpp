@@ -187,10 +187,13 @@ int main() {
                     0x00fa6688U &&
                 august_seventeenth->character.progression_cache_rva ==
                     0x00fa6440U &&
-                august_seventeenth->character
-                        .alternate_advancement_percent_offset == 0x24cU &&
-                august_seventeenth->character
-                        .alternate_advancement_points_offset == 0x250U,
+                    august_seventeenth->character
+                            .alternate_advancement_percent_offset == 0x24cU &&
+                    august_seventeenth->character
+                            .alternate_advancement_points_offset == 0U &&
+                    august_seventeenth->character
+                            .unallocated_alternate_advancement_points_offset ==
+                        0xaa5cU,
             "August 17 profile did not preserve its exact candidate boundary");
         require(plazmic::select_client_profile("changed") == nullptr,
                 "unknown digest unexpectedly selected");

@@ -237,7 +237,7 @@ the source for history, gain rate, and pace only.
 For the exact `legends-2026-08-06` and `legends-2026-08-17` clients only, the
 immutable character snapshot may additionally publish bounded current AA
 progress and banked points from each client's independently validated
-read-only progression cache. These optional fields are read twice, validated
+read-only progression state. These optional fields are read twice, validated
 as 0-100 percent and at most 10,000,000 points, and discarded for the frame if
 unavailable, invalid, or inconsistent. They are never inferred for another
 profile, persisted in activity history, exported, logged, or sent over the

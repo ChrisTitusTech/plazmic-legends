@@ -227,6 +227,48 @@ review. It does not authorize merging or releasing the pull requests.
 
 ## Post-release maintenance
 
+### M-15: Support the 2026-08-25 Legends client
+
+- [x] Start from clean, synchronized `main` and capture the new exact SHA-256
+  `6807ac5c672ffee98fcc6a62a5e87d0ec6af1a323251280144a4f1461829f0d4`
+  and PE identity without modifying any prior immutable profile.
+- [x] Prepare the owner-only SHA-bound compatibility candidate outside the
+  repository; keep it blocked from runtime selection while evidence is
+  incomplete.
+- [x] Independently re-establish the exact-client local-player, world, zone,
+  spawn, character, vital, equipment, current-XP, and current-AA fields from
+  static semantic data flow and two bounded controlled observations per
+  displayed field. Disable any optional capability that cannot pass its own
+  complete evidence gate. The required player, zone, and spawn paths passed;
+  the optional atomic Character capability and its XP/AA dependents are
+  disabled because both carried maximum-vital fields failed bounded live
+  validation.
+- [x] Add a new immutable compiled profile and synthetic exact-selection,
+  identity, bounds, malformed-data, lifecycle, and unsupported-client
+  coverage without changing any earlier profile. Existing shared rejection and
+  lifecycle fixtures cover the new profile contract; focused selection and
+  registry validation pass.
+- [ ] Pass the complete repository gate, exact fingerprint, package inventory,
+  atomic installed-build replacement, running-hash check, and privacy audit.
+  The automated gates, package inventory, exact fingerprint, atomic
+  replacement, isolated installed live smoke, and privacy-safe log pass. The
+  already-open visible companion still maps the prior binary and was not
+  interrupted, so its relaunch and running-hash check remain pending.
+- [ ] Complete the controlled live gate for character select, entering world,
+  two zones, changed positions and facings, visible spawn/character fields,
+  zoning, camping, exit, reacquisition, DWM placement, performance, and game
+  invariance.
+- Acceptance criteria: only the exact file and mapped PE identity select
+  `legends-2026-08-25`; every enabled displayed field passes
+  `docs/offset-discovery.md`; incomplete optional fields remain unavailable;
+  unknown or inconsistent clients fail closed; and no private research
+  artifact enters the repository or package.
+- Rollback: remove only the new compiled profile and its tests while retaining
+  every earlier immutable profile. The August 25 client returns to the
+  existing unsupported-client state.
+- Pause point: do not promote an ambiguous resolver, inherited offset, single
+  plausible read, or incomplete observation into the compiled profile.
+
 ### M-14: Read August 17 AA state and simplify the Details summary
 
 - [x] Record the owner's authorization and exact-client static and bounded

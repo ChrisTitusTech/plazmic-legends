@@ -372,12 +372,56 @@ constexpr ClientProfile kLegendsAugustSeventeenthProfile{
         },
 };
 
-constexpr std::array<const ClientProfile*, 5> kKnownClientProfiles{
+constexpr ClientProfile kLegendsAugustTwentyFifthProfile{
+    .id = "legends-2026-08-25",
+    .sha256 =
+        "6807ac5c672ffee98fcc6a62a5e87d0ec6af1a323251280144a4f1461829f0d4",
+    .machine = 0x8664U,
+    .timestamp = 0x6a8e193aU,
+    .optional_magic = 0x20bU,
+    .image_size = 0x16c3000U,
+    .character_snapshot_supported = false,
+    .game_state =
+        {
+            .local_player_pointer_rva = 0x00f09248U,
+            .world_data_pointer_rva = 0x00f08d38U,
+            .player_y_offset = 0x78U,
+            .player_x_offset = 0x74U,
+            .player_z_offset = 0x7cU,
+            .player_heading_offset = 0x94U,
+            .player_zone_id_offset = 0x21cU,
+            .zone_table_offset = 0x30U,
+            .zone_entry_id_offset = 0x0cU,
+            .zone_short_name_offset = 0x10U,
+            .zone_short_name_bytes = 64U,
+            .zone_id_mask = 0x7fffU,
+            .maximum_zone_id = 1000U,
+        },
+    .spawns =
+        {
+            .next_offset = 0x08U,
+            .previous_offset = 0x10U,
+            .name_offset = 0x0b8U,
+            .name_bytes = 64U,
+            .type_offset = 0x139U,
+            .id_offset = 0x178U,
+            .level_offset = 0x610U,
+            .y_offset = 0x78U,
+            .x_offset = 0x74U,
+            .z_offset = 0x7cU,
+            .record_bytes = 0x611U,
+            .maximum_count = 2048U,
+        },
+    .character = {},
+};
+
+constexpr std::array<const ClientProfile*, 6> kKnownClientProfiles{
     &kLegendsReferenceProfile,
     &kLegendsAugustThirdProfile,
     &kLegendsAugustFourthProfile,
     &kLegendsAugustSixthProfile,
     &kLegendsAugustSeventeenthProfile,
+    &kLegendsAugustTwentyFifthProfile,
 };
 
 }  // namespace

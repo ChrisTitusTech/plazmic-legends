@@ -195,6 +195,33 @@ int main() {
                             .unallocated_alternate_advancement_points_offset ==
                         0xaa5cU,
             "August 17 profile did not preserve its exact candidate boundary");
+        constexpr std::string_view kAugustTwentyFifthDigest =
+            "6807ac5c672ffee98fcc6a62a5e87d0ec6af1a323251280144a4f1461829f0d4";
+        const auto* august_twenty_fifth =
+            plazmic::select_client_profile(kAugustTwentyFifthDigest);
+        require(
+            august_twenty_fifth != nullptr &&
+                august_twenty_fifth != &profile &&
+                august_twenty_fifth != august_third &&
+                august_twenty_fifth != august_fourth &&
+                august_twenty_fifth != august_sixth &&
+                august_twenty_fifth != august_seventeenth &&
+                august_twenty_fifth->id == "legends-2026-08-25" &&
+                august_twenty_fifth->sha256 == kAugustTwentyFifthDigest &&
+                august_twenty_fifth->machine == 0x8664U &&
+                august_twenty_fifth->timestamp == 0x6a8e193aU &&
+                august_twenty_fifth->optional_magic == 0x20bU &&
+                august_twenty_fifth->image_size == 0x16c3000U &&
+                !august_twenty_fifth->character_snapshot_supported &&
+                august_twenty_fifth->game_state.local_player_pointer_rva ==
+                    0x00f09248U &&
+                august_twenty_fifth->game_state.world_data_pointer_rva ==
+                    0x00f08d38U &&
+                august_twenty_fifth->game_state.player_zone_id_offset ==
+                    0x21cU &&
+                august_twenty_fifth->spawns.level_offset == 0x610U &&
+                august_twenty_fifth->spawns.record_bytes == 0x611U,
+            "August 25 profile did not preserve its exact supported boundary");
         require(plazmic::select_client_profile("changed") == nullptr,
                 "unknown digest unexpectedly selected");
 

@@ -19,7 +19,7 @@ void require(bool condition, std::string_view message) {
 
 int main() {
     const auto profiles = plazmic::known_client_profiles();
-    require(profiles.size() == 5U,
+    require(profiles.size() == 6U,
             "known profile registry has an unexpected size");
     require(plazmic::validate_known_client_profiles().empty(),
             "known profile registry failed its contract");
@@ -50,6 +50,8 @@ int main() {
                 plazmic::validate_client_profile(*profiles[3])
                     .progression_available &&
                 plazmic::validate_client_profile(*profiles[4])
+                    .progression_available &&
+                !plazmic::validate_client_profile(*profiles[5])
                      .progression_available,
             "progression capability did not remain exact-profile scoped");
     require(plazmic::select_client_profile(
@@ -78,7 +80,7 @@ int main() {
     require(!plazmic::validate_client_profile(invalid),
             "partial character capability was enabled");
 
-    invalid = *profiles.back();
+    invalid = *profiles[4];
     invalid.character.experience_percent_rva = invalid.image_size - 2U;
     require(!plazmic::validate_client_profile(invalid),
             "partially out-of-image experience field passed the profile "
@@ -89,25 +91,25 @@ int main() {
     require(!plazmic::validate_client_profile(invalid),
             "experience capability was enabled without character support");
 
-    invalid = *profiles.back();
+    invalid = *profiles[4];
     invalid.character.progression_cache_rva = 0x100U;
     invalid.character.alternate_advancement_percent_offset =
         invalid.image_size;
     require(!plazmic::validate_client_profile(invalid),
             "out-of-image progression field passed the profile contract");
 
-    invalid = *profiles.back();
+    invalid = *profiles[4];
     invalid.character.alternate_advancement_points_offset = 0U;
     invalid.character.unallocated_alternate_advancement_points_offset = 0U;
     require(!plazmic::validate_client_profile(invalid),
             "partial progression capability was enabled");
 
-    invalid = *profiles.back();
+    invalid = *profiles[4];
     invalid.character.alternate_advancement_points_offset = 0x250U;
     require(!plazmic::validate_client_profile(invalid),
             "ambiguous progression point sources were enabled");
 
-    invalid = *profiles.back();
+    invalid = *profiles[4];
     invalid.character.unallocated_alternate_advancement_points_offset =
         64U * 1024U;
     require(!plazmic::validate_client_profile(invalid),

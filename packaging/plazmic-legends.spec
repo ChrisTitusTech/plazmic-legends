@@ -17,6 +17,8 @@ BuildRequires:  qt6-qtbase-devel >= 6.8
 BuildRequires:  xorg-x11-server-Xvfb
 BuildRequires:  xorg-x11-xauth
 Requires:       qt6-qtbase%{?_isa} >= 6.8
+Requires:       pulseaudio-utils%{?_isa}
+Requires:       sound-theme-freedesktop
 
 %description
 Plazmic Legends is an independent Qt 6 companion window for the 64-bit

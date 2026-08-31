@@ -18,8 +18,11 @@
 
 #include <QAbstractItemView>
 #include <QAction>
+#include <QApplication>
+#include <QBrush>
 #include <QCloseEvent>
 #include <QComboBox>
+#include <QColor>
 #include <QCheckBox>
 #include <QCoreApplication>
 #include <QDialog>
@@ -219,12 +222,21 @@ MainWindow::MainWindow(StatusSnapshot snapshot,
                        QString settings_path,
                        bool reset_layout,
                        QString client_directory,
+                       std::function<void()> audio_alert_sink,
                        QWidget* parent)
     : QMainWindow(parent),
       snapshot_(std::move(snapshot)),
       settings_(std::move(settings_path)),
       reset_layout_(reset_layout),
-      client_directory_(std::move(client_directory)) {
+      client_directory_(std::move(client_directory)),
+      mote_loot_audio_alert_(
+          audio_alert_sink
+              ? std::move(audio_alert_sink)
+              : MoteLootAudioAlert::Sink([] {
+                    if (!play_mote_loot_desktop_sound()) {
+                        QApplication::beep();
+                    }
+                })) {
     build_ui();
     update_snapshot(snapshot_);
     restore_ui_state();
@@ -899,6 +911,18 @@ void MainWindow::build_menu_bar(QDockWidget* character_dock,
     retain_activity_history_action_->setCheckable(true);
     connect(retain_activity_history_action_, &QAction::toggled,
             this, [this]() { save_activity_history_preference(); });
+    mote_loot_audio_alert_action_ =
+        user_menu->addAction("Mote Loot Audio Alert");
+    mote_loot_audio_alert_action_->setObjectName(
+        "mote-loot-audio-alert-action");
+    mote_loot_audio_alert_action_->setCheckable(true);
+    mote_loot_audio_alert_action_->setChecked(true);
+    mote_loot_audio_alert_.set_enabled(true);
+    connect(mote_loot_audio_alert_action_, &QAction::toggled,
+            this, [this](bool enabled) {
+                mote_loot_audio_alert_.set_enabled(enabled);
+                save_mote_loot_audio_alert_preference();
+            });
     export_activity_action_ =
         user_menu->addAction("Export Activity History...");
     export_activity_action_->setObjectName("export-activity-action");
@@ -1267,6 +1291,7 @@ void MainWindow::render_inventory_reconciliation(
 
 void MainWindow::update_activity_snapshot(
     const ActivityAnalyticsSnapshot& analytics) {
+    mote_loot_audio_alert_.observe(analytics);
     const bool payload_changed =
         !same_activity_export_payload(activity_analytics_, analytics);
     activity_analytics_ = analytics;
@@ -1345,6 +1370,17 @@ void MainWindow::update_activity_snapshot(
         activity_events_->setItem(
             row, 3,
             new QTableWidgetItem(QString::fromStdString(event.evidence)));
+        if (event.kind == ActivityEventKind::loot &&
+            contains_mote_word(event.label)) {
+            const QBrush background(QColor(255, 241, 118));
+            const QBrush foreground(Qt::black);
+            for (int column = 0; column < activity_events_->columnCount();
+                 ++column) {
+                QTableWidgetItem* item = activity_events_->item(row, column);
+                item->setBackground(background);
+                item->setForeground(foreground);
+            }
+        }
     }
 
     activity_abilities_->setRowCount(
@@ -1686,6 +1722,8 @@ void MainWindow::restore_ui_state() {
             state->combat_history_enabled);
         retain_activity_history_action_->setChecked(
             state->activity_history_enabled);
+        mote_loot_audio_alert_action_->setChecked(
+            state->mote_loot_audio_alert_enabled);
         activity_summary_widths = state->activity_summary_widths;
         activity_summary_widths_ = state->activity_summary_widths;
     }
@@ -1769,6 +1807,8 @@ bool MainWindow::save_ui_state() {
             map_canvas_->other_spawns_visible(),
         .combat_history_enabled = combat_history_enabled(),
         .activity_history_enabled = activity_history_enabled(),
+        .mote_loot_audio_alert_enabled =
+            mote_loot_audio_alert_enabled(),
         .activity_summary_widths = activity_summary_widths_,
         .spawn_filter = spawn_filter_->text(),
         .spawn_type_filter = type_filter,
@@ -1812,6 +1852,29 @@ void MainWindow::save_activity_history_preference() {
         "setting was restored");
 }
 
+void MainWindow::save_mote_loot_audio_alert_preference() {
+    const bool requested = mote_loot_audio_alert_enabled();
+    auto state = settings_.load();
+    bool saved = false;
+    bool previous = !requested;
+    if (!state) {
+        saved = save_ui_state();
+    } else {
+        previous = state->mote_loot_audio_alert_enabled;
+        state->mote_loot_audio_alert_enabled = requested;
+        saved = settings_.save(*state);
+    }
+    if (saved) {
+        return;
+    }
+    const QSignalBlocker blocker(mote_loot_audio_alert_action_);
+    mote_loot_audio_alert_action_->setChecked(previous);
+    mote_loot_audio_alert_.set_enabled(previous);
+    statusBar()->showMessage(
+        "Mote loot audio preference could not be saved; the previous "
+        "setting was restored");
+}
+
 bool MainWindow::combat_history_enabled() const {
     return retain_combat_history_action_ != nullptr &&
            retain_combat_history_action_->isChecked();
@@ -1820,6 +1883,11 @@ bool MainWindow::combat_history_enabled() const {
 bool MainWindow::activity_history_enabled() const {
     return retain_activity_history_action_ != nullptr &&
            retain_activity_history_action_->isChecked();
+}
+
+bool MainWindow::mote_loot_audio_alert_enabled() const {
+    return mote_loot_audio_alert_action_ != nullptr &&
+           mote_loot_audio_alert_action_->isChecked();
 }
 
 void MainWindow::changeEvent(QEvent* event) {

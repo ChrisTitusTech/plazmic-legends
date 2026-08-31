@@ -212,7 +212,7 @@ int main() {
                 august_twenty_fifth->timestamp == 0x6a8e193aU &&
                 august_twenty_fifth->optional_magic == 0x20bU &&
                 august_twenty_fifth->image_size == 0x16c3000U &&
-                !august_twenty_fifth->character_snapshot_supported &&
+                august_twenty_fifth->character_snapshot_supported &&
                 august_twenty_fifth->game_state.local_player_pointer_rva ==
                     0x00f09248U &&
                 august_twenty_fifth->game_state.world_data_pointer_rva ==
@@ -220,7 +220,26 @@ int main() {
                 august_twenty_fifth->game_state.player_zone_id_offset ==
                     0x21cU &&
                 august_twenty_fifth->spawns.level_offset == 0x610U &&
-                august_twenty_fifth->spawns.record_bytes == 0x611U,
+                august_twenty_fifth->spawns.record_bytes == 0x611U &&
+                august_twenty_fifth->character.local_character_pointer_rva ==
+                    0x00f09398U &&
+                august_twenty_fifth->character.player_maximum_health_offset ==
+                    0x420U &&
+                august_twenty_fifth->character.player_maximum_mana_offset ==
+                    0x618U &&
+                august_twenty_fifth->character.item_name_pointer_offset ==
+                    0x38U &&
+                august_twenty_fifth->character.experience_percent_rva ==
+                    0x00fa7688U &&
+                august_twenty_fifth->character.progression_cache_rva ==
+                    0x00fa7440U &&
+                august_twenty_fifth->character
+                        .alternate_advancement_percent_offset == 0x24cU &&
+                august_twenty_fifth->character
+                        .alternate_advancement_points_offset == 0U &&
+                august_twenty_fifth->character
+                        .unallocated_alternate_advancement_points_offset ==
+                    0xaa5cU,
             "August 25 profile did not preserve its exact supported boundary");
         require(plazmic::select_client_profile("changed") == nullptr,
                 "unknown digest unexpectedly selected");

@@ -46,6 +46,7 @@ int main() {
             .other_spawns_visible = false,
             .combat_history_enabled = true,
             .activity_history_enabled = true,
+            .mote_loot_audio_alert_enabled = true,
             .activity_summary_widths = {0, 210, 280},
             .spawn_filter = "guard",
             .spawn_type_filter = 1,
@@ -93,6 +94,8 @@ int main() {
                         expected.combat_history_enabled &&
                     loaded->activity_history_enabled ==
                         expected.activity_history_enabled &&
+                    loaded->mote_loot_audio_alert_enabled ==
+                        expected.mote_loot_audio_alert_enabled &&
                     loaded->activity_summary_widths ==
                         expected.activity_summary_widths &&
                     loaded->spawn_filter == expected.spawn_filter &&
@@ -165,9 +168,11 @@ int main() {
         legacy_widths.close();
         const auto migrated_widths = legacy_settings.load();
         require(migrated_widths &&
+                    migrated_widths->mote_loot_audio_alert_enabled &&
                     migrated_widths->activity_summary_widths ==
                         std::array<int, 3>{90, 180, 270},
-                "four-column activity widths did not migrate to three");
+                "legacy settings did not apply default-on Mote audio or "
+                "migrate four activity widths to three");
 
         require(legacy_widths.open(
                     QIODevice::WriteOnly | QIODevice::Truncate),
@@ -179,6 +184,17 @@ int main() {
         legacy_widths.close();
         require(!legacy_settings.load(),
                 "invalid discarded legacy width unexpectedly loaded");
+
+        require(legacy_widths.open(
+                    QIODevice::WriteOnly | QIODevice::Truncate),
+                "cannot open invalid Mote audio fixture");
+        require(legacy_widths.write(
+                    "[client]\ngame_directory = \"/tmp\"\n"
+                    "[alerts]\nmote_loot_audio = yes\n") > 0,
+                "cannot write invalid Mote audio fixture");
+        legacy_widths.close();
+        require(!legacy_settings.load(),
+                "invalid Mote audio boolean unexpectedly loaded");
 
         QFile malformed(partial_path);
         require(malformed.open(

@@ -703,13 +703,42 @@ std::optional<ActivityEventSnapshot> parse_activity_line(
 
     constexpr std::string_view kLootPrefix = "--You have looted ";
     constexpr std::string_view kLootSuffix = ".--";
+    std::string_view item;
     if (payload.starts_with(kLootPrefix) && payload.ends_with(kLootSuffix)) {
-        const std::string_view item = payload.substr(
+        item = payload.substr(
             kLootPrefix.size(),
             payload.size() - kLootPrefix.size() - kLootSuffix.size());
-        if (!valid_text(item)) {
+    } else {
+        const std::size_t actor_end = payload.find(' ');
+        if (actor_end == std::string_view::npos || actor_end == 0U ||
+            actor_end > 64U) {
             return std::nullopt;
         }
+        const std::string_view actor = payload.substr(0U, actor_end);
+        if (!std::ranges::all_of(actor, [](unsigned char byte) {
+                return (byte >= 'A' && byte <= 'Z') ||
+                       (byte >= 'a' && byte <= 'z');
+            })) {
+            return std::nullopt;
+        }
+        std::string_view remainder = payload.substr(actor_end + 1U);
+        constexpr std::string_view kObservedLootVerb = "looted ";
+        if (!remainder.starts_with(kObservedLootVerb)) {
+            return std::nullopt;
+        }
+        remainder.remove_prefix(kObservedLootVerb.size());
+        constexpr std::array<std::string_view, 3> kLootArticles{
+            "an ", "a ", "the "};
+        const auto article = std::ranges::find_if(
+            kLootArticles, [remainder](std::string_view candidate) {
+                return remainder.starts_with(candidate);
+            });
+        if (article == kLootArticles.end()) {
+            return std::nullopt;
+        }
+        item = remainder.substr(article->size());
+    }
+    if (valid_text(item)) {
         return ActivityEventSnapshot{
             .kind = ActivityEventKind::loot,
             .timestamp_unix_seconds = seconds,

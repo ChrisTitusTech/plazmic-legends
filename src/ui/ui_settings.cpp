@@ -190,6 +190,7 @@ std::optional<UiState> UiSettings::load() const {
         spawns,
         combat,
         activity,
+        alerts,
     };
     Section section = Section::other;
     std::optional<QString> client_directory;
@@ -208,6 +209,7 @@ std::optional<UiState> UiSettings::load() const {
     bool other_spawns_visible = true;
     bool combat_history_enabled = false;
     bool activity_history_enabled = false;
+    bool mote_loot_audio_alert_enabled = true;
     std::array<int, 3> activity_summary_widths{120, 320, 440};
     QString spawn_filter;
     int spawn_type_filter = -1;
@@ -232,6 +234,8 @@ std::optional<UiState> UiSettings::load() const {
                 section = Section::combat;
             } else if (line == "[activity]") {
                 section = Section::activity;
+            } else if (line == "[alerts]") {
+                section = Section::alerts;
             } else {
                 section = Section::other;
             }
@@ -375,6 +379,14 @@ std::optional<UiState> UiSettings::load() const {
                     }
                 }
             }
+        } else if (section == Section::alerts) {
+            if (line.startsWith("mote_loot_audio")) {
+                const auto value = scalar_value(line, "mote_loot_audio");
+                if (!value || (*value != "true" && *value != "false")) {
+                    return std::nullopt;
+                }
+                mote_loot_audio_alert_enabled = *value == "true";
+            }
         } else if (section == Section::spawns) {
             if (line.startsWith("filter")) {
                 const auto value = quoted_value(line, "filter");
@@ -455,6 +467,7 @@ std::optional<UiState> UiSettings::load() const {
         .other_spawns_visible = other_spawns_visible,
         .combat_history_enabled = combat_history_enabled,
         .activity_history_enabled = activity_history_enabled,
+        .mote_loot_audio_alert_enabled = mote_loot_audio_alert_enabled,
         .activity_summary_widths = activity_summary_widths,
         .spawn_filter = spawn_filter,
         .spawn_type_filter = spawn_type_filter,
@@ -571,6 +584,9 @@ bool UiSettings::save(const UiState& state) const {
         contents += QByteArray::number(state.activity_summary_widths[index]);
     }
     contents += "\n";
+    contents += "\n[alerts]\n";
+    contents += QByteArray("mote_loot_audio = ") +
+                (state.mote_loot_audio_alert_enabled ? "true\n" : "false\n");
     contents += "\n[spawns]\n";
     contents += "filter = \"" +
                 state.spawn_filter.toUtf8().toBase64() + "\"\n";

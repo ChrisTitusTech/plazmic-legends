@@ -21,6 +21,7 @@
 #include <QAction>
 #include <QDockWidget>
 #include <QComboBox>
+#include <QColor>
 #include <QLabel>
 #include <QLineEdit>
 #include <QHeaderView>
@@ -123,8 +124,10 @@ int main(int argc, char** argv) {
             .pid = getpid(),
         };
 
+        int audio_alerts = 0;
         plazmic::MainWindow window(
-            snapshot, settings_path, true, client_directory);
+            snapshot, settings_path, true, client_directory,
+            [&audio_alerts]() { ++audio_alerts; });
         window.show();
         process_events();
         require(window.isVisible(), "main window is not visible");
@@ -150,6 +153,8 @@ int main(int argc, char** argv) {
             window.findChild<QAction*>("import-inventory-action");
         QAction* retain_activity_action =
             window.findChild<QAction*>("retain-activity-history-action");
+        QAction* mote_loot_audio_action =
+            window.findChild<QAction*>("mote-loot-audio-alert-action");
         QAction* export_activity_action =
             window.findChild<QAction*>("export-activity-action");
         QAction* delete_activity_action =
@@ -175,6 +180,10 @@ int main(int argc, char** argv) {
                 retain_activity_action->isCheckable() &&
                 !retain_activity_action->isChecked() &&
                 !window.activity_history_enabled() &&
+                mote_loot_audio_action != nullptr &&
+                mote_loot_audio_action->isCheckable() &&
+                mote_loot_audio_action->isChecked() &&
+                window.mote_loot_audio_alert_enabled() &&
                 export_activity_action != nullptr &&
                 !export_activity_action->isEnabled() &&
                 delete_activity_action != nullptr &&
@@ -186,8 +195,22 @@ int main(int argc, char** argv) {
             plazmic::UiSettings(settings_path).load();
         require(immediate_retention &&
                     immediate_retention->activity_history_enabled &&
-                    window.activity_history_enabled(),
-                "activity retention opt-in was not persisted immediately");
+                    window.activity_history_enabled() &&
+                    immediate_retention->mote_loot_audio_alert_enabled &&
+                    window.mote_loot_audio_alert_enabled(),
+                "activity or Mote audio opt-in was not persisted immediately");
+        mote_loot_audio_action->trigger();
+        auto immediate_audio = plazmic::UiSettings(settings_path).load();
+        require(immediate_audio &&
+                    !immediate_audio->mote_loot_audio_alert_enabled &&
+                    !window.mote_loot_audio_alert_enabled(),
+                "default-on Mote audio did not preserve immediate opt-out");
+        mote_loot_audio_action->trigger();
+        immediate_audio = plazmic::UiSettings(settings_path).load();
+        require(immediate_audio &&
+                    immediate_audio->mote_loot_audio_alert_enabled &&
+                    window.mote_loot_audio_alert_enabled(),
+                "Mote audio opt-in was not restored after opt-out");
         retain_activity_action->trigger();
         require(retain_history_action->isChecked() &&
                     window.combat_history_enabled(),
@@ -657,6 +680,30 @@ int main(int argc, char** argv) {
                                "inventory-reconciliation-state")
                             ->textFormat() == Qt::PlainText,
                 "progression, activity, or inventory views did not render");
+
+        auto mote_activity = activity;
+        mote_activity.events.push_back({
+            .kind = plazmic::ActivityEventKind::loot,
+            .timestamp_unix_seconds = 4,
+            .zone = "synthetic_zone",
+            .label = "Mote of Synthetic Light",
+            .amount = 1.0,
+            .total = std::nullopt,
+            .evidence = "Synthetic exact loot line",
+            .source_id = "synthetic-mote-source",
+        });
+        window.update_activity_snapshot(mote_activity);
+        window.update_activity_snapshot(mote_activity);
+        auto* mote_events =
+            window.findChild<QTableWidget*>("activity-events");
+        require(audio_alerts == 1 && mote_events != nullptr &&
+                    mote_events->item(0, 2)->background().color() ==
+                        QColor(255, 241, 118) &&
+                    mote_events->item(0, 2)->foreground().color() ==
+                        QColor(Qt::black) &&
+                    mote_events->item(1, 2)->background().style() ==
+                        Qt::NoBrush,
+                "new Mote loot did not reach the injected audio sink once");
 
         auto memory_backed_character = character;
         memory_backed_character.alternate_advancement_percent = 71.25;
@@ -1565,6 +1612,8 @@ int main(int argc, char** argv) {
                 "close did not persist player-follow state");
         require(saved_state->combat_history_enabled,
                 "close did not persist combat-history retention consent");
+        require(saved_state->mote_loot_audio_alert_enabled,
+                "close did not persist Mote loot audio consent");
         require(saved_state->named_spawn_labels_visible &&
                     saved_state->player_labels_visible &&
                     saved_state->npc_labels_visible &&
@@ -1674,6 +1723,8 @@ int main(int argc, char** argv) {
                 "saved player-follow state was not restored");
         require(restored.combat_history_enabled(),
                 "saved combat-history retention consent was not restored");
+        require(restored.mote_loot_audio_alert_enabled(),
+                "saved Mote loot audio consent was not restored");
         require(restored.map_canvas()->named_spawn_labels_visible() &&
                     restored.map_canvas()->player_labels_visible() &&
                     restored.map_canvas()->npc_labels_visible() &&

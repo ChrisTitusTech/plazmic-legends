@@ -127,6 +127,21 @@ review. It does not authorize merging or releasing the pull requests.
 
 ### Phase 10: Buffs, timers, alerts, and audio
 
+- [x] Add the first narrow Phase 10 slice: a default-on, independently saved
+  system audio alert for new loot whose bounded item label contains `Mote` as
+  a complete case-insensitive word.
+- [x] Accept the live `<actor> looted a/an/the <item>` group-loot form and use
+  the desktop event-sound player with a Qt bell fallback after installed
+  validation exposed the original parser and X11-bell gaps.
+- [x] Replace the low-impact themed message event with the fixed freedesktop
+  bell through `paplay`, and highlight matching Activity loot rows yellow with
+  black text, after a second audible live acceptance failure.
+- [x] Record the owner's 2026-08-30 default-on exception while preserving an
+  immediate independent User-menu opt-out.
+- [x] Establish a silent initial/restored-history baseline, require a stable
+  activity source identity, reset across unavailable/partition lifecycle
+  changes, coalesce dispatch to once per two seconds, and test through an
+  injected fake sink.
 - [ ] Add bounded buff/respawn timers, local alert rules, visible notifications,
   and optional rate-limited sound/voice packs under `AC-22`.
 - [ ] Limit Phase 10 inputs to bounded local log/activity events,
@@ -134,6 +149,54 @@ review. It does not authorize merging or releasing the pull requests.
   observed and reference durations visibly distinct.
 - [ ] Complete fake-sink, lifecycle, accessibility, installed, review, CI, and
   thread-resolution gates in a separate pull request.
+- Acceptance and rollback contract:
+  `docs/research/phase10-mote-audio-checkpoint.md`.
+- First-slice validation evidence on 2026-08-30: the warnings-as-errors
+  repository gate, 13 Python tests, all 21 CTest cases, RPM/desktop/AppStream
+  metadata checks, exact August 25 client fingerprint, staged package
+  inventory, `git diff --check`, and the CodeRabbit review loop completed. The
+  review's valid ASCII-boundary and source-cap findings were corrected; the
+  repeated request to move `src/alerts` conflicts with the repository's
+  declared alerts boundary, and the claimed missing Qt integration is present
+  in `MainWindow`. Installed audible-system-alert, live nonmatch/history,
+  focus, game-invariance, exact-head CI, and pull-request thread checks remain
+  pending and are not claimed complete.
+- Default-on follow-up evidence on 2026-08-30: the owner approved the exception,
+  focused settings/alert/X11 tests, the complete repository gate, all 21 CTest
+  cases, package metadata validation, `git diff --check`, and the review loop
+  passed. The exact build and installed executable match SHA-256
+  `2a7406935f3688fa227df133ddc179b2d49b1f9dbbb2f96c3cdb97b5111828ec`;
+  owner/mode remain `root:root`/`0755`, the prior Phase 10 binary has a
+  hash-addressed rollback, and the owner-only setting is explicitly enabled.
+  The open window still maps the prior Phase 10 hash and requires a relaunch
+  before exact-running-hash and audible live evidence can be claimed.
+- Live-failure repair evidence on 2026-08-30: privacy-redacted inspection found
+  the observed Mote entries used `<actor> looted a/an/the <item>` and bypassed
+  the personal-loot-only parser. The repaired parser and desktop event-sound
+  path passed the complete repository gate, all 21 CTest cases, package
+  metadata validation, direct PipeWire-session playback, `git diff --check`,
+  and a zero-finding tracked-diff CodeRabbit review. The atomically installed
+  binary now matches SHA-256
+  `43352a6c0651e26436651ff1f6753402346b4ca120c27cf020e5a6706207529c`;
+  the still-open older PID must be relaunched before the repaired live path can
+  be accepted.
+- Second audio repair evidence on 2026-08-30: two new exact Mote loot lines
+  arrived after process startup while the alert remained enabled, isolating
+  the remaining failure to the low-impact themed sound. The replacement fixed
+  bell-file command exited successfully, yellow-row UI coverage passed, and the
+  complete gate and zero-finding tracked-diff review remained green. Build and
+  installed SHA-256 match
+  `cf073b61ecf41f61c3e1363bc4ac2643c2432c1e6edcc52c31211a1721ece22e`;
+  the owner then relaunched that exact hash and confirmed the audible alert and
+  yellow Mote-row presentation work.
+- Final review hardening evidence: independent review identified retained-
+  history, lifecycle rate-limit, and rapid opt-out/opt-in replay edges after
+  the live acceptance. All three were corrected with focused regression
+  coverage; the warnings-as-errors repository gate, 13 Python tests, all 21
+  CTest cases, `git diff --check`, and the final review pass are green. These
+  defensive lifecycle-only changes were not reinstalled for a repeated live
+  observation before publication, so the accepted installed hash above remains
+  the live evidence rather than an exact hash of the final source head.
 
 ### Phase 11: Map workflows
 
@@ -229,6 +292,11 @@ review. It does not authorize merging or releasing the pull requests.
 
 ### M-15: Support the 2026-08-25 Legends client
 
+- [x] Restore the complete atomic Character snapshot for the August 25 client
+  after the installed window showed that disabling unproven maximum-vital
+  fields also removed current XP and AA details. Independently resolve and
+  validate every Character, vital, equipment, XP, and AA field before enabling
+  the capability; do not expose a partial snapshot.
 - [x] Start from clean, synchronized `main` and capture the new exact SHA-256
   `6807ac5c672ffee98fcc6a62a5e87d0ec6af1a323251280144a4f1461829f0d4`
   and PE identity without modifying any prior immutable profile.
@@ -240,19 +308,23 @@ review. It does not authorize merging or releasing the pull requests.
   static semantic data flow and two bounded controlled observations per
   displayed field. Disable any optional capability that cannot pass its own
   complete evidence gate. The required player, zone, and spawn paths passed;
-  the optional atomic Character capability and its XP/AA dependents are
-  disabled because both carried maximum-vital fields failed bounded live
-  validation.
+  the optional atomic Character capability and its XP/AA dependents were
+  initially disabled because both carried maximum-vital fields failed bounded
+  live validation. The correction independently resolved the current fields
+  instead of carrying either rejected offset.
 - [x] Add a new immutable compiled profile and synthetic exact-selection,
   identity, bounds, malformed-data, lifecycle, and unsupported-client
   coverage without changing any earlier profile. Existing shared rejection and
   lifecycle fixtures cover the new profile contract; focused selection and
   registry validation pass.
-- [ ] Pass the complete repository gate, exact fingerprint, package inventory,
+- [x] Pass the complete repository gate, exact fingerprint, package inventory,
   atomic installed-build replacement, running-hash check, and privacy audit.
-  The automated gates, package inventory, exact fingerprint, atomic
-  replacement, isolated installed live smoke, and privacy-safe log pass. The
-  already-open visible companion still maps the prior binary and was not
+  The combined Phase 10 head passed the repository gate, 13 Python tests, all
+  21 CTest cases, exact fingerprint, package metadata, privacy-safe two-snapshot
+  XP/AA availability probe, review, and atomic replacement. Build and installed
+  SHA-256 match
+  `7a94afee87809ee572801aac40da9733c76c50f0f7a589395221f5e4954362ac`.
+  The already-open visible companion still maps the prior binary and was not
   interrupted, so its relaunch and running-hash check remain pending.
 - [ ] Complete the controlled live gate for character select, entering world,
   two zones, changed positions and facings, visible spawn/character fields,

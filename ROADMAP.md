@@ -627,7 +627,10 @@ event.
 
 ## Phase 10: Buffs, timers, alerts, and audio
 
-Status: Planned as a separate pull request stacked on Phase 9.
+Status: Authorized on 2026-08-30 as a separate pull request stacked on the
+merged Phase 9 implementation. The Mote loot system-sound alert is the first
+narrow slice; the remaining timer, notification, rule, and audio-pack scope
+stays planned.
 
 ### Outcome and included work
 
@@ -635,11 +638,24 @@ Add bounded buff duration and respawn timers, local text rules, rank-upgrade and
 custom kill alerts, visible notifications, optional sound/voice packs,
 configurable rate limits, and independent enable/disable controls.
 
-Phase 10 inputs are bounded cast, landing, fade, kill, and user-rule matches
-from the active local log; Phase 9 kill/activity snapshots; user-configured
-timer values; and schema/provenance-validated user-imported duration and audio
-packs. Observed durations and imported reference durations remain visibly
-distinct. No new process-memory or network source is approved by this phase.
+The first slice matches only new bounded loot activity whose item label
+contains `Mote` as a complete case-insensitive word. It uses an independently
+saved, default-on control with immediate opt-out and the packaged desktop
+event-sound player with a Qt bell fallback, establishes a
+silent baseline for restored history, coalesces bursts to one dispatch every
+two seconds, and exposes a fake sink for deterministic tests. Exact personal
+loot and observed `<actor> looted a/an/the <item>` group-loot lines are
+accepted. It adds no audio pack, linked multimedia dependency, process-memory
+source, or network path.
+Matching Mote loot is also highlighted as a readable yellow row in the
+Activity event table.
+
+Phase 10 inputs are bounded loot, cast, landing, fade, kill, and user-rule
+matches from the active local log; Phase 9 kill/activity snapshots;
+user-configured timer values; and schema/provenance-validated user-imported
+duration and audio packs. Observed durations and imported reference durations
+remain visibly distinct. No new process-memory or network source is approved
+by this phase.
 
 ### Risks, exit criteria, and validation
 

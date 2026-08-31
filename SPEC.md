@@ -58,7 +58,9 @@ support tier.
   imply approval of another.
 - Capabilities that write files, communicate over a network, display overlays,
   emit audio, automate work, control input, or modify a process are disabled by
-  default until the user enables that exact behavior.
+  default until the user enables that exact behavior or explicitly approves a
+  documented default-on exception. The Mote loot system alert is the only
+  current exception, approved on 2026-08-30 with an immediate opt-out.
 - No capability may bypass authentication, integrity checks, anti-cheat, or
   other client protections. Encountering such a protection is a stop condition
   for that design.
@@ -216,7 +218,8 @@ Missing, disabled, ambiguous, malformed, oversized, or unavailable logs show
 an explicit unavailable state without affecting memory-backed character data.
 
 The same bounded active-character stream may recognize exact XP percentage,
-AA-point-total, and loot forms for the Activity dock. It may also aggregate
+AA-point-total, personal-loot, and observed
+`<actor> looted a/an/the <item>` group-loot forms for the Activity dock. It may also aggregate
 the active character's named damage abilities as observation evidence and
 record changes between consecutive immutable equipment snapshots. It does not
 turn an observed ability into an asserted proc or class, and it does not infer
@@ -225,24 +228,42 @@ hour of retained progress observations; the level pace is the time to earn
 100% at that rate, not a claim about the character's current level position.
 Recent loot means the latest 24 hours.
 
-For the exact `legends-2026-08-17` client only, the immutable character
-snapshot may additionally publish the current player experience percentage
-from the client's read-only UI cache. The optional float is read twice,
+The first Phase 10 alert slice may emit the local system alert sound when a
+newly observed loot item's bounded label contains `Mote` as a complete ASCII
+word, matched case-insensitively. Under the owner's 2026-08-30 exception, the
+alert is enabled by default and can be disabled independently through the User
+menu. Initial or restored history establishes a baseline without sound; only a
+later event with a stable source identity can dispatch. Dispatches are
+coalesced to at most one every two seconds, reset safely when activity becomes
+unavailable or the selected character/log partition changes, and never add a
+log, network, process-memory, imported audio-pack, or retained-name output. The
+implementation uses the Fedora desktop audio player and system sound theme with
+a Qt bell fallback, declares both runtime dependencies, and bundles no audio
+asset. See
+`docs/research/phase10-mote-audio-checkpoint.md`.
+Matching Mote loot rows use a yellow background with black text across the
+Activity event table so the same event is also visually distinct.
+
+For the exact `legends-2026-08-17` and `legends-2026-08-25` clients only, the
+immutable character snapshot may additionally publish the current player
+experience percentage from the client's read-only UI cache. The optional float
+is read twice,
 validated as finite and in the inclusive range 0-100, and discarded for the
 frame if unavailable, invalid, or inconsistent. It is transient and is never
 persisted, exported, logged, or sent over the network. The Activity summary
 uses this memory value for the current XP position; combat-log XP events remain
 the source for history, gain rate, and pace only.
 
-For the exact `legends-2026-08-06` and `legends-2026-08-17` clients only, the
-immutable character snapshot may additionally publish bounded current AA
-progress and banked points from each client's independently validated
-read-only progression state. These optional fields are read twice, validated
-as 0-100 percent and at most 10,000,000 points, and discarded for the frame if
-unavailable, invalid, or inconsistent. They are never inferred for another
-profile, persisted in activity history, exported, logged, or sent over the
-network. The Activity dock prefers this current snapshot over an older log
-total while retaining exact log events for rates.
+For the exact `legends-2026-08-06`, `legends-2026-08-17`, and
+`legends-2026-08-25` clients only, the immutable character snapshot may
+additionally publish bounded current AA progress and banked points from each
+client's independently validated read-only progression state. These optional
+fields are read twice, validated as 0-100 percent and at most 10,000,000
+points, and discarded for the frame if unavailable, invalid, or inconsistent.
+They are never inferred for another profile, persisted in activity history,
+exported, logged, or sent over the network. The Activity dock prefers this
+current snapshot over an older log total while retaining exact log events for
+rates.
 
 Activity retention is independently opt-in and partitioned by the same stable
 opaque character-and-selected-log key. The selected log filename must contain a

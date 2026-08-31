@@ -36,7 +36,7 @@ int main() {
                     profile->character_snapshot_supported,
                 "character capability did not match the profile gate");
         require(validation.experience_available ==
-                    (profile == profiles[4]),
+                    (profile == profiles[4] || profile == profiles[5]),
                 "experience capability did not remain exact-profile scoped");
         require(plazmic::select_client_profile(profile->sha256) == profile,
                 "known profile did not select by exact digest");
@@ -51,8 +51,8 @@ int main() {
                     .progression_available &&
                 plazmic::validate_client_profile(*profiles[4])
                     .progression_available &&
-                !plazmic::validate_client_profile(*profiles[5])
-                     .progression_available,
+                plazmic::validate_client_profile(*profiles[5])
+                    .progression_available,
             "progression capability did not remain exact-profile scoped");
     require(plazmic::select_client_profile(
                 "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff") ==

@@ -101,6 +101,16 @@ int main() {
         require(loot && loot->kind == plazmic::ActivityEventKind::loot &&
                     loot->label == "Synthetic Gem",
                 "loot event was not parsed");
+        const auto observed_group_loot = plazmic::parse_activity_line(
+            "[Mon Aug 03 12:46:00 2026] Synthetichero looted a Mote of "
+            "Synthetic Light",
+            kCharacter, "synthetic_zone");
+        require(observed_group_loot &&
+                    observed_group_loot->kind ==
+                        plazmic::ActivityEventKind::loot &&
+                    observed_group_loot->label ==
+                        "Mote of Synthetic Light",
+                "observed group-loot event was not parsed");
         const auto fixture_time = std::chrono::system_clock::time_point{
             std::chrono::seconds(experience->timestamp_unix_seconds)};
         require(!plazmic::parse_activity_line(
@@ -118,6 +128,19 @@ int main() {
                         "[Mon Aug 03 12:00:00 2026] You receive Synthetic Gem",
                         kCharacter, "synthetic_zone"),
                 "ambiguous or invalid activity line was accepted");
+        require(!plazmic::parse_activity_line(
+                    "[Mon Aug 03 12:00:00 2026] Synthetic Hero looted a "
+                    "Mote of Synthetic Light",
+                    kCharacter, "synthetic_zone") &&
+                    !plazmic::parse_activity_line(
+                        "[Mon Aug 03 12:00:00 2026] Synthetichero says, "
+                        "'Otherhero looted a Mote'",
+                        kCharacter, "synthetic_zone") &&
+                    !plazmic::parse_activity_line(
+                        "[Mon Aug 03 12:00:00 2026] Synthetichero looted "
+                        "Mote of Synthetic Light",
+                        kCharacter, "synthetic_zone"),
+                "ambiguous group-loot activity line was accepted");
 
         plazmic::ActivityTracker tracker;
         tracker.consume(

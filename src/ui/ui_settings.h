@@ -25,6 +25,7 @@ struct UiState {
     bool other_spawns_visible{true};
     bool combat_history_enabled{false};
     bool activity_history_enabled{false};
+    bool mote_loot_audio_alert_enabled{true};
     std::array<int, 3> activity_summary_widths{120, 320, 440};
     QString spawn_filter;
     int spawn_type_filter{-1};

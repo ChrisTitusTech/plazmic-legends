@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alerts/mote_loot_audio_alert.h"
 #include "model/character_snapshot.h"
 #include "model/activity_snapshot.h"
 #include "model/combat_snapshot.h"
@@ -42,6 +43,7 @@ class MainWindow final : public QMainWindow {
                         QString settings_path = UiSettings::default_path(),
                         bool reset_layout = false,
                         QString client_directory = {},
+                        std::function<void()> audio_alert_sink = {},
                         QWidget* parent = nullptr);
 
     void update_snapshot(const StatusSnapshot& snapshot);
@@ -75,6 +77,7 @@ class MainWindow final : public QMainWindow {
     [[nodiscard]] MapCanvas* map_canvas() const { return map_canvas_; }
     [[nodiscard]] bool combat_history_enabled() const;
     [[nodiscard]] bool activity_history_enabled() const;
+    [[nodiscard]] bool mote_loot_audio_alert_enabled() const;
     void set_delete_activity_callback(
         std::function<void(std::string)> callback) {
         delete_activity_callback_ = std::move(callback);
@@ -102,6 +105,7 @@ class MainWindow final : public QMainWindow {
     [[nodiscard]] bool save_ui_state();
     void save_combat_history_preference();
     void save_activity_history_preference();
+    void save_mote_loot_audio_alert_preference();
     void select_spawn(std::uint32_t id);
     void clear_spawn_selection();
     void update_spawn_detail(const SpawnSnapshot* spawn);
@@ -131,6 +135,7 @@ class MainWindow final : public QMainWindow {
     QAction* import_inventory_action_{nullptr};
     QAction* retain_combat_history_action_{nullptr};
     QAction* retain_activity_history_action_{nullptr};
+    QAction* mote_loot_audio_alert_action_{nullptr};
     QAction* export_activity_action_{nullptr};
     QAction* delete_activity_action_{nullptr};
     QLabel* parse_state_{nullptr};
@@ -151,6 +156,7 @@ class MainWindow final : public QMainWindow {
     QTableWidget* inventory_reconciliation_{nullptr};
     CombatAnalyticsSnapshot combat_analytics_;
     ActivityAnalyticsSnapshot activity_analytics_;
+    MoteLootAudioAlert mote_loot_audio_alert_;
     InventoryReconciliationSnapshot inventory_snapshot_;
     QString inventory_path_;
     std::string inventory_character_name_;

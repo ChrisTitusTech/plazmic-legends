@@ -55,9 +55,16 @@ implementing the conflicting behavior.
   in two stacked left docks. The owner explicitly authorized release without
   repeating the final manual live lifecycle gate on the merged head; that
   skipped check remains a documented residual risk.
-- Phase 7 defines the expansion framework and feature-parity roadmap. Phase 7
-  and every later major capability are delivered as separate, independently
-  reviewable pull requests in the numeric merge order recorded in `ROADMAP.md`.
+- Phase 7 is complete and defines the expansion framework and provenance-safe
+  feature-parity roadmap.
+- Phase 8 combat analytics and the implemented Phase 9 progression, loot,
+  inventory, XP, and AA slices are on `main`; their remaining closeout work is
+  tracked in `TASKS.md`.
+- Phase 10 has its first validated slice on `main`: default-on Mote loot audio
+  with an independent opt-out and yellow Mote rows. The wider timer, rule,
+  notification, and audio-pack scope remains active.
+- Later major capabilities remain separately reviewable and follow the numeric
+  order and gates recorded in `ROADMAP.md`.
 - No inherited implementation or third-party source is retained.
 - The local reference client is a Windows x86-64 PE executable running through
   GE-Proton11-3 in an X11 session.
@@ -92,10 +99,9 @@ review, license review, and comparison against a native replacement.
 - `src/map`: map geometry, transforms, and renderer-independent map state.
 - `src/ui`: Qt 6 main window, map canvas, spawn table, status, and preferences.
 - `src/common`: narrow configuration, logging, and shared utilities.
-- Planned `src/activity`: bounded progression, loot, raid, buff, timer, and other
+- `src/activity`: bounded progression, loot, raid, buff, timer, and other
   user-owned activity histories.
-- Planned `src/alerts`: local alert rules, notification dispatch, and optional
-  audio.
+- `src/alerts`: local alert rules, notification dispatch, and optional audio.
 - Planned `src/knowledge`: validated user-imported or license-compatible knowledge
   packs and planners.
 - Planned `src/services`: explicitly enabled network, update, feedback, and sharing
@@ -108,10 +114,11 @@ requirement justifies a focused change.
 
 ## Working boundaries
 
-- Phase 0 through Phase 6 are complete on `main`. The current release is
-  `v0.2.0`. Preserve validated lifecycle behavior, exact-profile failure
-  rules, privacy guarantees, and package inventory while extending them for
-  each new capability.
+- Phase 0 through Phase 7 are complete on `main`; Phase 8, Phase 9, and the
+  first Phase 10 slice are implemented as described above. The current release
+  remains `v0.2.0`. Preserve validated lifecycle behavior, exact-profile
+  failure rules, privacy guarantees, and package inventory while extending
+  them for each new capability.
 - RPM, COPR, AppImage, and other package publication are authorized.
 - The owner explicitly accepts that this development project operates
   against the Daybreak EULA. Read-only symbol and gameplay-state research may

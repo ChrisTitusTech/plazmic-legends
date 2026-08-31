@@ -139,15 +139,6 @@ requirement justifies a focused change.
 - Keep private UI bundles, character/server INI names, and their archives
   ignored and local. They are user-supplied installer input and may not enter
   source packages, binary packages, releases, logs, fixtures, or pull requests.
-- Do not bypass anti-cheat, integrity checks, authentication, or client
-  protections. If one blocks the proposed integration, stop and surface it as
-  a product decision.
-- The current implementation has no injection, gameplay-state write, input
-  synthesis, automation, scripting, multibox, plugin-host, or remote-control
-  capability. Adding any such capability requires a dedicated approved phase,
-  an updated threat model, clear user control, failure isolation, and evidence
-  that it does not bypass a client protection. Authorization for one
-  capability does not authorize another.
 - Centralize client-specific addresses and signatures in versioned
   compatibility profiles. Do not scatter raw offsets through UI or lifecycle
   code.

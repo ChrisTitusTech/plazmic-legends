@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Tests for the read-only PE identity inspector."""
 
 from __future__ import annotations
@@ -9,7 +8,6 @@ import struct
 import tempfile
 import unittest
 from pathlib import Path
-
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "tools" / "inspect_eqgame.py"
 MODULE_SPEC = importlib.util.spec_from_file_location("inspect_eqgame", MODULE_PATH)

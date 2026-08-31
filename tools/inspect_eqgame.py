@@ -12,7 +12,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import BinaryIO
 
-
 MACHINES = {
     0x014C: "x86",
     0x8664: "x86-64",

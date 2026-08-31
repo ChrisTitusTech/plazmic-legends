@@ -13,7 +13,6 @@ from pathlib import Path
 
 from inspect_eqgame import InspectionError, inspect_pe, resolve_target
 
-
 SCHEMA_VERSION = 1
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 RESOLVERS = (

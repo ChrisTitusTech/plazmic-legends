@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Tests for fail-closed compatibility candidate preparation."""
 
 from __future__ import annotations
@@ -12,7 +11,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from test_inspect_eqgame import make_pe32_plus
-
 
 TOOLS_DIRECTORY = Path(__file__).resolve().parents[1] / "tools"
 MODULE_PATH = TOOLS_DIRECTORY / "prepare_profile_refresh.py"

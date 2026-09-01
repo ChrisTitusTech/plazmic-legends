@@ -54,11 +54,16 @@ form, while the other candidate was the shorter base catalog name.
 The initially promoted XP and AA values were disproved by installed UI
 acceptance evidence: they rendered as zero XP, zero AA progress, and a `255`
 AA count. A renewed static trace found that those addresses belong to
-unrelated initialization objects. The exact XP, AA-progress, and banked-AA UI
-handlers instead write three adjacent cache fields. Two bounded rereads of
-that corrected cache were stable, finite, in range, nonzero for both progress
-values, and did not contain the rejected `255` sentinel. The private gameplay
-values are not retained.
+unrelated initialization objects. The exact XP and AA-progress UI handlers
+write two adjacent cache fields. Two bounded rereads of those progress fields
+were stable, finite, in range, and nonzero.
+
+The adjacent banked-AA cache was then separately disproved by installed UI
+acceptance evidence: it did not match the visible banked count. The exact
+banked-AA handler invokes a character-root accessor that resolves a bounded
+record and reads a dword at record offset `0xaa64`. Two bounded rereads of that
+accessor were stable, in range, and matched the visible nonzero count. The
+private gameplay values are not retained.
 
 | Profile value | Static resolver | Bounded observations | Exact value |
 | --- | --- | --- | --- |
@@ -76,16 +81,16 @@ values are not retained.
 | Equipment display name | Inventory and display-name paths | 23 bounded slots and complete reread twice | Item pointer `0x68` |
 | Current XP | Exact XP label handler and cache write | Finite in `[0, 100]` twice | `0x00fab528` RVA |
 | Current AA percent | Exact AA-progress label handler and cache write | Finite in `[0, 100]` twice | RVA `0x00fab528`, offset `0x04` |
-| Unallocated AA | Exact banked-AA label handler and cache write | Bounded dword twice | RVA `0x00fab528`, offset `0x08` |
+| Unallocated AA | Exact banked-AA character-root accessor | Bounded dword matched visible state twice | Resolved record offset `0xaa64` |
 
 Two consecutive observations through the production core passed exact mapped
 PE selection, finite player state, the same valid zone, complete reciprocal
 spawn collections, Character, and all 23 equipment slots. A later observation
 also accepted a changed complete spawn collection. The initially recorded XP
 and AA observations were invalidated by the installed UI failure described
-above. The corrected cache then passed two bounded, stable, range-checked
-observations without printing or retaining any runtime name, gameplay value,
-address, zone text, or item text.
+above. The corrected progress cache and direct banked-AA accessor then passed
+two bounded, stable, range-checked observations without printing or retaining
+any runtime name, gameplay value, address, zone text, or item text.
 
 ## Validation status
 
@@ -103,10 +108,10 @@ result is claimed; an independent review remains validation debt.
 
 After correcting the XP and AA regression, the validated binary was atomically
 installed at the shell-resolved unmanaged path with SHA-256
-`ceb054308f9c8574e88f615ede38143a9af4a48c8b364f8b58f4b5deb7b83344`,
+`af8d5963bd44a2ee4078a31d3c939df36438c122c8459a6f113b2c0c2612df90`,
 matching the build artifact. The installed owner and mode are `root:root` and
 `0755`; the superseded binary with SHA-256
-`e970fbbef0ced0e6076331ac4f0513dac9617cf0dde28e8f671215177c0b7c79`
+`ceb054308f9c8574e88f615ede38143a9af4a48c8b364f8b58f4b5deb7b83344`
 is preserved in the local hash-addressed rollback directory. The already-open
 companion was not interrupted and maps the superseded deleted inode, so its
 visible behavior cannot count for the corrected binary until the owner

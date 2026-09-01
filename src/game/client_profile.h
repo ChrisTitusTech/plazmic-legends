@@ -81,6 +81,7 @@ struct CharacterSymbols {
     std::size_t unallocated_alternate_advancement_points_offset;
     std::size_t unallocated_alternate_advancement_points_bytes{
         sizeof(std::uint32_t)};
+    std::size_t character_root_alternate_advancement_points_offset{};
 };
 
 struct ClientProfile {

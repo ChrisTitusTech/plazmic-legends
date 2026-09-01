@@ -224,6 +224,36 @@ std::optional<std::uintptr_t> resolve_profile(
     return std::nullopt;
 }
 
+std::optional<std::uintptr_t> resolve_character_root_record(
+    const ProcessMemoryReader& reader,
+    std::uintptr_t character_root,
+    const CharacterSymbols& symbols,
+    std::string& detail) {
+    const auto type_descriptor = read_value_at<std::uintptr_t>(
+        reader,
+        character_root,
+        symbols.character_type_descriptor_offset,
+        detail);
+    if (!type_descriptor || *type_descriptor == 0U) {
+        detail = "character-root type descriptor is unavailable";
+        return std::nullopt;
+    }
+    const auto displacement = read_value_at<std::int32_t>(
+        reader,
+        *type_descriptor,
+        symbols.type_descriptor_displacement_offset,
+        detail);
+    std::uintptr_t lookup_base = 0U;
+    std::uintptr_t lookup = 0U;
+    if (!displacement ||
+        !checked_add(character_root, symbols.stats_lookup_offset, lookup_base) ||
+        !checked_add_signed(lookup_base, *displacement, lookup)) {
+        detail = "character-root record address overflows";
+        return std::nullopt;
+    }
+    return resolve_stats(reader, lookup, symbols, detail);
+}
+
 bool valid_profile(const CharacterSymbols& symbols) {
     constexpr std::size_t kMaximumProgressionCacheOffset = 4096U;
     constexpr std::size_t kMaximumCharacterProfileOffset = 64U * 1024U;
@@ -231,16 +261,22 @@ bool valid_profile(const CharacterSymbols& symbols) {
         symbols.alternate_advancement_points_offset != 0U;
     const bool has_unallocated_points =
         symbols.unallocated_alternate_advancement_points_offset != 0U;
+    const bool has_character_root_points =
+        symbols.character_root_alternate_advancement_points_offset != 0U;
+    const unsigned int point_source_count =
+        static_cast<unsigned int>(has_cache_points) +
+        static_cast<unsigned int>(has_unallocated_points) +
+        static_cast<unsigned int>(has_character_root_points);
     const bool any_progression = symbols.progression_cache_rva != 0U ||
                                  symbols.alternate_advancement_percent_offset !=
                                      0U ||
-                                 has_cache_points || has_unallocated_points;
+                                 point_source_count != 0U;
     const bool progression_profile_valid =
         !any_progression ||
         (symbols.progression_cache_rva != 0U &&
          symbols.alternate_advancement_percent_offset <=
              kMaximumProgressionCacheOffset &&
-         has_cache_points != has_unallocated_points &&
+         point_source_count == 1U &&
          (!has_cache_points ||
           (symbols.alternate_advancement_points_offset <=
                kMaximumProgressionCacheOffset &&
@@ -253,7 +289,10 @@ bool valid_profile(const CharacterSymbols& symbols) {
                 sizeof(std::uint32_t)) &&
            symbols.unallocated_alternate_advancement_points_offset <=
                kMaximumCharacterProfileOffset -
-                   symbols.unallocated_alternate_advancement_points_bytes)));
+                   symbols.unallocated_alternate_advancement_points_bytes)) &&
+         (!has_character_root_points ||
+          symbols.character_root_alternate_advancement_points_offset <=
+              kMaximumCharacterProfileOffset - sizeof(std::uint32_t)));
     const auto valid_vital_width = [](std::size_t width) {
         return width == sizeof(std::int32_t) ||
                width == sizeof(std::int64_t);
@@ -530,6 +569,7 @@ CharacterReadResult read_character_snapshot(
     std::uintptr_t progression_cache = 0U;
     std::uintptr_t alternate_advancement_points_base = 0U;
     std::size_t alternate_advancement_points_offset = 0U;
+    std::optional<std::uintptr_t> character_root_points_record;
     std::string progression_detail;
     if (symbols.progression_cache_rva != 0U &&
         checked_add(process.image_base,
@@ -540,7 +580,17 @@ CharacterReadResult read_character_snapshot(
             progression_cache,
             symbols.alternate_advancement_percent_offset,
             progression_detail);
-        if (symbols.unallocated_alternate_advancement_points_offset != 0U) {
+        if (symbols.character_root_alternate_advancement_points_offset != 0U) {
+            character_root_points_record = resolve_character_root_record(
+                reader, *character_root, symbols, progression_detail);
+            if (character_root_points_record) {
+                alternate_advancement_points_base =
+                    *character_root_points_record;
+                alternate_advancement_points_offset =
+                    symbols.character_root_alternate_advancement_points_offset;
+            }
+        } else if (
+            symbols.unallocated_alternate_advancement_points_offset != 0U) {
             alternate_advancement_points_base = *profile;
             alternate_advancement_points_offset =
                 symbols.unallocated_alternate_advancement_points_offset;
@@ -553,12 +603,14 @@ CharacterReadResult read_character_snapshot(
             symbols.unallocated_alternate_advancement_points_offset != 0U
                 ? symbols.unallocated_alternate_advancement_points_bytes
                 : sizeof(std::uint32_t);
-        const auto points = read_unsigned_at(
-            reader,
-            alternate_advancement_points_base,
-            alternate_advancement_points_offset,
-            points_width,
-            progression_detail);
+        const auto points = alternate_advancement_points_base != 0U
+            ? read_unsigned_at(
+                  reader,
+                  alternate_advancement_points_base,
+                  alternate_advancement_points_offset,
+                  points_width,
+                  progression_detail)
+            : std::nullopt;
         if (percent && std::isfinite(*percent) && *percent >= 0.0F &&
             *percent <= 100.0F) {
             alternate_advancement_percent =
@@ -707,12 +759,23 @@ CharacterReadResult read_character_snapshot(
             symbols.unallocated_alternate_advancement_points_offset != 0U
                 ? symbols.unallocated_alternate_advancement_points_bytes
                 : sizeof(std::uint32_t);
-        const auto final_points = read_unsigned_at(
-            reader,
-            alternate_advancement_points_base,
-            alternate_advancement_points_offset,
-            points_width,
-            progression_detail);
+        const auto final_root_points_record =
+            symbols.character_root_alternate_advancement_points_offset != 0U
+            ? resolve_character_root_record(
+                  reader, *final_character, symbols, progression_detail)
+            : std::optional<std::uintptr_t>{
+                  alternate_advancement_points_base};
+        const auto final_points =
+            final_root_points_record &&
+                    *final_root_points_record ==
+                        alternate_advancement_points_base
+                ? read_unsigned_at(
+                      reader,
+                      *final_root_points_record,
+                      alternate_advancement_points_offset,
+                      points_width,
+                      progression_detail)
+                : std::nullopt;
         if (!final_points || *final_points > 10'000'000U ||
             *final_points != *alternate_advancement_points) {
             alternate_advancement_points.reset();

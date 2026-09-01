@@ -128,5 +128,16 @@ int main() {
     require(!plazmic::validate_client_profile(invalid),
             "invalid unallocated-AA width passed the profile contract");
 
+    invalid = *profiles[6];
+    invalid.character.alternate_advancement_points_offset = 0x08U;
+    require(!plazmic::validate_client_profile(invalid),
+            "ambiguous character-root AA source passed the profile contract");
+
+    invalid = *profiles[6];
+    invalid.character.character_root_alternate_advancement_points_offset =
+        64U * 1024U;
+    require(!plazmic::validate_client_profile(invalid),
+            "out-of-range character-root AA field passed the profile contract");
+
     return 0;
 }

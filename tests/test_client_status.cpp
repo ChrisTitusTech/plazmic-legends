@@ -292,10 +292,13 @@ int main() {
                 september_first->character
                         .alternate_advancement_percent_offset == 0x04U &&
                 september_first->character
-                        .alternate_advancement_points_offset == 0x08U &&
+                        .alternate_advancement_points_offset == 0U &&
                 september_first->character
                         .unallocated_alternate_advancement_points_offset ==
-                    0U,
+                    0U &&
+                september_first->character
+                        .character_root_alternate_advancement_points_offset ==
+                    0xaa64U,
             "September 1 profile did not preserve its exact supported boundary");
         require(plazmic::select_client_profile("changed") == nullptr,
                 "unknown digest unexpectedly selected");

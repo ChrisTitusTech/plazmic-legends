@@ -161,6 +161,9 @@ ClientProfileValidation validate_client_profile(
                                      0U ||
                                  character
                                          .unallocated_alternate_advancement_points_offset !=
+                                     0U ||
+                                 character
+                                         .character_root_alternate_advancement_points_offset !=
                                      0U;
     const bool cache_points =
         character.alternate_advancement_points_offset != 0U &&
@@ -177,13 +180,21 @@ ClientProfileValidation validate_client_profile(
         character.unallocated_alternate_advancement_points_offset <=
             kMaximumCharacterProfileFieldOffset -
                 character.unallocated_alternate_advancement_points_bytes;
+    const bool character_root_points =
+        character.character_root_alternate_advancement_points_offset != 0U &&
+        character.character_root_alternate_advancement_points_offset <=
+            kMaximumCharacterProfileFieldOffset - sizeof(std::uint32_t);
+    const unsigned int point_source_count =
+        static_cast<unsigned int>(cache_points) +
+        static_cast<unsigned int>(unallocated_points) +
+        static_cast<unsigned int>(character_root_points);
     const bool complete_progression =
         character.alternate_advancement_percent_offset != 0U &&
         image_field_range(character.progression_cache_rva,
                           character.alternate_advancement_percent_offset,
                           sizeof(float),
                           profile.image_size) &&
-        cache_points != unallocated_points;
+        point_source_count == 1U;
     reject(any_progression &&
                (!profile.character_snapshot_supported ||
                 !complete_progression),

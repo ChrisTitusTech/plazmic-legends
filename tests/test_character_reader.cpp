@@ -257,6 +257,78 @@ int main() {
                             ->alternate_advancement_points == 7U,
                 "bounded progression cache values were not decoded");
 
+        Fixture character_root_progression;
+        constexpr std::size_t kRoot = 0x1000U;
+        constexpr std::size_t kRootDescriptor = 0x16000U;
+        constexpr std::size_t kRootRecord = 0x16600U;
+        constexpr std::size_t kRootRecordValue = 0xb000U;
+        constexpr std::int32_t kRootDisplacement = 0x600;
+        character_root_progression.symbols.progression_cache_rva = 0x300U;
+        character_root_progression.symbols
+            .alternate_advancement_percent_offset = 0x04U;
+        character_root_progression.symbols
+            .alternate_advancement_points_offset = 0U;
+        character_root_progression.symbols
+            .unallocated_alternate_advancement_points_offset = 0U;
+        character_root_progression.symbols
+            .character_root_alternate_advancement_points_offset = 0xaa64U;
+        store(character_root_progression.memory, 0x304U, 42.5F);
+        store(
+            character_root_progression.memory,
+            kRoot + character_root_progression.symbols
+                        .character_type_descriptor_offset,
+            character_root_progression.base + kRootDescriptor);
+        store(
+            character_root_progression.memory,
+            kRootDescriptor + character_root_progression.symbols
+                                  .type_descriptor_displacement_offset,
+            kRootDisplacement);
+        const std::size_t root_lookup =
+            kRoot + character_root_progression.symbols.stats_lookup_offset +
+            static_cast<std::size_t>(kRootDisplacement);
+        store(
+            character_root_progression.memory,
+            root_lookup,
+            character_root_progression.base + kRootRecord);
+        store(
+            character_root_progression.memory,
+            root_lookup + character_root_progression.symbols
+                              .stats_lookup_key_offset,
+            std::int32_t{17});
+        store(
+            character_root_progression.memory,
+            kRootRecord + character_root_progression.symbols
+                              .stats_record_key_offset,
+            std::int32_t{17});
+        store(
+            character_root_progression.memory,
+            kRootRecord + character_root_progression.symbols
+                              .stats_record_value_offset,
+            character_root_progression.base + kRootRecordValue);
+        store(
+            character_root_progression.memory,
+            kRootRecord + character_root_progression.symbols
+                              .stats_record_next_offset,
+            std::uintptr_t{0});
+        store(
+            character_root_progression.memory,
+            kRootRecordValue +
+                character_root_progression.symbols
+                    .character_root_alternate_advancement_points_offset,
+            std::uint32_t{6U});
+        const auto character_root_progression_result =
+            plazmic::read_character_snapshot(
+                character_root_progression.process,
+                character_root_progression.local_player,
+                character_root_progression.symbols);
+        require(
+            character_root_progression_result &&
+                character_root_progression_result.snapshot
+                        ->alternate_advancement_percent == 42.5 &&
+                character_root_progression_result.snapshot
+                        ->alternate_advancement_points == 6U,
+            "character-root AA accessor value was not decoded");
+
         progression.symbols.unallocated_alternate_advancement_points_bytes =
             sizeof(std::uint8_t);
         store(progression.memory, 0xa500U, std::uint8_t{9U});

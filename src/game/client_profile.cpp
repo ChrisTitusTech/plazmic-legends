@@ -533,8 +533,9 @@ constexpr ClientProfile kLegendsSeptemberFirstProfile{
             .experience_percent_rva = 0x00fab528U,
             .progression_cache_rva = 0x00fab528U,
             .alternate_advancement_percent_offset = 0x04U,
-            .alternate_advancement_points_offset = 0x08U,
+            .alternate_advancement_points_offset = 0U,
             .unallocated_alternate_advancement_points_offset = 0U,
+            .character_root_alternate_advancement_points_offset = 0xaa64U,
         },
 };
 

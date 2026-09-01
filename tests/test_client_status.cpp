@@ -286,19 +286,16 @@ int main() {
                 september_first->character.item_name_pointer_offset ==
                     0x68U &&
                 september_first->character.experience_percent_rva ==
-                    0x00faa688U &&
+                    0x00fab528U &&
                 september_first->character.progression_cache_rva ==
-                    0x00faa440U &&
+                    0x00fab528U &&
                 september_first->character
-                        .alternate_advancement_percent_offset == 0x24cU &&
+                        .alternate_advancement_percent_offset == 0x04U &&
                 september_first->character
-                        .alternate_advancement_points_offset == 0U &&
+                        .alternate_advancement_points_offset == 0x08U &&
                 september_first->character
                         .unallocated_alternate_advancement_points_offset ==
-                    0xaa5cU &&
-                september_first->character
-                        .unallocated_alternate_advancement_points_bytes ==
-                    sizeof(std::uint8_t),
+                    0U,
             "September 1 profile did not preserve its exact supported boundary");
         require(plazmic::select_client_profile("changed") == nullptr,
                 "unknown digest unexpectedly selected");

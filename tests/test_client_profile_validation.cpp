@@ -123,7 +123,7 @@ int main() {
     require(!plazmic::validate_client_profile(invalid),
             "out-of-range character-profile AA field was enabled");
 
-    invalid = *profiles[6];
+    invalid = *profiles[4];
     invalid.character.unallocated_alternate_advancement_points_bytes = 2U;
     require(!plazmic::validate_client_profile(invalid),
             "invalid unallocated-AA width passed the profile contract");

@@ -51,10 +51,14 @@ candidates were rejected or selected through static display-name use and a
 private comparison: the selected display name was consistently the qualified
 form, while the other candidate was the shorter base catalog name.
 
-Current XP and AA cache paths moved with the image globals. The active-profile
-unallocated-AA accessor still uses offset `0xaa5c`, but its exact operand is a
-byte; the reader now records that width in this profile rather than consuming
-adjacent state as a dword.
+The initially promoted XP and AA values were disproved by installed UI
+acceptance evidence: they rendered as zero XP, zero AA progress, and a `255`
+AA count. A renewed static trace found that those addresses belong to
+unrelated initialization objects. The exact XP, AA-progress, and banked-AA UI
+handlers instead write three adjacent cache fields. Two bounded rereads of
+that corrected cache were stable, finite, in range, nonzero for both progress
+values, and did not contain the rejected `255` sentinel. The private gameplay
+values are not retained.
 
 | Profile value | Static resolver | Bounded observations | Exact value |
 | --- | --- | --- | --- |
@@ -70,16 +74,18 @@ adjacent state as a dword.
 | Maximum health | Vital update and initialization paths | Finite and not below current twice | Player `0x4d0`, 4 bytes |
 | Current and maximum mana | Independent mana update paths | Finite and ordered twice | Stats `0x276c`, 4 bytes; player `0x5a8`, 8 bytes |
 | Equipment display name | Inventory and display-name paths | 23 bounded slots and complete reread twice | Item pointer `0x68` |
-| Current XP | Experience-percent cache path | Finite in `[0, 100]` twice | `0x00faa688` RVA |
-| Current AA percent | Progression-cache path | Finite in `[0, 100]` twice | RVA `0x00faa440`, offset `0x24c` |
-| Unallocated AA | Active-profile accessor | Bounded byte twice | Offset `0xaa5c`, 1 byte |
+| Current XP | Exact XP label handler and cache write | Finite in `[0, 100]` twice | `0x00fab528` RVA |
+| Current AA percent | Exact AA-progress label handler and cache write | Finite in `[0, 100]` twice | RVA `0x00fab528`, offset `0x04` |
+| Unallocated AA | Exact banked-AA label handler and cache write | Bounded dword twice | RVA `0x00fab528`, offset `0x08` |
 
 Two consecutive observations through the production core passed exact mapped
 PE selection, finite player state, the same valid zone, complete reciprocal
-spawn collections, Character, all 23 equipment slots, current XP, AA percent,
-and unallocated AA. A later observation also accepted a changed complete spawn
-collection. No runtime name, gameplay value, address, zone text, or item text
-was printed or retained.
+spawn collections, Character, and all 23 equipment slots. A later observation
+also accepted a changed complete spawn collection. The initially recorded XP
+and AA observations were invalidated by the installed UI failure described
+above. The corrected cache then passed two bounded, stable, range-checked
+observations without printing or retaining any runtime name, gameplay value,
+address, zone text, or item text.
 
 ## Validation status
 
@@ -95,17 +101,16 @@ review service without a result beyond the documented 10-minute window. The
 task-scoped reviewer processes were terminated after that timeout. No review
 result is claimed; an independent review remains validation debt.
 
-The validated binary was atomically installed at the shell-resolved unmanaged
-path with SHA-256
-`e970fbbef0ced0e6076331ac4f0513dac9617cf0dde28e8f671215177c0b7c79`,
+After correcting the XP and AA regression, the validated binary was atomically
+installed at the shell-resolved unmanaged path with SHA-256
+`ceb054308f9c8574e88f615ede38143a9af4a48c8b364f8b58f4b5deb7b83344`,
 matching the build artifact. The installed owner and mode are `root:root` and
-`0755`; the prior binary is preserved in the local hash-addressed rollback
-directory. An isolated eight-second launch through the exact installed path
-selected `legends-2026-09-01`, reported `supported` and `running`, exited with
-status zero, emitted no standard output or error, and left no process or
-staging file. The already-open companion was not interrupted and still maps
-the prior deleted inode, so its visible behavior cannot count for the new
-binary until the owner relaunches it.
+`0755`; the superseded binary with SHA-256
+`e970fbbef0ced0e6076331ac4f0513dac9617cf0dde28e8f671215177c0b7c79`
+is preserved in the local hash-addressed rollback directory. The already-open
+companion was not interrupted and maps the superseded deleted inode, so its
+visible behavior cannot count for the corrected binary until the owner
+relaunches it.
 
 The broader controlled live gate remains open: character select, a second
 zone, changed position and facing, visibly changed vitals, a second equipment

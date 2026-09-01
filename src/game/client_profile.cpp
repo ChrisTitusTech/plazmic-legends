@@ -530,13 +530,11 @@ constexpr ClientProfile kLegendsSeptemberFirstProfile{
             .inventory_maximum_slots = 36U,
             .item_name_pointer_offset = 0x68U,
             .item_name_bytes = 64U,
-            .experience_percent_rva = 0x00faa688U,
-            .progression_cache_rva = 0x00faa440U,
-            .alternate_advancement_percent_offset = 0x24cU,
-            .alternate_advancement_points_offset = 0U,
-            .unallocated_alternate_advancement_points_offset = 0xaa5cU,
-            .unallocated_alternate_advancement_points_bytes =
-                sizeof(std::uint8_t),
+            .experience_percent_rva = 0x00fab528U,
+            .progression_cache_rva = 0x00fab528U,
+            .alternate_advancement_percent_offset = 0x04U,
+            .alternate_advancement_points_offset = 0x08U,
+            .unallocated_alternate_advancement_points_offset = 0U,
         },
 };
 

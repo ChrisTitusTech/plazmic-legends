@@ -53,9 +53,13 @@ struct CharacterSymbols {
     std::size_t stats_maximum_records;
     std::size_t stats_current_mana_offset;
     std::size_t stats_current_health_offset;
+    std::size_t stats_current_health_bytes{sizeof(std::int64_t)};
     std::size_t health_adjustment_offset;
+    bool apply_health_adjustment{true};
     std::size_t player_maximum_health_offset;
     std::size_t player_maximum_mana_offset;
+    std::size_t player_maximum_health_bytes{sizeof(std::int64_t)};
+    std::size_t player_maximum_mana_bytes{sizeof(std::int64_t)};
     std::size_t character_base_bias;
     std::size_t profile_manager_offset;
     std::size_t profile_manager_current_type_offset;
@@ -75,6 +79,8 @@ struct CharacterSymbols {
     std::size_t alternate_advancement_percent_offset;
     std::size_t alternate_advancement_points_offset;
     std::size_t unallocated_alternate_advancement_points_offset;
+    std::size_t unallocated_alternate_advancement_points_bytes{
+        sizeof(std::uint32_t)};
 };
 
 struct ClientProfile {

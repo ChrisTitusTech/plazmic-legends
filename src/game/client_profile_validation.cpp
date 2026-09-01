@@ -62,6 +62,10 @@ bool image_field_range(std::uintptr_t base_rva,
     return image_range(base_rva + offset, width, image_size);
 }
 
+bool vital_width(std::size_t width) {
+    return width == sizeof(std::int32_t) || width == sizeof(std::int64_t);
+}
+
 }  // namespace
 
 ClientProfileValidation validate_client_profile(
@@ -127,8 +131,11 @@ ClientProfileValidation validate_client_profile(
         character.item_name_bytes <= kMaximumNameBytes &&
         character.stats_current_mana_offset != 0U &&
         character.stats_current_health_offset != 0U &&
+        vital_width(character.stats_current_health_bytes) &&
         character.player_maximum_health_offset != 0U &&
-        character.player_maximum_mana_offset != 0U;
+        character.player_maximum_mana_offset != 0U &&
+        vital_width(character.player_maximum_health_bytes) &&
+        vital_width(character.player_maximum_mana_bytes);
     reject(profile.character_snapshot_supported && !valid_character,
            "enabled character profile is incomplete", result);
     result.character_available =
@@ -163,8 +170,13 @@ ClientProfileValidation validate_client_profile(
                           profile.image_size);
     const bool unallocated_points =
         character.unallocated_alternate_advancement_points_offset != 0U &&
+        (character.unallocated_alternate_advancement_points_bytes ==
+             sizeof(std::uint8_t) ||
+         character.unallocated_alternate_advancement_points_bytes ==
+             sizeof(std::uint32_t)) &&
         character.unallocated_alternate_advancement_points_offset <=
-            kMaximumCharacterProfileFieldOffset - sizeof(std::uint32_t);
+            kMaximumCharacterProfileFieldOffset -
+                character.unallocated_alternate_advancement_points_bytes;
     const bool complete_progression =
         character.alternate_advancement_percent_offset != 0U &&
         image_field_range(character.progression_cache_rva,

@@ -244,7 +244,8 @@ asset. See
 Matching Mote loot rows use a yellow background with black text across the
 Activity event table so the same event is also visually distinct.
 
-For the exact `legends-2026-08-17` and `legends-2026-08-25` clients only, the
+For the exact `legends-2026-08-17`, `legends-2026-08-25`, and
+`legends-2026-09-01` clients only, the
 immutable character snapshot may additionally publish the current player
 experience percentage from the client's read-only UI cache. The optional float
 is read twice,
@@ -254,8 +255,9 @@ persisted, exported, logged, or sent over the network. The Activity summary
 uses this memory value for the current XP position; combat-log XP events remain
 the source for history, gain rate, and pace only.
 
-For the exact `legends-2026-08-06`, `legends-2026-08-17`, and
-`legends-2026-08-25` clients only, the immutable character snapshot may
+For the exact `legends-2026-08-06`, `legends-2026-08-17`,
+`legends-2026-08-25`, and `legends-2026-09-01` clients only, the immutable
+character snapshot may
 additionally publish bounded current AA progress and banked points from each
 client's independently validated read-only progression state. These optional
 fields are read twice, validated as 0-100 percent and at most 10,000,000

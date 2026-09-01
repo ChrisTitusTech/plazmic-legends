@@ -174,6 +174,34 @@ int main() {
         require(result.snapshot->mana.current == 400 &&
                     result.snapshot->mana.maximum == 500,
                 "mana current/maximum were not decoded");
+
+        Fixture narrow_maximum_health;
+        narrow_maximum_health.symbols.stats_current_health_bytes =
+            sizeof(std::int32_t);
+        narrow_maximum_health.symbols.apply_health_adjustment = false;
+        narrow_maximum_health.symbols.player_maximum_health_bytes =
+            sizeof(std::int32_t);
+        store(
+            narrow_maximum_health.memory,
+            0xa000 +
+                narrow_maximum_health.symbols.stats_current_health_offset,
+            std::int32_t{900});
+        store(
+            narrow_maximum_health.memory,
+            0x5000 +
+                narrow_maximum_health.symbols.player_maximum_health_offset,
+            std::int32_t{1000});
+        const auto narrow_maximum_health_result =
+            plazmic::read_character_snapshot(
+                narrow_maximum_health.process,
+                narrow_maximum_health.local_player,
+                narrow_maximum_health.symbols);
+        require(narrow_maximum_health_result &&
+                    narrow_maximum_health_result.snapshot->health.current ==
+                        900 &&
+                    narrow_maximum_health_result.snapshot->health.maximum ==
+                        1000,
+                "32-bit unadjusted health was not decoded");
         require(!result.snapshot->experience_percent &&
                     !result.snapshot->alternate_advancement_percent &&
                     !result.snapshot->alternate_advancement_points,
@@ -229,6 +257,19 @@ int main() {
                             ->alternate_advancement_points == 7U,
                 "bounded progression cache values were not decoded");
 
+        progression.symbols.unallocated_alternate_advancement_points_bytes =
+            sizeof(std::uint8_t);
+        store(progression.memory, 0xa500U, std::uint8_t{9U});
+        const auto narrow_progression_result =
+            plazmic::read_character_snapshot(
+                progression.process,
+                progression.local_player,
+                progression.symbols);
+        require(narrow_progression_result &&
+                    narrow_progression_result.snapshot
+                            ->alternate_advancement_points == 9U,
+                "8-bit unallocated AA points were not decoded");
+
         store(progression.memory, 0x300U, 101.0F);
         const auto invalid_progression = plazmic::read_character_snapshot(
             progression.process,
@@ -238,7 +279,7 @@ int main() {
                     !invalid_progression.snapshot
                          ->alternate_advancement_percent &&
                     invalid_progression.snapshot
-                            ->alternate_advancement_points == 7U,
+                            ->alternate_advancement_points == 9U,
                 "invalid optional AA percent affected the character snapshot");
         constexpr std::size_t kPerformanceReads = 100U;
         const auto performance_start = std::chrono::steady_clock::now();
@@ -383,6 +424,34 @@ int main() {
         require(invalid_profile_result.error ==
                     plazmic::CharacterReadError::invalid_profile,
                 "incomplete character profile did not fail closed");
+
+        Fixture invalid_vital_width;
+        invalid_vital_width.symbols.stats_current_health_bytes = 2U;
+        const auto invalid_vital_width_result =
+            plazmic::read_character_snapshot(
+                invalid_vital_width.process,
+                invalid_vital_width.local_player,
+                invalid_vital_width.symbols);
+        require(invalid_vital_width_result.error ==
+                    plazmic::CharacterReadError::invalid_profile,
+                "invalid current-health width did not fail closed");
+
+        Fixture invalid_progression_width;
+        invalid_progression_width.symbols.progression_cache_rva = 0x300U;
+        invalid_progression_width.symbols
+            .alternate_advancement_percent_offset = 0x24cU;
+        invalid_progression_width.symbols
+            .unallocated_alternate_advancement_points_offset = 0x500U;
+        invalid_progression_width.symbols
+            .unallocated_alternate_advancement_points_bytes = 2U;
+        const auto invalid_progression_width_result =
+            plazmic::read_character_snapshot(
+                invalid_progression_width.process,
+                invalid_progression_width.local_player,
+                invalid_progression_width.symbols);
+        require(invalid_progression_width_result.error ==
+                    plazmic::CharacterReadError::invalid_profile,
+                "invalid unallocated-AA width did not fail closed");
 
         Fixture bounded_cycle;
         store(

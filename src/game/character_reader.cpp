@@ -54,6 +54,42 @@ std::optional<Value> read_value_at(const ProcessMemoryReader& reader,
     return read_value<Value>(reader, address, detail);
 }
 
+std::optional<std::int64_t> read_vital_at(
+    const ProcessMemoryReader& reader,
+    std::uintptr_t base,
+    std::size_t offset,
+    std::size_t width,
+    std::string& detail) {
+    if (width == sizeof(std::int32_t)) {
+        const auto value = read_value_at<std::int32_t>(
+            reader, base, offset, detail);
+        return value ? std::optional<std::int64_t>{*value} : std::nullopt;
+    }
+    if (width == sizeof(std::int64_t)) {
+        return read_value_at<std::int64_t>(reader, base, offset, detail);
+    }
+    detail = "profile vital width is invalid";
+    return std::nullopt;
+}
+
+std::optional<std::uint32_t> read_unsigned_at(
+    const ProcessMemoryReader& reader,
+    std::uintptr_t base,
+    std::size_t offset,
+    std::size_t width,
+    std::string& detail) {
+    if (width == sizeof(std::uint8_t)) {
+        const auto value = read_value_at<std::uint8_t>(
+            reader, base, offset, detail);
+        return value ? std::optional<std::uint32_t>{*value} : std::nullopt;
+    }
+    if (width == sizeof(std::uint32_t)) {
+        return read_value_at<std::uint32_t>(reader, base, offset, detail);
+    }
+    detail = "profile unsigned width is invalid";
+    return std::nullopt;
+}
+
 bool checked_add(std::uintptr_t base,
                  std::size_t offset,
                  std::uintptr_t& result) {
@@ -211,8 +247,17 @@ bool valid_profile(const CharacterSymbols& symbols) {
            symbols.alternate_advancement_percent_offset !=
                symbols.alternate_advancement_points_offset)) &&
          (!has_unallocated_points ||
-          symbols.unallocated_alternate_advancement_points_offset <=
-              kMaximumCharacterProfileOffset - sizeof(std::uint32_t)));
+          ((symbols.unallocated_alternate_advancement_points_bytes ==
+                sizeof(std::uint8_t) ||
+            symbols.unallocated_alternate_advancement_points_bytes ==
+                sizeof(std::uint32_t)) &&
+           symbols.unallocated_alternate_advancement_points_offset <=
+               kMaximumCharacterProfileOffset -
+                   symbols.unallocated_alternate_advancement_points_bytes)));
+    const auto valid_vital_width = [](std::size_t width) {
+        return width == sizeof(std::int32_t) ||
+               width == sizeof(std::int64_t);
+    };
     return symbols.local_character_pointer_rva != 0U &&
            symbols.player_name_bytes > 0U &&
            symbols.player_name_bytes <= 128U &&
@@ -225,7 +270,11 @@ bool valid_profile(const CharacterSymbols& symbols) {
            symbols.inventory_maximum_slots >= kEquipmentSlots.size() &&
            symbols.inventory_maximum_slots <= 256U &&
            symbols.item_name_bytes > 0U &&
-           symbols.item_name_bytes <= 128U && progression_profile_valid;
+           symbols.item_name_bytes <= 128U &&
+           valid_vital_width(symbols.stats_current_health_bytes) &&
+           valid_vital_width(symbols.player_maximum_health_bytes) &&
+           valid_vital_width(symbols.player_maximum_mana_bytes) &&
+           progression_profile_valid;
 }
 
 }  // namespace
@@ -307,16 +356,34 @@ CharacterReadResult read_character_snapshot(
             CharacterReadError::invalid_pointer,
             std::move(detail));
     }
-    const auto health_base = read_value_at<std::int64_t>(
-        reader, *stats, symbols.stats_current_health_offset, detail);
-    const auto health_adjustment = read_value_at<std::int32_t>(
-        reader, character_zone, symbols.health_adjustment_offset, detail);
+    const auto health_base = read_vital_at(
+        reader,
+        *stats,
+        symbols.stats_current_health_offset,
+        symbols.stats_current_health_bytes,
+        detail);
+    const std::optional<std::int32_t> health_adjustment =
+        symbols.apply_health_adjustment
+            ? read_value_at<std::int32_t>(
+                  reader,
+                  character_zone,
+                  symbols.health_adjustment_offset,
+                  detail)
+            : std::optional<std::int32_t>{0};
     const auto mana = read_value_at<std::int32_t>(
         reader, *stats, symbols.stats_current_mana_offset, detail);
-    const auto maximum_health = read_value_at<std::int64_t>(
-        reader, local_player, symbols.player_maximum_health_offset, detail);
-    const auto maximum_mana = read_value_at<std::int64_t>(
-        reader, local_player, symbols.player_maximum_mana_offset, detail);
+    const auto maximum_health = read_vital_at(
+        reader,
+        local_player,
+        symbols.player_maximum_health_offset,
+        symbols.player_maximum_health_bytes,
+        detail);
+    const auto maximum_mana = read_vital_at(
+        reader,
+        local_player,
+        symbols.player_maximum_mana_offset,
+        symbols.player_maximum_mana_bytes,
+        detail);
     if (!health_base || !health_adjustment || !mana || !maximum_health ||
         !maximum_mana) {
         return failure(CharacterReadError::read_failed, std::move(detail));
@@ -482,9 +549,16 @@ CharacterReadResult read_character_snapshot(
             alternate_advancement_points_offset =
                 symbols.alternate_advancement_points_offset;
         }
-        const auto points = read_value_at<std::uint32_t>(
-            reader, alternate_advancement_points_base,
-            alternate_advancement_points_offset, progression_detail);
+        const std::size_t points_width =
+            symbols.unallocated_alternate_advancement_points_offset != 0U
+                ? symbols.unallocated_alternate_advancement_points_bytes
+                : sizeof(std::uint32_t);
+        const auto points = read_unsigned_at(
+            reader,
+            alternate_advancement_points_base,
+            alternate_advancement_points_offset,
+            points_width,
+            progression_detail);
         if (percent && std::isfinite(*percent) && *percent >= 0.0F &&
             *percent <= 100.0F) {
             alternate_advancement_percent =
@@ -505,19 +579,37 @@ CharacterReadResult read_character_snapshot(
         reader, displacement_address, detail);
     const auto final_stats = resolve_stats(reader, lookup, symbols, detail);
     const auto final_health_base = final_stats
-        ? read_value_at<std::int64_t>(
-              reader, *final_stats, symbols.stats_current_health_offset, detail)
+        ? read_vital_at(
+              reader,
+              *final_stats,
+              symbols.stats_current_health_offset,
+              symbols.stats_current_health_bytes,
+              detail)
         : std::nullopt;
-    const auto final_health_adjustment = read_value_at<std::int32_t>(
-        reader, character_zone, symbols.health_adjustment_offset, detail);
+    const std::optional<std::int32_t> final_health_adjustment =
+        symbols.apply_health_adjustment
+            ? read_value_at<std::int32_t>(
+                  reader,
+                  character_zone,
+                  symbols.health_adjustment_offset,
+                  detail)
+            : std::optional<std::int32_t>{0};
     const auto final_mana = final_stats
         ? read_value_at<std::int32_t>(
               reader, *final_stats, symbols.stats_current_mana_offset, detail)
         : std::nullopt;
-    const auto final_maximum_health = read_value_at<std::int64_t>(
-        reader, local_player, symbols.player_maximum_health_offset, detail);
-    const auto final_maximum_mana = read_value_at<std::int64_t>(
-        reader, local_player, symbols.player_maximum_mana_offset, detail);
+    const auto final_maximum_health = read_vital_at(
+        reader,
+        local_player,
+        symbols.player_maximum_health_offset,
+        symbols.player_maximum_health_bytes,
+        detail);
+    const auto final_maximum_mana = read_vital_at(
+        reader,
+        local_player,
+        symbols.player_maximum_mana_offset,
+        symbols.player_maximum_mana_bytes,
+        detail);
     const auto final_current_type = read_value_at<std::int32_t>(
         reader,
         profile_manager,
@@ -611,9 +703,16 @@ CharacterReadResult read_character_snapshot(
         }
     }
     if (alternate_advancement_points) {
-        const auto final_points = read_value_at<std::uint32_t>(
-            reader, alternate_advancement_points_base,
-            alternate_advancement_points_offset, progression_detail);
+        const std::size_t points_width =
+            symbols.unallocated_alternate_advancement_points_offset != 0U
+                ? symbols.unallocated_alternate_advancement_points_bytes
+                : sizeof(std::uint32_t);
+        const auto final_points = read_unsigned_at(
+            reader,
+            alternate_advancement_points_base,
+            alternate_advancement_points_offset,
+            points_width,
+            progression_detail);
         if (!final_points || *final_points > 10'000'000U ||
             *final_points != *alternate_advancement_points) {
             alternate_advancement_points.reset();

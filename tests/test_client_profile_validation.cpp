@@ -19,7 +19,7 @@ void require(bool condition, std::string_view message) {
 
 int main() {
     const auto profiles = plazmic::known_client_profiles();
-    require(profiles.size() == 6U,
+    require(profiles.size() == 7U,
             "known profile registry has an unexpected size");
     require(plazmic::validate_known_client_profiles().empty(),
             "known profile registry failed its contract");
@@ -36,7 +36,8 @@ int main() {
                     profile->character_snapshot_supported,
                 "character capability did not match the profile gate");
         require(validation.experience_available ==
-                    (profile == profiles[4] || profile == profiles[5]),
+                    (profile == profiles[4] || profile == profiles[5] ||
+                     profile == profiles[6]),
                 "experience capability did not remain exact-profile scoped");
         require(plazmic::select_client_profile(profile->sha256) == profile,
                 "known profile did not select by exact digest");
@@ -52,6 +53,8 @@ int main() {
                 plazmic::validate_client_profile(*profiles[4])
                     .progression_available &&
                 plazmic::validate_client_profile(*profiles[5])
+                    .progression_available &&
+                plazmic::validate_client_profile(*profiles[6])
                     .progression_available,
             "progression capability did not remain exact-profile scoped");
     require(plazmic::select_client_profile(
@@ -79,6 +82,11 @@ int main() {
     invalid.character_snapshot_supported = true;
     require(!plazmic::validate_client_profile(invalid),
             "partial character capability was enabled");
+
+    invalid = *profiles[6];
+    invalid.character.stats_current_health_bytes = 2U;
+    require(!plazmic::validate_client_profile(invalid),
+            "invalid current-health width passed the profile contract");
 
     invalid = *profiles[4];
     invalid.character.experience_percent_rva = invalid.image_size - 2U;
@@ -114,6 +122,11 @@ int main() {
         64U * 1024U;
     require(!plazmic::validate_client_profile(invalid),
             "out-of-range character-profile AA field was enabled");
+
+    invalid = *profiles[6];
+    invalid.character.unallocated_alternate_advancement_points_bytes = 2U;
+    require(!plazmic::validate_client_profile(invalid),
+            "invalid unallocated-AA width passed the profile contract");
 
     return 0;
 }

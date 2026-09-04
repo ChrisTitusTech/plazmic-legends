@@ -19,7 +19,7 @@ void require(bool condition, std::string_view message) {
 
 int main() {
     const auto profiles = plazmic::known_client_profiles();
-    require(profiles.size() == 7U,
+    require(profiles.size() == 8U,
             "known profile registry has an unexpected size");
     require(plazmic::validate_known_client_profiles().empty(),
             "known profile registry failed its contract");
@@ -37,7 +37,7 @@ int main() {
                 "character capability did not match the profile gate");
         require(validation.experience_available ==
                     (profile == profiles[4] || profile == profiles[5] ||
-                     profile == profiles[6]),
+                     profile == profiles[6] || profile == profiles[7]),
                 "experience capability did not remain exact-profile scoped");
         require(plazmic::select_client_profile(profile->sha256) == profile,
                 "known profile did not select by exact digest");
@@ -55,6 +55,8 @@ int main() {
                 plazmic::validate_client_profile(*profiles[5])
                     .progression_available &&
                 plazmic::validate_client_profile(*profiles[6])
+                    .progression_available &&
+                plazmic::validate_client_profile(*profiles[7])
                     .progression_available,
             "progression capability did not remain exact-profile scoped");
     require(plazmic::select_client_profile(

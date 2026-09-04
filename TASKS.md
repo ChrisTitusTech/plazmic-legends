@@ -170,6 +170,12 @@ workflow.
   placement, performance, game-invariance, and independent-review gates. Two
   consecutive bounded in-world snapshots and the automated repository gate
   are recorded in `docs/research/legends-2026-09-01-profile.md`.
+- [ ] The 2026-09-02 profile: complete the controlled character-select,
+  two-zone, changed-position and facing, visibly changed vital, equipment,
+  spawn add/remove/change, zoning, camping, exit, reacquisition, DWM
+  placement, performance, game-invariance, and independent-review gates. Two
+  consecutive bounded in-world snapshots and the automated repository gate
+  are recorded in `docs/research/legends-2026-09-02-profile.md`.
 - [ ] Inventory export: successfully import a private exported file through EQ
   Legends Tools and verify the documented fields that Plazmic Legends does not
   read or invent.

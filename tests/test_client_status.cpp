@@ -300,6 +300,66 @@ int main() {
                         .character_root_alternate_advancement_points_offset ==
                     0xaa64U,
             "September 1 profile did not preserve its exact supported boundary");
+        constexpr std::string_view kSeptemberSecondDigest =
+            "f1c6ab2f07a5d08e62bb936061fd01049fa7b64ce8ddac50c57009162088a9f9";
+        const auto* september_second =
+            plazmic::select_client_profile(kSeptemberSecondDigest);
+        require(
+            september_second != nullptr &&
+                september_second != &profile &&
+                september_second != august_third &&
+                september_second != august_fourth &&
+                september_second != august_sixth &&
+                september_second != august_seventeenth &&
+                september_second != august_twenty_fifth &&
+                september_second != september_first &&
+                september_second->id == "legends-2026-09-02" &&
+                september_second->sha256 == kSeptemberSecondDigest &&
+                september_second->machine == 0x8664U &&
+                september_second->timestamp == 0x6a983abaU &&
+                september_second->optional_magic == 0x20bU &&
+                september_second->image_size == 0x16c6000U &&
+                september_second->character_snapshot_supported &&
+                september_second->game_state.local_player_pointer_rva ==
+                    0x00f0c360U &&
+                september_second->game_state.world_data_pointer_rva ==
+                    0x00f0be50U &&
+                september_second->game_state.player_zone_id_offset ==
+                    0x59cU &&
+                september_second->spawns.level_offset == 0x4bcU &&
+                september_second->spawns.record_bytes == 0x4bdU &&
+                september_second->character.local_character_pointer_rva ==
+                    0x00f0c4b0U &&
+                september_second->character.stats_current_mana_offset ==
+                    0x276cU &&
+                september_second->character.stats_current_health_bytes ==
+                    sizeof(std::int32_t) &&
+                !september_second->character.apply_health_adjustment &&
+                september_second->character.player_maximum_health_offset ==
+                    0x4d0U &&
+                september_second->character.player_maximum_health_bytes ==
+                    sizeof(std::int32_t) &&
+                september_second->character.player_maximum_mana_offset ==
+                    0x5a8U &&
+                september_second->character.player_maximum_mana_bytes ==
+                    sizeof(std::int64_t) &&
+                september_second->character.item_name_pointer_offset ==
+                    0x68U &&
+                september_second->character.experience_percent_rva ==
+                    0x00faa538U &&
+                september_second->character.progression_cache_rva ==
+                    0x00faa538U &&
+                september_second->character
+                        .alternate_advancement_percent_offset == 0x04U &&
+                september_second->character
+                        .alternate_advancement_points_offset == 0U &&
+                september_second->character
+                        .unallocated_alternate_advancement_points_offset ==
+                    0U &&
+                september_second->character
+                        .character_root_alternate_advancement_points_offset ==
+                    0xaa64U,
+            "September 2 profile did not preserve its exact supported boundary");
         require(plazmic::select_client_profile("changed") == nullptr,
                 "unknown digest unexpectedly selected");
 
